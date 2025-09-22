@@ -64,16 +64,8 @@ export class SocketMultiplayerClient {
   }
 
   async connect(): Promise<void> {
-    // Si ya estamos conectados, no hacer nada
-    if (this.isConnected && this.socket && this.socket.connected) {
-      console.log('✅ Ya conectado al servidor')
-      return Promise.resolve()
-    }
-
-    // Si ya estamos intentando conectar, no hacer nada
-    if (this.isReconnecting) {
-      console.log('🔄 Ya intentando conectar...')
-      return Promise.resolve()
+    if (this.isConnected || this.isReconnecting) {
+      return
     }
 
     this.isReconnecting = true
@@ -83,28 +75,24 @@ export class SocketMultiplayerClient {
       try {
         console.log(`🌍 Conectando al servidor... (intento ${this.connectionAttempts}/${this.maxConnectionAttempts})`, this.SERVER_URL)
         
-        // Solo crear nueva conexión si no existe
-        if (!this.socket) {
-          this.socket = io(this.SERVER_URL, {
-            transports: ['polling', 'websocket'],
-            timeout: this.CONNECTION_TIMEOUT,
-            forceNew: false, // Reuse existing connection if possible
-            reconnection: false, // No automatic reconnection
-            autoConnect: true,
-            upgrade: true,
-            rememberUpgrade: true, // Remember successful transport
-            withCredentials: false
-          })
-
-          this.setupEventListeners()
+        // Clear any existing connection
+        if (this.socket) {
+          this.socket.disconnect()
+          this.socket = null
         }
 
-        // Si ya está conectado, resolver inmediatamente
-        if (this.socket.connected) {
-          this.handleSuccessfulConnection()
-          resolve()
-          return
-        }
+        this.socket = io(this.SERVER_URL, {
+          transports: ['polling', 'websocket'],
+          timeout: this.CONNECTION_TIMEOUT,
+          forceNew: true, // Always create new connection
+          reconnection: false, // No automatic reconnection
+          autoConnect: true,
+          upgrade: true,
+          rememberUpgrade: false, // Don't remember transport
+          withCredentials: false
+        })
+
+        this.setupEventListeners()
         
         // Connection timeout
         this.connectionTimeout = setTimeout(() => {
@@ -201,15 +189,8 @@ export class SocketMultiplayerClient {
       this.isConnected = false
       this.isReconnecting = false
       
-      // Solo reconectar si no fue una desconexión manual
-      if (reason !== 'io client disconnect' && reason !== 'client namespace disconnect') {
-        console.log('🔌 Reconectando automáticamente...')
-        setTimeout(() => {
-          this.connect().catch(console.error)
-        }, 1000)
-      } else {
-        console.log('🔌 Desconexión manual - no se reconectará')
-      }
+      // No reconectar automáticamente
+      console.log('🔌 Conexión perdida - se requiere reconexión manual')
     })
 
     // Error handling
