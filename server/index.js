@@ -16,7 +16,10 @@ const io = socketIo(server, {
       : "*",
     methods: ["GET", "POST"],
     credentials: true
-  }
+  },
+  transports: ['websocket', 'polling'],
+  pingTimeout: 60000,
+  pingInterval: 25000
 });
 
 // Middleware
@@ -50,6 +53,16 @@ app.get('/health', (req, res) => {
     status: 'OK', 
     timestamp: new Date().toISOString(),
     players: Object.keys(gameState.players).length
+  });
+});
+
+// Endpoint de prueba para verificar conectividad
+app.get('/test', (req, res) => {
+  res.status(200).json({ 
+    message: 'Servidor funcionando correctamente',
+    timestamp: new Date().toISOString(),
+    environment: NODE_ENV,
+    port: PORT
   });
 });
 

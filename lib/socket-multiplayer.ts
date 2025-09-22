@@ -56,10 +56,16 @@ export class SocketMultiplayerClient {
   async connect(): Promise<void> {
     return new Promise((resolve, reject) => {
       try {
-        console.log('🌍 Conectando al servidor...')
+        console.log('🌍 Conectando al servidor...', this.SERVER_URL)
         
         this.socket = io(this.SERVER_URL, {
-          transports: ['websocket', 'polling']
+          transports: ['websocket', 'polling'],
+          timeout: 10000,
+          forceNew: true,
+          reconnection: true,
+          reconnectionDelay: 1000,
+          reconnectionAttempts: 5,
+          maxReconnectionAttempts: 5
         })
 
         this.setupEventListeners()
@@ -82,7 +88,7 @@ export class SocketMultiplayerClient {
           if (!this.isConnected) {
             reject(new Error('Timeout de conexión'))
           }
-        }, 5000)
+        }, 15000)
 
       } catch (error) {
         console.error('❌ Error conectando al servidor:', error)

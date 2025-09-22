@@ -4,6 +4,8 @@
 
 [build.environment]
   NODE_VERSION = "18"
+  NEXT_PUBLIC_SERVER_URL = "https://rpg-chat-mfru.onrender.com"
+  NODE_ENV = "production"
 
 [[redirects]]
   from = "/*"
