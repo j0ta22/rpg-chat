@@ -3,11 +3,13 @@ services:
     name: rpg-chat-server
     env: node
     plan: free
-    buildCommand: npm install
+    buildCommand: npm ci --only=production
     startCommand: node index.js
     healthCheckPath: /health
-    healthCheckTimeout: 300
-    healthCheckInterval: 30
+    healthCheckTimeout: 60
+    healthCheckInterval: 10
+    autoDeploy: true
+    branch: main
     envVars:
       - key: NODE_ENV
         value: production
