@@ -396,7 +396,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
     }
   }, [character.name, character.avatar, isMoving])
 
-  // Monitor connection status (simplified)
+  // Monitor connection status and sync positions periodically
   useEffect(() => {
     if (multiplayerClient) {
       const checkConnection = () => {
@@ -414,10 +414,26 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
         }
       }
       
-      const interval = setInterval(checkConnection, 5000) // Check every 5 seconds (less frequent)
-      return () => clearInterval(interval)
+      // Sync position every 2 seconds instead of real-time updates
+      const syncPosition = () => {
+        if (multiplayerClient && multiplayerClient.isConnectedToServer()) {
+          try {
+            multiplayerClient.updatePlayerPosition(localCharacter.x, localCharacter.y)
+          } catch (error) {
+            console.warn('⚠️ Error sincronizando posición:', error)
+          }
+        }
+      }
+      
+      const connectionInterval = setInterval(checkConnection, 5000) // Check every 5 seconds
+      const positionInterval = setInterval(syncPosition, 2000) // Sync position every 2 seconds
+      
+      return () => {
+        clearInterval(connectionInterval)
+        clearInterval(positionInterval)
+      }
     }
-  }, [multiplayerClient]) // Solo cuando cambia el character inicial o el estado de movimiento
+  }, [multiplayerClient, localCharacter.x, localCharacter.y]) // Solo cuando cambia el character inicial o el estado de movimiento
 
   // Sincronizar otherPlayers cuando cambie allPlayers (simplificado)
   useEffect(() => {
@@ -923,10 +939,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
       // Configurar timeout para resetear isMoving después de 150ms de inactividad
       movementTimeoutRef.current = setTimeout(() => {
         setIsMoving(false)
-        // Enviar posición final cuando se detiene el movimiento
-        if (multiplayerClient) {
-          multiplayerClient.updatePlayerPosition(localCharacter.x, localCharacter.y)
-        }
+        // Disable position updates to prevent disconnect loops
       }, 150)
       
       // Actualizar posición local inmediatamente para respuesta fluida
@@ -934,16 +947,8 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
       setLocalCharacter(updatedCharacter)
       onCharacterUpdate(updatedCharacter)
       
-          // Enviar actualización al servidor con throttling (máximo cada 200ms)
-          const now = Date.now()
-          if (multiplayerClient && multiplayerClient.isConnectedToServer() && now - lastPositionUpdateRef.current > 200) {
-            try {
-              multiplayerClient.updatePlayerPosition(newX, newY)
-              lastPositionUpdateRef.current = now
-            } catch (error) {
-              console.warn('⚠️ Error enviando posición al servidor:', error)
-            }
-          }
+      // Disable real-time position updates to prevent disconnect loops
+      // Position updates will be handled by periodic polling instead
       
       // Update camera to follow player
       const targetCameraX = newX - CANVAS_WIDTH / 2
