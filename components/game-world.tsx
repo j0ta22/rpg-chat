@@ -299,6 +299,8 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
   useEffect(() => {
     const client = new SocketMultiplayerClient(
       (state: GameState) => {
+        console.log('📥 Estado del juego recibido:', state)
+        
         // Guardar todos los jugadores
         setAllPlayers(state.players)
         
@@ -314,9 +316,17 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
           }))
         }
         
-        // Separar otros jugadores (sin el actual)
+        // Separar otros jugadores (sin el actual) y asegurar que tengan lastSeen
         const others = { ...state.players }
         delete others[currentPlayerId]
+        
+        // Asegurar que todos los jugadores tengan lastSeen
+        Object.keys(others).forEach(playerId => {
+          if (!others[playerId].lastSeen) {
+            others[playerId].lastSeen = Date.now()
+          }
+        })
+        
         setOtherPlayers(others)
       },
       (player: Player) => {
@@ -333,12 +343,29 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
         // Player moved - actualizar posición inmediatamente
         console.log(`🔄 Jugador ${playerId} se movió a (${x}, ${y})`)
         
-        if (allPlayers[playerId]) {
-          setAllPlayers(prev => ({
+        // Actualizar en allPlayers para mantener sincronización
+        setAllPlayers(prev => ({
+          ...prev,
+          [playerId]: { 
+            ...prev[playerId], 
+            x, 
+            y,
+            lastSeen: Date.now()
+          }
+        }))
+        
+        // También actualizar en otherPlayers si no es el jugador actual
+        const currentPlayerId = client.getPlayerId()
+        if (playerId !== currentPlayerId) {
+          setOtherPlayers(prev => ({
             ...prev,
-            [playerId]: { ...prev[playerId], x, y }
+            [playerId]: { 
+              ...prev[playerId], 
+              x, 
+              y,
+              lastSeen: Date.now()
+            }
           }))
-          
         }
       },
       (message: ChatMessage) => {
@@ -397,7 +424,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
     }
   }, [multiplayerClient]) // Solo cuando cambia el character inicial o el estado de movimiento
 
-  // Sincronizar otherPlayers cuando cambie allPlayers
+  // Sincronizar otherPlayers cuando cambie allPlayers (simplificado)
   useEffect(() => {
     const others = { ...allPlayers }
     delete others[playerId]
@@ -965,20 +992,23 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
       localCharacter.avatar
     )
 
-    // Dibujar otros jugadores desde otherPlayers
-    Object.values(otherPlayers).forEach((player) => {
-      drawPlayer(
-        ctx, 
-        player.x, 
-        player.y, 
-        player.color, 
-        player.name, 
-        false, // No es el jugador actual
-        camera.x, 
-        camera.y,
-        player.currentMessage,
-        player.avatar
-      )
+    // Dibujar otros jugadores desde allPlayers (excluyendo el jugador actual)
+    Object.values(allPlayers).forEach((player) => {
+      // Solo dibujar si no es el jugador actual
+      if (player.id !== playerId) {
+        drawPlayer(
+          ctx, 
+          player.x, 
+          player.y, 
+          player.color, 
+          player.name, 
+          false, // No es el jugador actual
+          camera.x, 
+          camera.y,
+          player.currentMessage,
+          player.avatar
+        )
+      }
     })
 
     ctx.fillStyle = "rgba(0, 0, 0, 0.7)"
@@ -987,9 +1017,9 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
     ctx.font = "16px monospace"
     ctx.fillText(`Hero: ${localCharacter.name}`, 20, 30)
     ctx.fillText(`Position: ${Math.floor(localCharacter.x)}, ${Math.floor(localCharacter.y)}`, 20, 50)
-    ctx.fillText(`Players Online: ${Object.keys(otherPlayers).length + 1}`, 20, 70)
+    ctx.fillText(`Players Online: ${Object.keys(allPlayers).length}`, 20, 70)
     ctx.fillText(`Location: Medieval Tavern`, 20, 90)
-  }, [localCharacter, otherPlayers, camera, allPlayers, playerId])
+  }, [localCharacter, camera, allPlayers, playerId])
 
   const gameLoop = useCallback(() => {
     const hasChanges = updateGame()

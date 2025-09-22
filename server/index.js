@@ -136,10 +136,8 @@ io.on('connection', (socket) => {
           y: positionData.y
         });
         
-        // También enviar el estado completo para sincronización (menos frecuente)
-        if (Math.random() < 0.3) { // Solo 30% de las veces para reducir carga
-          socket.broadcast.emit('gameState', gameState);
-        }
+        // Enviar el estado completo para sincronización (siempre para mantener visibilidad)
+        socket.broadcast.emit('gameState', gameState);
       } catch (error) {
         console.error('❌ Error procesando actualización de posición:', error);
       }
