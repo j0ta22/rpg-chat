@@ -17,9 +17,13 @@ const io = socketIo(server, {
     methods: ["GET", "POST"],
     credentials: true
   },
-  transports: ['websocket', 'polling'],
-  pingTimeout: 60000,
-  pingInterval: 25000
+  transports: ['polling', 'websocket'], // Try polling first for better compatibility
+  pingTimeout: 30000, // 30 seconds
+  pingInterval: 15000, // 15 seconds
+  upgradeTimeout: 10000, // 10 seconds
+  allowEIO3: true, // Allow Engine.IO v3 clients
+  allowUpgrades: true,
+  perMessageDeflate: false // Disable compression for better performance
 });
 
 // Middleware

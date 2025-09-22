@@ -1,4 +1,4 @@
-import { io, Socket } from 'socket.io-client';
+import { io, Socket } from 'socket.io-client'
 
 export interface ChatMessage {
   id: string
@@ -33,13 +33,21 @@ export class SocketMultiplayerClient {
   private onChatMessage: (message: ChatMessage) => void
   private heartbeatInterval: NodeJS.Timeout | null = null
   private keepAliveInterval: NodeJS.Timeout | null = null
-  private readonly HEARTBEAT_INTERVAL = 5000 // 5 segundos
-  private readonly KEEPALIVE_INTERVAL = 30000 // 30 segundos
+  private connectionTimeout: NodeJS.Timeout | null = null
+  private readonly HEARTBEAT_INTERVAL = 8000 // 8 segundos
+  private readonly KEEPALIVE_INTERVAL = 15000 // 15 segundos
+  private readonly CONNECTION_TIMEOUT = 8000 // 8 segundos
   private readonly SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL || 
     (process.env.NODE_ENV === 'production' 
       ? 'https://rpg-chat-mfru.onrender.com' 
       : 'http://localhost:3001')
   private isConnected = false
+  private connectionAttempts = 0
+  private maxConnectionAttempts = 3
+  private isReconnecting = false
+  private lastSuccessfulConnection = 0
+  private reconnectDelay = 2000
+  private maxReconnectDelay = 10000
 
   constructor(
     onStateUpdate: (state: GameState) => void,
@@ -56,49 +64,103 @@ export class SocketMultiplayerClient {
   }
 
   async connect(): Promise<void> {
+    if (this.isConnected || this.isReconnecting) {
+      return
+    }
+
+    this.isReconnecting = true
+    this.connectionAttempts++
+
     return new Promise((resolve, reject) => {
       try {
-        console.log('🌍 Conectando al servidor...', this.SERVER_URL)
+        console.log(`🌍 Conectando al servidor... (intento ${this.connectionAttempts}/${this.maxConnectionAttempts})`, this.SERVER_URL)
         
+        // Clear any existing connection
+        if (this.socket) {
+          this.socket.disconnect()
+          this.socket = null
+        }
+
         this.socket = io(this.SERVER_URL, {
-          transports: ['websocket', 'polling'],
-          timeout: 10000,
+          transports: ['polling', 'websocket'], // Try polling first, then websocket
+          timeout: this.CONNECTION_TIMEOUT,
           forceNew: true,
-          reconnection: true,
-          reconnectionDelay: 2000,
-          reconnectionAttempts: 10,
-          maxReconnectionAttempts: 10,
-          reconnectionDelayMax: 10000
+          reconnection: false, // We handle reconnection manually
+          autoConnect: true,
+          upgrade: true,
+          rememberUpgrade: false,
+          withCredentials: false
         })
 
         this.setupEventListeners()
         
-        // Esperar a que la conexión esté realmente establecida
+        // Connection timeout
+        this.connectionTimeout = setTimeout(() => {
+          if (!this.isConnected) {
+            console.error('❌ Timeout de conexión')
+            this.handleConnectionFailure()
+            reject(new Error('Timeout de conexión'))
+          }
+        }, this.CONNECTION_TIMEOUT)
+
+        // Wait for connection
         this.socket.on('connect', () => {
-          this.isConnected = true
-          console.log('✅ Conectado al servidor')
-          this.startHeartbeat()
-          this.startKeepAlive()
+          this.handleSuccessfulConnection()
           resolve()
         })
 
         this.socket.on('connect_error', (error) => {
           console.error('❌ Error de conexión:', error)
+          this.handleConnectionFailure()
           reject(error)
         })
 
-        // Timeout de conexión
-        setTimeout(() => {
-          if (!this.isConnected) {
-            reject(new Error('Timeout de conexión'))
-          }
-        }, 15000)
-
       } catch (error) {
         console.error('❌ Error conectando al servidor:', error)
+        this.handleConnectionFailure()
         reject(error)
       }
     })
+  }
+
+  private handleSuccessfulConnection() {
+    this.isConnected = true
+    this.isReconnecting = false
+    this.connectionAttempts = 0
+    this.lastSuccessfulConnection = Date.now()
+    
+    if (this.connectionTimeout) {
+      clearTimeout(this.connectionTimeout)
+      this.connectionTimeout = null
+    }
+
+    console.log('✅ Conectado al servidor')
+    this.startHeartbeat()
+    this.startKeepAlive()
+  }
+
+  private handleConnectionFailure() {
+    this.isConnected = false
+    this.isReconnecting = false
+    
+    if (this.connectionTimeout) {
+      clearTimeout(this.connectionTimeout)
+      this.connectionTimeout = null
+    }
+
+    // Attempt reconnection with exponential backoff
+    if (this.connectionAttempts < this.maxConnectionAttempts) {
+      const delay = Math.min(this.reconnectDelay * Math.pow(1.5, this.connectionAttempts - 1), this.maxReconnectDelay)
+      console.log(`🔄 Reintentando conexión en ${delay}ms...`)
+      
+      setTimeout(() => {
+        this.connect().catch(() => {
+          // Reconnection failed, will be handled by handleConnectionFailure
+        })
+      }, delay)
+    } else {
+      console.error('❌ Máximo número de intentos de conexión alcanzado')
+    }
   }
 
   private setupEventListeners(): void {
@@ -134,15 +196,47 @@ export class SocketMultiplayerClient {
     })
 
     // Desconexión
-    this.socket.on('disconnect', () => {
-      console.log('🔌 Desconectado del servidor')
+    this.socket.on('disconnect', (reason) => {
+      console.log('🔌 Desconectado del servidor:', reason)
       this.isConnected = false
+      this.isReconnecting = false
+      
+      // Attempt reconnection if it wasn't a manual disconnect
+      if (reason !== 'io client disconnect') {
+        this.attemptReconnection()
+      }
+    })
+
+    // Error handling
+    this.socket.on('error', (error) => {
+      console.error('❌ Error del socket:', error)
     })
   }
 
+  private attemptReconnection() {
+    if (this.isReconnecting || this.connectionAttempts >= this.maxConnectionAttempts) {
+      return
+    }
+
+    this.isReconnecting = true
+    const delay = Math.min(this.reconnectDelay * Math.pow(1.5, this.connectionAttempts), this.maxReconnectDelay)
+    
+    console.log(`🔄 Intentando reconectar en ${delay}ms...`)
+    
+    setTimeout(() => {
+      this.connect().catch(() => {
+        // Reconnection failed, will be handled by handleConnectionFailure
+      })
+    }, delay)
+  }
+
   private startHeartbeat(): void {
+    if (this.heartbeatInterval) {
+      clearInterval(this.heartbeatInterval)
+    }
+
     this.heartbeatInterval = setInterval(() => {
-      if (this.socket && this.socket.connected) {
+      if (this.socket && this.socket.connected && this.isConnected) {
         this.socket.emit('heartbeat')
         console.log('💓 Heartbeat enviado')
       }
@@ -150,14 +244,31 @@ export class SocketMultiplayerClient {
   }
 
   private startKeepAlive(): void {
+    if (this.keepAliveInterval) {
+      clearInterval(this.keepAliveInterval)
+    }
+
     this.keepAliveInterval = setInterval(async () => {
       try {
-        const response = await fetch(`${this.SERVER_URL}/keepalive`)
+        const response = await fetch(`${this.SERVER_URL}/keepalive`, {
+          method: 'GET',
+          headers: {
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache'
+          }
+        })
+        
         if (response.ok) {
           console.log('🔄 Keep-alive enviado')
+        } else {
+          console.warn('⚠️ Keep-alive falló:', response.status)
         }
       } catch (error) {
         console.warn('⚠️ Error en keep-alive:', error)
+        // If keep-alive fails, try to reconnect
+        if (this.isConnected) {
+          this.attemptReconnection()
+        }
       }
     }, this.KEEPALIVE_INTERVAL)
   }
@@ -179,13 +290,13 @@ export class SocketMultiplayerClient {
   }
 
   updatePlayerPosition(x: number, y: number): void {
-    if (this.socket && this.socket.connected) {
+    if (this.socket && this.socket.connected && this.isConnected) {
       this.socket.emit('updatePosition', { x, y })
     }
   }
 
   sendChatMessage(message: string): void {
-    if (this.socket && this.socket.connected) {
+    if (this.socket && this.socket.connected && this.isConnected) {
       // Asegurar que el mensaje sea un string
       const messageText = typeof message === 'string' ? message : String(message);
       this.socket.emit('chatMessage', messageText)
@@ -193,12 +304,22 @@ export class SocketMultiplayerClient {
   }
 
   disconnect(): void {
+    this.isReconnecting = false
+    this.connectionAttempts = 0
+    
     if (this.heartbeatInterval) {
       clearInterval(this.heartbeatInterval)
+      this.heartbeatInterval = null
     }
     
     if (this.keepAliveInterval) {
       clearInterval(this.keepAliveInterval)
+      this.keepAliveInterval = null
+    }
+    
+    if (this.connectionTimeout) {
+      clearTimeout(this.connectionTimeout)
+      this.connectionTimeout = null
     }
     
     if (this.socket) {
@@ -224,6 +345,15 @@ export class SocketMultiplayerClient {
     return { players: {}, lastUpdate: Date.now() }
   }
 
+  getConnectionStatus() {
+    return {
+      connected: this.isConnected,
+      reconnecting: this.isReconnecting,
+      attempts: this.connectionAttempts,
+      lastConnection: this.lastSuccessfulConnection
+    }
+  }
+
   // Función estática para limpiar todos los jugadores
   static async clearAllPlayers(): Promise<void> {
     try {
@@ -231,7 +361,7 @@ export class SocketMultiplayerClient {
         (process.env.NODE_ENV === 'production' 
           ? 'https://rpg-chat-mfru.onrender.com' 
           : 'http://localhost:3001')
-        
+      
       const response = await fetch(`${serverUrl}/api/players`, {
         method: 'DELETE'
       })

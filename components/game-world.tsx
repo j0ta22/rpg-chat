@@ -181,6 +181,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
   const animationTimers = useRef<Record<string, number>>({})
   const movementTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const lastPositionUpdateRef = useRef<number>(0)
+  const connectionStatusRef = useRef<{ connected: boolean; lastCheck: number }>({ connected: false, lastCheck: 0 })
 
   const CANVAS_WIDTH = 800
   const CANVAS_HEIGHT = 600
@@ -371,7 +372,25 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
         clearTimeout(movementTimeoutRef.current)
       }
     }
-  }, [character.name, character.avatar, isMoving]) // Solo cuando cambia el character inicial o el estado de movimiento
+  }, [character.name, character.avatar, isMoving])
+
+  // Monitor connection status
+  useEffect(() => {
+    if (multiplayerClient) {
+      const checkConnection = () => {
+        const isConnected = multiplayerClient.isConnectedToServer()
+        const now = Date.now()
+        
+        if (connectionStatusRef.current.connected !== isConnected) {
+          connectionStatusRef.current = { connected: isConnected, lastCheck: now }
+          console.log(`🔌 Estado de conexión: ${isConnected ? 'Conectado' : 'Desconectado'}`)
+        }
+      }
+      
+      const interval = setInterval(checkConnection, 2000) // Check every 2 seconds
+      return () => clearInterval(interval)
+    }
+  }, [multiplayerClient]) // Solo cuando cambia el character inicial o el estado de movimiento
 
   // Sincronizar otherPlayers cuando cambie allPlayers
   useEffect(() => {
@@ -718,13 +737,13 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
               lines.push(currentLine)
             }
             
-            // Dimensiones del globo
+            // Dimensiones del globo con pixel-perfect positioning
             const padding = 8
             const lineHeight = 14
             const bubbleWidth = Math.min(maxWidth + padding * 2, Math.max(...lines.map(line => ctx.measureText(line).width)) + padding * 2)
             const bubbleHeight = lines.length * lineHeight + padding * 2
-            const bubbleX = screenX - bubbleWidth / 2
-            const bubbleY = screenY - 60 - bubbleHeight
+            const bubbleX = Math.floor(screenX - bubbleWidth / 2)
+            const bubbleY = Math.floor(screenY - 60 - bubbleHeight)
             
             // Dibujar sombra del globo
             ctx.fillStyle = `rgba(0, 0, 0, ${0.3 * opacity})`
@@ -739,22 +758,23 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
             ctx.lineWidth = 1
             ctx.strokeRect(bubbleX, bubbleY, bubbleWidth, bubbleHeight)
             
-            // Dibujar cola del globo (triángulo)
+            // Dibujar cola del globo (triángulo) con pixel-perfect positioning
             ctx.fillStyle = `rgba(255, 255, 255, ${0.95 * opacity})`
             ctx.beginPath()
-            ctx.moveTo(screenX - 8, bubbleY + bubbleHeight)
-            ctx.lineTo(screenX, screenY - 50)
-            ctx.lineTo(screenX + 8, bubbleY + bubbleHeight)
+            ctx.moveTo(Math.floor(screenX - 8), bubbleY + bubbleHeight)
+            ctx.lineTo(Math.floor(screenX), Math.floor(screenY - 50))
+            ctx.lineTo(Math.floor(screenX + 8), bubbleY + bubbleHeight)
             ctx.closePath()
             ctx.fill()
             ctx.stroke()
             
-            // Dibujar texto del mensaje
+            // Dibujar texto del mensaje con pixel-perfect positioning
             ctx.fillStyle = `rgba(0, 0, 0, ${opacity})`
             ctx.font = "12px monospace"
             ctx.textAlign = "center"
             lines.forEach((line, index) => {
-              ctx.fillText(line, screenX, bubbleY + padding + (index + 1) * lineHeight - 2)
+              const textY = Math.floor(bubbleY + padding + (index + 1) * lineHeight - 2)
+              ctx.fillText(line, Math.floor(screenX), textY)
             })
           }
         }
@@ -774,37 +794,47 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
           const frameX = safeFrame * spriteConfig.frameWidth
           const frameY = 0 // Solo una fila
           
-          // Dibujar SOLO el sprite (sin fallback)
+          // Dibujar SOLO el sprite (sin fallback) con pixel-perfect rendering
+          const drawX = Math.floor(screenX - spriteConfig.renderSize / 2)
+          const drawY = Math.floor(screenY - spriteConfig.renderSize / 2)
+          
           ctx.drawImage(
             spriteImage,
             frameX, frameY, 
             spriteConfig.frameWidth, spriteConfig.frameHeight,
-            screenX - spriteConfig.renderSize / 2, 
-            screenY - spriteConfig.renderSize / 2,
+            drawX, 
+            drawY,
             spriteConfig.renderSize, 
             spriteConfig.renderSize
           )
           
         } else {
-          // Fallback SOLO cuando no hay sprite disponible
+          // Fallback SOLO cuando no hay sprite disponible con pixel-perfect rendering
           const fallbackSize = spriteConfig.renderSize
-          ctx.fillStyle = color
-          ctx.fillRect(screenX - fallbackSize / 2, screenY - fallbackSize / 2, fallbackSize, fallbackSize)
+          const fallbackX = Math.floor(screenX - fallbackSize / 2)
+          const fallbackY = Math.floor(screenY - fallbackSize / 2)
           
+          ctx.fillStyle = color
+          ctx.fillRect(fallbackX, fallbackY, fallbackSize, fallbackSize)
           
           // Ojos simples para el fallback
           ctx.fillStyle = "#ffffff"
-          ctx.fillRect(screenX - 8, screenY - 8, 4, 4)
-          ctx.fillRect(screenX + 4, screenY - 8, 4, 4)
+          ctx.fillRect(Math.floor(screenX - 8), Math.floor(screenY - 8), 4, 4)
+          ctx.fillRect(Math.floor(screenX + 4), Math.floor(screenY - 8), 4, 4)
         }
 
-        // Nombre del jugador (solo esto, sin elementos antiguos)
+        // Nombre del jugador (solo esto, sin elementos antiguos) con pixel-perfect rendering
+        const nameX = Math.floor(screenX - 30)
+        const nameY = Math.floor(screenY - spriteConfig.renderSize / 2 - 20)
+        const nameTextX = Math.floor(screenX)
+        const nameTextY = Math.floor(screenY - spriteConfig.renderSize / 2 - 8)
+        
         ctx.fillStyle = "rgba(0, 0, 0, 0.7)"
-        ctx.fillRect(screenX - 30, screenY - spriteConfig.renderSize / 2 - 20, 60, 16)
+        ctx.fillRect(nameX, nameY, 60, 16)
         ctx.fillStyle = "#ffffff"
         ctx.font = "12px monospace"
         ctx.textAlign = "center"
-        ctx.fillText(name, screenX, screenY - spriteConfig.renderSize / 2 - 8)
+        ctx.fillText(name, nameTextX, nameTextY)
         ctx.textAlign = "left"
       }
     },
@@ -877,12 +907,12 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
       setLocalCharacter(updatedCharacter)
       onCharacterUpdate(updatedCharacter)
       
-      // Enviar actualización al servidor con throttling (máximo cada 50ms)
-      const now = Date.now()
-      if (multiplayerClient && now - lastPositionUpdateRef.current > 50) {
-        multiplayerClient.updatePlayerPosition(newX, newY)
-        lastPositionUpdateRef.current = now
-      }
+          // Enviar actualización al servidor con throttling (máximo cada 100ms)
+          const now = Date.now()
+          if (multiplayerClient && multiplayerClient.isConnectedToServer() && now - lastPositionUpdateRef.current > 100) {
+            multiplayerClient.updatePlayerPosition(newX, newY)
+            lastPositionUpdateRef.current = now
+          }
       
       // Update camera to follow player
       const targetCameraX = newX - CANVAS_WIDTH / 2
