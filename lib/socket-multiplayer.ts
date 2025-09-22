@@ -32,7 +32,9 @@ export class SocketMultiplayerClient {
   private onPlayerMove: (playerId: string, x: number, y: number) => void
   private onChatMessage: (message: ChatMessage) => void
   private heartbeatInterval: NodeJS.Timeout | null = null
+  private keepAliveInterval: NodeJS.Timeout | null = null
   private readonly HEARTBEAT_INTERVAL = 5000 // 5 segundos
+  private readonly KEEPALIVE_INTERVAL = 30000 // 30 segundos
   private readonly SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL || 
     (process.env.NODE_ENV === 'production' 
       ? 'https://rpg-chat-mfru.onrender.com' 
@@ -63,9 +65,10 @@ export class SocketMultiplayerClient {
           timeout: 10000,
           forceNew: true,
           reconnection: true,
-          reconnectionDelay: 1000,
-          reconnectionAttempts: 5,
-          maxReconnectionAttempts: 5
+          reconnectionDelay: 2000,
+          reconnectionAttempts: 10,
+          maxReconnectionAttempts: 10,
+          reconnectionDelayMax: 10000
         })
 
         this.setupEventListeners()
@@ -75,6 +78,7 @@ export class SocketMultiplayerClient {
           this.isConnected = true
           console.log('✅ Conectado al servidor')
           this.startHeartbeat()
+          this.startKeepAlive()
           resolve()
         })
 
@@ -145,6 +149,19 @@ export class SocketMultiplayerClient {
     }, this.HEARTBEAT_INTERVAL)
   }
 
+  private startKeepAlive(): void {
+    this.keepAliveInterval = setInterval(async () => {
+      try {
+        const response = await fetch(`${this.SERVER_URL}/keepalive`)
+        if (response.ok) {
+          console.log('🔄 Keep-alive enviado')
+        }
+      } catch (error) {
+        console.warn('⚠️ Error en keep-alive:', error)
+      }
+    }, this.KEEPALIVE_INTERVAL)
+  }
+
   joinGame(player: Omit<Player, "id" | "lastSeen">): void {
     if (this.socket && this.socket.connected && this.isConnected) {
       this.socket.emit('joinGame', player)
@@ -178,6 +195,10 @@ export class SocketMultiplayerClient {
   disconnect(): void {
     if (this.heartbeatInterval) {
       clearInterval(this.heartbeatInterval)
+    }
+    
+    if (this.keepAliveInterval) {
+      clearInterval(this.keepAliveInterval)
     }
     
     if (this.socket) {

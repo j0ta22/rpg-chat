@@ -66,6 +66,15 @@ app.get('/test', (req, res) => {
   });
 });
 
+// Keep-alive endpoint para mantener el servidor despierto
+app.get('/keepalive', (req, res) => {
+  res.status(200).json({ 
+    status: 'alive',
+    timestamp: new Date().toISOString(),
+    players: Object.keys(gameState.players).length
+  });
+});
+
 // API REST endpoints
 app.get('/api/state', (req, res) => {
   res.json(gameState);

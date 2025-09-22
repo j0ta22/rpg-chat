@@ -6,6 +6,8 @@ services:
     buildCommand: npm install
     startCommand: node index.js
     healthCheckPath: /health
+    healthCheckTimeout: 300
+    healthCheckInterval: 30
     envVars:
       - key: NODE_ENV
         value: production
