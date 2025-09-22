@@ -82,13 +82,13 @@ export class SocketMultiplayerClient {
         }
 
         this.socket = io(this.SERVER_URL, {
-          transports: ['polling', 'websocket'], // Try polling first, then websocket
+          transports: ['polling', 'websocket'],
           timeout: this.CONNECTION_TIMEOUT,
-          forceNew: true,
-          reconnection: false, // We handle reconnection manually
+          forceNew: false, // Reuse existing connection if possible
+          reconnection: false, // No automatic reconnection
           autoConnect: true,
           upgrade: true,
-          rememberUpgrade: false,
+          rememberUpgrade: true, // Remember successful transport
           withCredentials: false
         })
 
@@ -148,19 +148,7 @@ export class SocketMultiplayerClient {
       this.connectionTimeout = null
     }
 
-    // Attempt reconnection with exponential backoff
-    if (this.connectionAttempts < this.maxConnectionAttempts) {
-      const delay = Math.min(this.reconnectDelay * Math.pow(1.5, this.connectionAttempts - 1), this.maxReconnectDelay)
-      console.log(`🔄 Reintentando conexión en ${delay}ms...`)
-      
-      setTimeout(() => {
-        this.connect().catch(() => {
-          // Reconnection failed, will be handled by handleConnectionFailure
-        })
-      }, delay)
-    } else {
-      console.error('❌ Máximo número de intentos de conexión alcanzado')
-    }
+    console.error('❌ Fallo de conexión - no se intentará reconectar automáticamente')
   }
 
   private setupEventListeners(): void {
@@ -201,10 +189,8 @@ export class SocketMultiplayerClient {
       this.isConnected = false
       this.isReconnecting = false
       
-      // Attempt reconnection if it wasn't a manual disconnect
-      if (reason !== 'io client disconnect') {
-        this.attemptReconnection()
-      }
+      // No intentar reconectar automáticamente
+      console.log('🔌 Conexión perdida - se requiere reconexión manual')
     })
 
     // Error handling
@@ -213,22 +199,6 @@ export class SocketMultiplayerClient {
     })
   }
 
-  private attemptReconnection() {
-    if (this.isReconnecting || this.connectionAttempts >= this.maxConnectionAttempts) {
-      return
-    }
-
-    this.isReconnecting = true
-    const delay = Math.min(this.reconnectDelay * Math.pow(1.5, this.connectionAttempts), this.maxReconnectDelay)
-    
-    console.log(`🔄 Intentando reconectar en ${delay}ms...`)
-    
-    setTimeout(() => {
-      this.connect().catch(() => {
-        // Reconnection failed, will be handled by handleConnectionFailure
-      })
-    }, delay)
-  }
 
   private startHeartbeat(): void {
     if (this.heartbeatInterval) {
@@ -291,7 +261,11 @@ export class SocketMultiplayerClient {
 
   updatePlayerPosition(x: number, y: number): void {
     if (this.socket && this.socket.connected && this.isConnected) {
-      this.socket.emit('updatePosition', { x, y })
+      try {
+        this.socket.emit('updatePosition', { x, y })
+      } catch (error) {
+        console.warn('⚠️ Error enviando posición:', error)
+      }
     }
   }
 

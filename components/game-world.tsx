@@ -374,7 +374,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
     }
   }, [character.name, character.avatar, isMoving])
 
-  // Monitor connection status
+  // Monitor connection status (simplified)
   useEffect(() => {
     if (multiplayerClient) {
       const checkConnection = () => {
@@ -384,10 +384,15 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
         if (connectionStatusRef.current.connected !== isConnected) {
           connectionStatusRef.current = { connected: isConnected, lastCheck: now }
           console.log(`🔌 Estado de conexión: ${isConnected ? 'Conectado' : 'Desconectado'}`)
+          
+          // Si se perdió la conexión, no intentar reconectar automáticamente
+          if (!isConnected) {
+            console.log('🔌 Conexión perdida - el jugador permanecerá en el juego localmente')
+          }
         }
       }
       
-      const interval = setInterval(checkConnection, 2000) // Check every 2 seconds
+      const interval = setInterval(checkConnection, 5000) // Check every 5 seconds (less frequent)
       return () => clearInterval(interval)
     }
   }, [multiplayerClient]) // Solo cuando cambia el character inicial o el estado de movimiento
@@ -907,11 +912,15 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
       setLocalCharacter(updatedCharacter)
       onCharacterUpdate(updatedCharacter)
       
-          // Enviar actualización al servidor con throttling (máximo cada 100ms)
+          // Enviar actualización al servidor con throttling (máximo cada 200ms)
           const now = Date.now()
-          if (multiplayerClient && multiplayerClient.isConnectedToServer() && now - lastPositionUpdateRef.current > 100) {
-            multiplayerClient.updatePlayerPosition(newX, newY)
-            lastPositionUpdateRef.current = now
+          if (multiplayerClient && multiplayerClient.isConnectedToServer() && now - lastPositionUpdateRef.current > 200) {
+            try {
+              multiplayerClient.updatePlayerPosition(newX, newY)
+              lastPositionUpdateRef.current = now
+            } catch (error) {
+              console.warn('⚠️ Error enviando posición al servidor:', error)
+            }
           }
       
       // Update camera to follow player

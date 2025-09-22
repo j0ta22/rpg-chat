@@ -36,10 +36,10 @@ let gameState = {
   lastUpdate: Date.now()
 };
 
-// Limpiar jugadores inactivos cada 30 segundos
+// Limpiar jugadores inactivos cada 60 segundos (más tolerante)
 setInterval(() => {
   const now = Date.now();
-  const timeout = 30000; // 30 segundos
+  const timeout = 60000; // 60 segundos
   
   Object.keys(gameState.players).forEach(playerId => {
     if (now - gameState.players[playerId].lastSeen > timeout) {
@@ -49,7 +49,7 @@ setInterval(() => {
   });
   
   gameState.lastUpdate = now;
-}, 30000);
+}, 60000);
 
 // Health check endpoint para Render
 app.get('/health', (req, res) => {
@@ -123,20 +123,26 @@ io.on('connection', (socket) => {
   // Manejar actualización de posición
   socket.on('updatePosition', (positionData) => {
     if (gameState.players[socket.id]) {
-      gameState.players[socket.id].x = positionData.x;
-      gameState.players[socket.id].y = positionData.y;
-      gameState.players[socket.id].lastSeen = Date.now();
-      gameState.lastUpdate = Date.now();
-      
-      // Notificar a todos los clientes excepto al que envió la actualización
-      socket.broadcast.emit('playerMoved', {
-        playerId: socket.id,
-        x: positionData.x,
-        y: positionData.y
-      });
-      
-      // También enviar el estado completo para sincronización
-      socket.broadcast.emit('gameState', gameState);
+      try {
+        gameState.players[socket.id].x = positionData.x;
+        gameState.players[socket.id].y = positionData.y;
+        gameState.players[socket.id].lastSeen = Date.now();
+        gameState.lastUpdate = Date.now();
+        
+        // Notificar a todos los clientes excepto al que envió la actualización
+        socket.broadcast.emit('playerMoved', {
+          playerId: socket.id,
+          x: positionData.x,
+          y: positionData.y
+        });
+        
+        // También enviar el estado completo para sincronización (menos frecuente)
+        if (Math.random() < 0.3) { // Solo 30% de las veces para reducir carga
+          socket.broadcast.emit('gameState', gameState);
+        }
+      } catch (error) {
+        console.error('❌ Error procesando actualización de posición:', error);
+      }
     }
   });
 
