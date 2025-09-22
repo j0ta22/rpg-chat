@@ -370,23 +370,30 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
       }
     )
 
-    client.connect().then(() => {
-      setPlayerId(client.getPlayerId())
-      setMultiplayerClient(client)
-      
-      // Unirse al juego después de un breve delay para asegurar que la conexión esté estable
-      setTimeout(() => {
-        client.joinGame({
-          name: character.name,
-          avatar: character.avatar,
-          x: character.x || 100,
-          y: character.y || 150,
-          color: avatarColors[character.avatar] || "#3b82f6",
-        })
-      }, 500)
-    }).catch((error) => {
-      console.error('❌ Error conectando al servidor:', error)
-    })
+    // Solo conectar si no hay cliente existente
+    if (!multiplayerClient) {
+      client.connect().then(() => {
+        setPlayerId(client.getPlayerId())
+        setMultiplayerClient(client)
+        
+        // Unirse al juego después de un breve delay para asegurar que la conexión esté estable
+        setTimeout(() => {
+          client.joinGame({
+            name: character.name,
+            avatar: character.avatar,
+            x: character.x || 100,
+            y: character.y || 150,
+            color: avatarColors[character.avatar] || "#3b82f6",
+          })
+        }, 500)
+      }).catch((error) => {
+        console.error('❌ Error conectando al servidor:', error)
+      })
+    } else {
+      // Si ya hay un cliente, solo actualizar el ID
+      setPlayerId(multiplayerClient.getPlayerId())
+      setMultiplayerClient(multiplayerClient)
+    }
 
     return () => {
       client.disconnect()
@@ -991,7 +998,10 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
     Object.values(allPlayers).forEach((player) => {
       // Solo dibujar si no es el jugador actual y está marcado como visible
       if (player.id !== playerId && playerVisibility[player.id] !== false) {
-        console.log(`🎨 Dibujando jugador ${player.name} en (${player.x}, ${player.y})`)
+        // Solo loggear ocasionalmente para evitar spam
+        if (Math.random() < 0.01) { // 1% de las veces
+          console.log(`🎨 Dibujando jugador ${player.name} en (${player.x}, ${player.y})`)
+        }
         drawPlayer(
           ctx, 
           player.x, 
