@@ -84,11 +84,14 @@ export class SocketMultiplayerClient {
         this.socket = io(this.SERVER_URL, {
           transports: ['polling', 'websocket'],
           timeout: this.CONNECTION_TIMEOUT,
-          forceNew: true, // Always create new connection
-          reconnection: false, // No automatic reconnection
+          forceNew: false, // Reuse existing connection if possible
+          reconnection: true, // Enable automatic reconnection
+          reconnectionDelay: 1000, // 1 second delay
+          reconnectionAttempts: 5, // Max 5 attempts
+          reconnectionDelayMax: 5000, // Max 5 seconds delay
           autoConnect: true,
           upgrade: true,
-          rememberUpgrade: false, // Don't remember transport
+          rememberUpgrade: true, // Remember successful transport
           withCredentials: false
         })
 
@@ -189,8 +192,8 @@ export class SocketMultiplayerClient {
       this.isConnected = false
       this.isReconnecting = false
       
-      // No reconectar automáticamente
-      console.log('🔌 Conexión perdida - se requiere reconexión manual')
+      // Let Socket.IO handle reconnection automatically
+      console.log('🔌 Conexión perdida - Socket.IO intentará reconectar automáticamente')
     })
 
     // Error handling

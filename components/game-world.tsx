@@ -414,9 +414,9 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
         }
       }
       
-      // Sync position every 2 seconds instead of real-time updates
+      // Backup sync position every 10 seconds (only if not moving)
       const syncPosition = () => {
-        if (multiplayerClient && multiplayerClient.isConnectedToServer()) {
+        if (multiplayerClient && multiplayerClient.isConnectedToServer() && !isMoving) {
           try {
             multiplayerClient.updatePlayerPosition(localCharacter.x, localCharacter.y)
           } catch (error) {
@@ -426,7 +426,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
       }
       
       const connectionInterval = setInterval(checkConnection, 5000) // Check every 5 seconds
-      const positionInterval = setInterval(syncPosition, 2000) // Sync position every 2 seconds
+      const positionInterval = setInterval(syncPosition, 10000) // Backup sync every 10 seconds (only when not moving)
       
       return () => {
         clearInterval(connectionInterval)
@@ -939,7 +939,14 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
       // Configurar timeout para resetear isMoving después de 150ms de inactividad
       movementTimeoutRef.current = setTimeout(() => {
         setIsMoving(false)
-        // Disable position updates to prevent disconnect loops
+        // Send final position when movement stops
+        if (multiplayerClient && multiplayerClient.isConnectedToServer()) {
+          try {
+            multiplayerClient.updatePlayerPosition(localCharacter.x, localCharacter.y)
+          } catch (error) {
+            console.warn('⚠️ Error enviando posición final:', error)
+          }
+        }
       }, 150)
       
       // Actualizar posición local inmediatamente para respuesta fluida
@@ -947,8 +954,19 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
       setLocalCharacter(updatedCharacter)
       onCharacterUpdate(updatedCharacter)
       
-      // Disable real-time position updates to prevent disconnect loops
-      // Position updates will be handled by periodic polling instead
+      // Send position updates with smart throttling to prevent disconnect loops
+      const now = Date.now()
+      if (multiplayerClient && multiplayerClient.isConnectedToServer() && now - lastPositionUpdateRef.current > 100) {
+        try {
+          // Only send if we're actually moving and connected
+          if (isMoving) {
+            multiplayerClient.updatePlayerPosition(newX, newY)
+            lastPositionUpdateRef.current = now
+          }
+        } catch (error) {
+          console.warn('⚠️ Error enviando posición al servidor:', error)
+        }
+      }
       
       // Update camera to follow player
       const targetCameraX = newX - CANVAS_WIDTH / 2
