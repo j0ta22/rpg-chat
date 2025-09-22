@@ -332,7 +332,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
         // Player moved - actualizar posición inmediatamente
         console.log(`🔄 Jugador ${playerId} se movió a (${x}, ${y})`)
         
-        // Actualizar en allPlayers
+        // Solo actualizar allPlayers - otherPlayers se actualizará automáticamente via useEffect
         setAllPlayers(prev => ({
           ...prev,
           [playerId]: { 
@@ -342,20 +342,6 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
             lastSeen: Date.now()
           }
         }))
-        
-        // Actualizar en otherPlayers si no es el jugador actual
-        const currentPlayerId = client.getPlayerId()
-        if (playerId !== currentPlayerId) {
-          setOtherPlayers(prev => ({
-            ...prev,
-            [playerId]: { 
-              ...prev[playerId], 
-              x, 
-              y,
-              lastSeen: Date.now()
-            }
-          }))
-        }
         
         // Asegurar que el jugador permanezca visible
         setPlayerVisibility(prev => ({
@@ -435,11 +421,14 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
     }
   }, [multiplayerClient, localCharacter.x, localCharacter.y]) // Solo cuando cambia el character inicial o el estado de movimiento
 
-  // Sincronizar otherPlayers cuando cambie allPlayers (simplificado)
+  // Sincronizar otherPlayers cuando cambie allPlayers (robusto)
   useEffect(() => {
-    const others = { ...allPlayers }
-    delete others[playerId]
-    setOtherPlayers(others)
+    if (playerId && Object.keys(allPlayers).length > 0) {
+      const others = { ...allPlayers }
+      delete others[playerId]
+      setOtherPlayers(others)
+      console.log(`🔄 Sincronizando otherPlayers: ${Object.keys(others).length} jugadores`)
+    }
   }, [allPlayers, playerId])
 
 
@@ -1124,7 +1113,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
           <p className="text-sm pixel-text text-muted-foreground">
             {Object.keys(otherPlayers).length > 0
               ? `Playing with ${Object.keys(otherPlayers).length} other ${Object.keys(otherPlayers).length === 1 ? "hero" : "heroes"}`
-              : "Waiting for other heroes to join..."}
+              : `Waiting for other heroes to join... (allPlayers: ${Object.keys(allPlayers).length}, playerId: ${playerId})`}
           </p>
         </CardHeader>
         <CardContent className="space-y-4">
