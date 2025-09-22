@@ -4,6 +4,9 @@ const socketIo = require('socket.io');
 const cors = require('cors');
 const { v4: uuidv4 } = require('uuid');
 
+const PORT = process.env.PORT || 3001;
+const NODE_ENV = process.env.NODE_ENV || 'development';
+
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server, {
@@ -15,9 +18,6 @@ const io = socketIo(server, {
     credentials: true
   }
 });
-
-const PORT = process.env.PORT || 3001;
-const NODE_ENV = process.env.NODE_ENV || 'development';
 
 // Middleware
 app.use(cors());
