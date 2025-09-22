@@ -167,6 +167,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
   const [multiplayerClient, setMultiplayerClient] = useState<SocketMultiplayerClient | null>(null)
   const [otherPlayers, setOtherPlayers] = useState<Record<string, Player>>({})
   const [allPlayers, setAllPlayers] = useState<Record<string, Player>>({})
+  const [playerVisibility, setPlayerVisibility] = useState<Record<string, boolean>>({})
   const [playerId, setPlayerId] = useState<string>("")
   const [camera, setCamera] = useState({ x: 0, y: 0 })
   const [localCharacter, setLocalCharacter] = useState<Character>(character)
@@ -301,33 +302,21 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
       (state: GameState) => {
         console.log('📥 Estado del juego recibido:', state)
         
-        // Guardar todos los jugadores
+        // Actualizar todos los jugadores directamente
         setAllPlayers(state.players)
         
-        // Actualizar posición local si el jugador está en el estado del servidor
-        // Solo si no se está moviendo activamente para evitar conflictos
+        // Separar otros jugadores (sin el actual)
         const currentPlayerId = client.getPlayerId()
-        if (state.players[currentPlayerId] && !isMoving) {
-          const serverPlayer = state.players[currentPlayerId]
-          setLocalCharacter(prev => ({
-            ...prev,
-            x: serverPlayer.x,
-            y: serverPlayer.y
-          }))
-        }
-        
-        // Separar otros jugadores (sin el actual) y asegurar que tengan lastSeen
         const others = { ...state.players }
         delete others[currentPlayerId]
-        
-        // Asegurar que todos los jugadores tengan lastSeen
-        Object.keys(others).forEach(playerId => {
-          if (!others[playerId].lastSeen) {
-            others[playerId].lastSeen = Date.now()
-          }
-        })
-        
         setOtherPlayers(others)
+        
+        // Marcar todos los jugadores como visibles
+        const visibility: Record<string, boolean> = {}
+        Object.keys(state.players).forEach(id => {
+          visibility[id] = true
+        })
+        setPlayerVisibility(visibility)
       },
       (player: Player) => {
         // Player joined
@@ -343,7 +332,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
         // Player moved - actualizar posición inmediatamente
         console.log(`🔄 Jugador ${playerId} se movió a (${x}, ${y})`)
         
-        // Actualizar en allPlayers para mantener sincronización
+        // Actualizar en allPlayers
         setAllPlayers(prev => ({
           ...prev,
           [playerId]: { 
@@ -354,7 +343,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
           }
         }))
         
-        // También actualizar en otherPlayers si no es el jugador actual
+        // Actualizar en otherPlayers si no es el jugador actual
         const currentPlayerId = client.getPlayerId()
         if (playerId !== currentPlayerId) {
           setOtherPlayers(prev => ({
@@ -367,6 +356,12 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
             }
           }))
         }
+        
+        // Asegurar que el jugador permanezca visible
+        setPlayerVisibility(prev => ({
+          ...prev,
+          [playerId]: true
+        }))
       },
       (message: ChatMessage) => {
         // Chat message received
@@ -994,8 +989,9 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
 
     // Dibujar otros jugadores desde allPlayers (excluyendo el jugador actual)
     Object.values(allPlayers).forEach((player) => {
-      // Solo dibujar si no es el jugador actual
-      if (player.id !== playerId) {
+      // Solo dibujar si no es el jugador actual y está marcado como visible
+      if (player.id !== playerId && playerVisibility[player.id] !== false) {
+        console.log(`🎨 Dibujando jugador ${player.name} en (${player.x}, ${player.y})`)
         drawPlayer(
           ctx, 
           player.x, 
@@ -1019,7 +1015,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
     ctx.fillText(`Position: ${Math.floor(localCharacter.x)}, ${Math.floor(localCharacter.y)}`, 20, 50)
     ctx.fillText(`Players Online: ${Object.keys(allPlayers).length}`, 20, 70)
     ctx.fillText(`Location: Medieval Tavern`, 20, 90)
-  }, [localCharacter, camera, allPlayers, playerId])
+  }, [localCharacter, camera, allPlayers, playerId, playerVisibility])
 
   const gameLoop = useCallback(() => {
     const hasChanges = updateGame()

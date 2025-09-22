@@ -129,6 +129,8 @@ io.on('connection', (socket) => {
         gameState.players[socket.id].lastSeen = Date.now();
         gameState.lastUpdate = Date.now();
         
+        console.log(`🔄 Jugador ${gameState.players[socket.id].name} se movió a (${positionData.x}, ${positionData.y})`);
+        
         // Notificar a todos los clientes excepto al que envió la actualización
         socket.broadcast.emit('playerMoved', {
           playerId: socket.id,
@@ -138,6 +140,9 @@ io.on('connection', (socket) => {
         
         // Enviar el estado completo para sincronización (siempre para mantener visibilidad)
         socket.broadcast.emit('gameState', gameState);
+        
+        // También enviar al cliente que se movió para confirmación
+        socket.emit('gameState', gameState);
       } catch (error) {
         console.error('❌ Error procesando actualización de posición:', error);
       }
@@ -197,6 +202,10 @@ io.on('connection', (socket) => {
   socket.on('heartbeat', () => {
     if (gameState.players[socket.id]) {
       gameState.players[socket.id].lastSeen = Date.now();
+      gameState.lastUpdate = Date.now();
+      
+      // Enviar estado actualizado para mantener sincronización
+      socket.emit('gameState', gameState);
     }
   });
 });
