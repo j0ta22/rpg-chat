@@ -11,7 +11,7 @@ npm install
 ### 2. Deploy en Render
 
 1. **Crear cuenta en Render:**
-   - Ve a [render.com](https://render.com)
+fy y   - Ve a [render.com](https://render.com)
    - Conecta tu cuenta de GitHub
 
 2. **Crear nuevo Web Service:**
@@ -42,7 +42,7 @@ npm install
 
 2. **Configurar variables de entorno:**
    - En Netlify Dashboard → Site settings → Environment variables
-   - Agregar: `NEXT_PUBLIC_SERVER_URL=https://rpg-chat-server.onrender.com`
+   - Agregar: `NEXT_PUBLIC_SERVER_URL=https://rpg-chat-mfru.onrender.com`
    - Agregar: `NODE_ENV=production`
 
 3. **Deploy:**
@@ -52,8 +52,8 @@ npm install
 ### 2. Actualizar URLs en el código
 
 Después del deploy, actualiza las URLs en `lib/socket-multiplayer.ts`:
-- Cambia `https://rpg-chat-server.onrender.com` por tu URL real de Render
-- Cambia `https://tu-app.netlify.app` por tu URL real de Netlify
+- Cambia `https://rpg-chat-mfru.onrender.com` por tu URL real de Render (ya actualizado)
+- Cambia `https://dancing-banoffee-3f1566.netlify.app` por tu URL real de Netlify (ya actualizado)
 
 ## Estructura del Proyecto
 
@@ -90,6 +90,6 @@ npm run deploy:netlify
 
 ## URLs de ejemplo
 
-- **Servidor**: `https://rpg-chat-server.onrender.com`
-- **Frontend**: `https://tu-app.netlify.app`
-- **API**: `https://rpg-chat-server.onrender.com/api/state`
+- **Servidor**: `https://rpg-chat-mfru.onrender.com`
+- **Frontend**: `https://dancing-banoffee-3f1566.netlify.app`
+- **API**: `https://rpg-chat-mfru.onrender.com/api/state`

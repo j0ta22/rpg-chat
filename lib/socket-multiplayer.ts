@@ -35,7 +35,7 @@ export class SocketMultiplayerClient {
   private readonly HEARTBEAT_INTERVAL = 5000 // 5 segundos
   private readonly SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL || 
     (process.env.NODE_ENV === 'production' 
-      ? 'https://rpg-chat-server.onrender.com' 
+      ? 'https://rpg-chat-mfru.onrender.com' 
       : 'http://localhost:3001')
   private isConnected = false
 
@@ -202,7 +202,7 @@ export class SocketMultiplayerClient {
     try {
       const serverUrl = process.env.NEXT_PUBLIC_SERVER_URL || 
         (process.env.NODE_ENV === 'production' 
-          ? 'https://rpg-chat-server.onrender.com' 
+          ? 'https://rpg-chat-mfru.onrender.com' 
           : 'http://localhost:3001')
         
       const response = await fetch(`${serverUrl}/api/players`, {

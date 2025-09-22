@@ -12,7 +12,7 @@ const server = http.createServer(app);
 const io = socketIo(server, {
   cors: {
     origin: NODE_ENV === 'production' 
-      ? ["https://tu-app.netlify.app", "https://tu-app.netlify.app/", "http://localhost:3000"] 
+      ? ["https://dancing-banoffee-3f1566.netlify.app", "https://dancing-banoffee-3f1566.netlify.app/", "http://localhost:3000"] 
       : "*",
     methods: ["GET", "POST"],
     credentials: true
