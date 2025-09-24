@@ -26,6 +26,5 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# large audio files
-public/tavern.mp3
-*.mp3
+# large audio files (only files > 50MB)
+# *.mp3
