@@ -126,16 +126,18 @@ io.on('connection', (socket) => {
       try {
         gameState.players[socket.id].x = positionData.x;
         gameState.players[socket.id].y = positionData.y;
+        gameState.players[socket.id].direction = positionData.direction || 'down'; // Incluir dirección
         gameState.players[socket.id].lastSeen = Date.now();
         gameState.lastUpdate = Date.now();
         
-        console.log(`🔄 Jugador ${gameState.players[socket.id].name} se movió a (${positionData.x}, ${positionData.y})`);
+        console.log(`🔄 Jugador ${gameState.players[socket.id].name} se movió a (${positionData.x}, ${positionData.y}) dirección: ${positionData.direction || 'down'}`);
         
         // Notificar a todos los clientes excepto al que envió la actualización
         socket.broadcast.emit('playerMoved', {
           playerId: socket.id,
           x: positionData.x,
-          y: positionData.y
+          y: positionData.y,
+          direction: positionData.direction || 'down'
         });
         
         // Enviar el estado completo para sincronización (siempre para mantener visibilidad)

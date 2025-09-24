@@ -262,10 +262,10 @@ export class SocketMultiplayerClient {
     }
   }
 
-  updatePlayerPosition(x: number, y: number): void {
+  updatePlayerPosition(x: number, y: number, direction?: string): void {
     if (this.socket && this.socket.connected && this.isConnected) {
       try {
-        this.socket.emit('updatePosition', { x, y })
+        this.socket.emit('updatePosition', { x, y, direction: direction || 'down' })
       } catch (error) {
         console.warn('⚠️ Error enviando posición:', error)
       }

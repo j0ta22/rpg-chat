@@ -235,6 +235,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
   const animationTimers = useRef<Record<string, number>>({})
   const movementTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const lastPositionUpdateRef = useRef<number>(0)
+  const positionUpdateQueueRef = useRef<{x: number, y: number, direction: string} | null>(null)
   const connectionStatusRef = useRef<{ connected: boolean; lastCheck: number }>({ connected: false, lastCheck: 0 })
   const [nearbyNPC, setNearbyNPC] = useState<NPC | null>(null)
   const [showNPCDialog, setShowNPCDialog] = useState(false)
@@ -479,7 +480,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
       const syncPosition = () => {
         if (multiplayerClient && multiplayerClient.isConnectedToServer() && !isMoving) {
           try {
-            multiplayerClient.updatePlayerPosition(localCharacter.x, localCharacter.y)
+            multiplayerClient.updatePlayerPosition(localCharacter.x, localCharacter.y, playerDirection)
           } catch (error) {
             console.warn('⚠️ Error sincronizando posición:', error)
           }
@@ -1005,18 +1006,23 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
         clearTimeout(movementTimeoutRef.current)
       }
       
-      // Configurar timeout para resetear isMoving después de 150ms de inactividad
+      // Configurar timeout para resetear isMoving después de 250ms de inactividad
       movementTimeoutRef.current = setTimeout(() => {
         setIsMoving(false)
-        // Send final position when movement stops
-        if (multiplayerClient && multiplayerClient.isConnectedToServer()) {
+        // Send final position when movement stops (only if we haven't sent recently)
+        const now = Date.now()
+        if (multiplayerClient && multiplayerClient.isConnectedToServer() && now - lastPositionUpdateRef.current > 100) {
           try {
-            multiplayerClient.updatePlayerPosition(localCharacter.x, localCharacter.y)
+            // Use queued position if available, otherwise use current position
+            const finalPosition = positionUpdateQueueRef.current || { x: localCharacter.x, y: localCharacter.y, direction: playerDirection }
+            multiplayerClient.updatePlayerPosition(finalPosition.x, finalPosition.y, finalPosition.direction)
+            lastPositionUpdateRef.current = now
+            positionUpdateQueueRef.current = null // Clear the queue
           } catch (error) {
             console.warn('⚠️ Error enviando posición final:', error)
           }
         }
-      }, 150)
+      }, 250)
       
       // Actualizar posición local inmediatamente para respuesta fluida
       const updatedCharacter = { ...localCharacter, x: newX, y: newY }
@@ -1025,16 +1031,21 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
       
       // Send position updates with smart throttling to prevent disconnect loops
       const now = Date.now()
-      if (multiplayerClient && multiplayerClient.isConnectedToServer() && now - lastPositionUpdateRef.current > 100) {
+      if (multiplayerClient && multiplayerClient.isConnectedToServer() && now - lastPositionUpdateRef.current > 150) {
         try {
           // Only send if we're actually moving and connected
           if (isMoving) {
-            multiplayerClient.updatePlayerPosition(newX, newY)
+            // Queue the latest position to avoid spam
+            positionUpdateQueueRef.current = { x: newX, y: newY, direction: playerDirection }
+            multiplayerClient.updatePlayerPosition(newX, newY, playerDirection)
             lastPositionUpdateRef.current = now
           }
         } catch (error) {
           console.warn('⚠️ Error enviando posición al servidor:', error)
         }
+      } else if (isMoving) {
+        // Queue the position even if we can't send it yet
+        positionUpdateQueueRef.current = { x: newX, y: newY, direction: playerDirection }
       }
       
       // Update camera to follow player
@@ -1103,7 +1114,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
           camera.y,
           player.currentMessage,
           player.avatar,
-          'down' // Dirección por defecto para otros jugadores
+          player.direction || 'down' // Usar la dirección del jugador o 'down' por defecto
         )
       }
     })
@@ -1236,12 +1247,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
     <div className="flex flex-col lg:flex-row items-start justify-center space-y-6 lg:space-y-0 lg:space-x-6 p-4">
       <Card className="character-card">
         <CardHeader className="text-center pb-4">
-          <CardTitle className="text-2xl font-bold pixel-text">{`${localCharacter.name}'s Tavern Adventure`}</CardTitle>
-          <p className="text-sm pixel-text text-muted-foreground">
-            {Object.keys(otherPlayers).length > 0
-              ? `Playing with ${Object.keys(otherPlayers).length} other ${Object.keys(otherPlayers).length === 1 ? "hero" : "heroes"}`
-              : `Waiting for other heroes to join... (allPlayers: ${Object.keys(allPlayers).length}, playerId: ${playerId})`}
-          </p>
+          <CardTitle className="text-2xl font-bold pixel-text">Apestore's tavern</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="relative">
