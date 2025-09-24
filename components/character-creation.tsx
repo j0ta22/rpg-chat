@@ -16,73 +16,66 @@ interface CharacterCreationProps {
   onCharacterCreated: (character: Character) => void
 }
 
-// Definición de las 4 clases disponibles
-const classes = [
-  { 
-    id: "warrior", 
-    name: "Warrior", 
-    description: "Strong melee fighter",
-    sprite: "/4.png" 
-  },
-  { 
-    id: "archer", 
-    name: "Archer", 
-    description: "Ranged combat expert",
-    sprite: "/3.png" 
-  },
-  { 
-    id: "lancer", 
-    name: "Lancer",  
-    description: "Spear-wielding warrior",
-    sprite: "/2.png" 
-  },
-  { 
-    id: "monk", 
-    name: "Monk",  
-    description: "Spiritual fighter",
-    sprite: "/1.png" 
-  },
+// Definición de los 32 avatares disponibles
+const avatars = [
+  { id: "character_1", name: "Hero 1", description: "Brave warrior", sprite: "/sprite_split/character_1/character_1_frame32x32.png" },
+  { id: "character_2", name: "Hero 2", description: "Mystic mage", sprite: "/sprite_split/character_2/character_2_frame32x32.png" },
+  { id: "character_3", name: "Hero 3", description: "Swift archer", sprite: "/sprite_split/character_3/character_3_frame32x32.png" },
+  { id: "character_4", name: "Hero 4", description: "Dark knight", sprite: "/sprite_split/character_4/character_4_frame32x32.png" },
+  { id: "character_5", name: "Hero 5", description: "Noble paladin", sprite: "/sprite_split/character_5/character_5_frame32x32.png" },
+  { id: "character_6", name: "Hero 6", description: "Purple mage", sprite: "/sprite_split/character_6/character_6_frame32x32.png" },
+  { id: "character_7", name: "Hero 7", description: "Red warrior", sprite: "/sprite_split/character_7/character_7_frame32x32.png" },
+  { id: "character_8", name: "Hero 8", description: "Orange monk", sprite: "/sprite_split/character_8/character_8_frame32x32.png" },
+  { id: "character_9", name: "Hero 9", description: "Cyan fighter", sprite: "/sprite_split/character_9/character_9_frame32x32.png" },
+  { id: "character_10", name: "Hero 10", description: "Green ranger", sprite: "/sprite_split/character_10/character_10_frame32x32.png" },
+  { id: "character_11", name: "Hero 11", description: "Pink warrior", sprite: "/sprite_split/character_11/character_11_frame32x32.png" },
+  { id: "character_12", name: "Hero 12", description: "Indigo mage", sprite: "/sprite_split/character_12/character_12_frame32x32.png" },
+  { id: "character_13", name: "Hero 13", description: "Teal fighter", sprite: "/sprite_split/character_13/character_13_frame32x32.png" },
+  { id: "character_14", name: "Hero 14", description: "Golden warrior", sprite: "/sprite_split/character_14/character_14_frame32x32.png" },
+  { id: "character_15", name: "Hero 15", description: "Crimson knight", sprite: "/sprite_split/character_15/character_15_frame32x32.png" },
+  { id: "character_16", name: "Hero 16", description: "Violet mage", sprite: "/sprite_split/character_16/character_16_frame32x32.png" },
+  { id: "character_17", name: "Hero 17", description: "Sky fighter", sprite: "/sprite_split/character_17/character_17_frame32x32.png" },
+  { id: "character_18", name: "Hero 18", description: "Lime ranger", sprite: "/sprite_split/character_18/character_18_frame32x32.png" },
+  { id: "character_19", name: "Hero 19", description: "Rose warrior", sprite: "/sprite_split/character_19/character_19_frame32x32.png" },
+  { id: "character_20", name: "Hero 20", description: "Blue mage", sprite: "/sprite_split/character_20/character_20_frame32x32.png" },
+  { id: "character_21", name: "Hero 21", description: "Aqua fighter", sprite: "/sprite_split/character_21/character_21_frame32x32.png" },
+  { id: "character_22", name: "Hero 22", description: "Amber warrior", sprite: "/sprite_split/character_22/character_22_frame32x32.png" },
+  { id: "character_23", name: "Hero 23", description: "Scarlet knight", sprite: "/sprite_split/character_23/character_23_frame32x32.png" },
+  { id: "character_24", name: "Hero 24", description: "Purple mage", sprite: "/sprite_split/character_24/character_24_frame32x32.png" },
+  { id: "character_25", name: "Hero 25", description: "Cyan fighter", sprite: "/sprite_split/character_25/character_25_frame32x32.png" },
+  { id: "character_26", name: "Hero 26", description: "Lime ranger", sprite: "/sprite_split/character_26/character_26_frame32x32.png" },
+  { id: "character_27", name: "Hero 27", description: "Pink warrior", sprite: "/sprite_split/character_27/character_27_frame32x32.png" },
+  { id: "character_28", name: "Hero 28", description: "Indigo mage", sprite: "/sprite_split/character_28/character_28_frame32x32.png" },
+  { id: "character_29", name: "Hero 29", description: "Teal fighter", sprite: "/sprite_split/character_29/character_29_frame32x32.png" },
+  { id: "character_30", name: "Hero 30", description: "Golden warrior", sprite: "/sprite_split/character_30/character_30_frame32x32.png" },
+  { id: "character_31", name: "Hero 31", description: "Crimson knight", sprite: "/sprite_split/character_31/character_31_frame32x32.png" },
+  { id: "character_32", name: "Hero 32", description: "Violet mage", sprite: "/sprite_split/character_32/character_32_frame32x32.png" },
 ]
 
-// Definición de los 4 colores disponibles
-const colors = [
-  { id: "black", name: "Black", color: "bg-gray-800", textColor: "text-white" },
-  { id: "blue", name: "Blue", color: "bg-blue-500", textColor: "text-white" },
-  { id: "red", name: "Red", color: "bg-red-500", textColor: "text-white" },
-  { id: "yellow", name: "Yellow", color: "bg-yellow-500", textColor: "text-black" },
-]
 
 export default function CharacterCreation({ onCharacterCreated }: CharacterCreationProps) {
   const [name, setName] = useState("")
-  const [selectedClass, setSelectedClass] = useState<string>("")
-  const [selectedColor, setSelectedColor] = useState<string>("")
+
+  // Función para asignar un avatar aleatorio
+  const assignRandomAvatar = () => {
+    const randomIndex = Math.floor(Math.random() * avatars.length)
+    return avatars[randomIndex].id
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (name.trim() && selectedClass && selectedColor) {
-      const avatarId = `${selectedColor}-${selectedClass}`
-      onCharacterCreated({ name: name.trim(), avatar: avatarId })
+    if (name.trim()) {
+      const avatar = assignRandomAvatar()
+      onCharacterCreated({ name: name.trim(), avatar })
     }
   }
 
-  // Generar sprite path dinámicamente
-  const getSpritePath = (classId: string, colorId: string) => {
-    const colorName = colorId.charAt(0).toUpperCase() + colorId.slice(1)
-    const className = classId.charAt(0).toUpperCase() + classId.slice(1)
-    
-    // Caso especial para Monk (no tiene sufijo _Idle)
-    if (classId === 'monk') {
-      return `/Tiny Swords (Free Pack)/Units/${colorName} Units/${className}/Idle.png`
-    }
-    
-    return `/Tiny Swords (Free Pack)/Units/${colorName} Units/${className}/${className}_Idle.png`
-  }
 
   return (
     <Card className="character-card w-full max-w-2xl">
       <CardHeader className="text-center">
         <CardTitle className="text-4xl font-bold text-primary mb-2">{"Create Your Hero"}</CardTitle>
-        <p className="text-muted-foreground text-lg">{"Choose your name and avatar to begin your adventure"}</p>
+        <p className="text-muted-foreground text-lg">{"Enter your name and get a random avatar to begin your adventure"}</p>
       </CardHeader>
       <CardContent className="space-y-8">
         <form onSubmit={handleSubmit} className="space-y-8">
@@ -101,76 +94,19 @@ export default function CharacterCreation({ onCharacterCreated }: CharacterCreat
             />
           </div>
 
-          {/* Selección de Clase */}
+          {/* Información sobre asignación aleatoria */}
           <div className="space-y-4">
-            <label className="text-lg font-semibold text-foreground">{"Choose Your Class"}</label>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {classes.map((classItem) => (
-                <button
-                  key={classItem.id}
-                  type="button"
-                  onClick={() => setSelectedClass(classItem.id)}
-                  className={`p-4 rounded-xl border-3 transition-all duration-300 hover:scale-105 ${
-                    selectedClass === classItem.id
-                      ? "border-primary bg-primary/10 shadow-lg"
-                      : "border-border hover:border-primary/50"
-                  }`}
-                >
-                  <div className="flex flex-col items-center space-y-2">
-                    {/* Preview del sprite */}
-                    <div className="w-16 h-16 relative">
-                      <img
-                        src={classItem.sprite}
-                        alt={classItem.name}
-                        className="w-full h-full object-contain pixel-art"
-                      />
-                    </div>
-                    {/* Fallback emoji si el sprite no carga */}
-                    <div className="text-center">
-                      <p className="font-semibold text-foreground text-sm">{classItem.name}</p>
-                      <p className="text-xs text-muted-foreground">{classItem.description}</p>
-                    </div>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Selección de Color */}
-          <div className="space-y-4">
-            <label className="text-lg font-semibold text-foreground">{"Choose Your Color"}</label>
-            <div className="grid grid-cols-4 gap-4">
-              {colors.map((color) => (
-                <button
-                  key={color.id}
-                  type="button"
-                  onClick={() => setSelectedColor(color.id)}
-                  className={`p-4 rounded-xl border-3 transition-all duration-300 hover:scale-105 ${
-                    selectedColor === color.id
-                      ? "border-primary bg-primary/10 shadow-lg"
-                      : "border-border hover:border-primary/50"
-                  }`}
-                >
-                  <div className="flex flex-col items-center space-y-2">
-                    {/* Preview del sprite con color seleccionado */}
-                 
-                    {/* Fallback emoji con color */}
-                    <div
-                      className={`w-8 h-8 rounded-full ${color.color} flex items-center justify-center text-lg ${color.textColor}`}
-                    >
-
-                    </div>
-                    <p className={`font-semibold text-sm ${color.textColor}`}>{color.name}</p>
-                  </div>
-                </button>
-              ))}
+            <div className="text-center p-4 rounded-xl border-2 border-primary/20 bg-primary/5">
+              <p className="text-muted-foreground text-sm">
+                🎲 Your avatar will be randomly assigned when you start your adventure
+              </p>
             </div>
           </div>
 
 
           <Button
             type="submit"
-            disabled={!name.trim() || !selectedClass || !selectedColor}
+            disabled={!name.trim()}
             className="w-full text-xl py-6 bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-xl transition-all duration-300 hover:scale-105"
           >
             {"Start Adventure"}
@@ -180,3 +116,4 @@ export default function CharacterCreation({ onCharacterCreated }: CharacterCreat
     </Card>
   )
 }
+

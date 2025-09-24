@@ -13,6 +13,16 @@ interface Character {
   y: number
 }
 
+interface NPC {
+  id: string
+  name: string
+  x: number
+  y: number
+  avatar: string
+  message: string
+  interactionRadius: number
+}
+
 interface GameWorldProps {
   character: Character
   onCharacterUpdate: (character: Character) => void
@@ -33,13 +43,29 @@ type AvatarKey = keyof typeof avatarSprites
 // Función para migrar avatares antiguos a nuevos
 const migrateAvatar = (oldAvatar: string): AvatarKey => {
   const avatarMigration: Record<string, AvatarKey> = {
-    'knight': 'blue-warrior',
-    'warrior': 'blue-warrior',
-    'wizard': 'blue-monk',
-    'mage': 'blue-monk',
-    'archer': 'blue-archer',
-    'rogue': 'black-warrior',
-    'paladin': 'yellow-warrior',
+    'knight': 'character_1',
+    'warrior': 'character_1',
+    'wizard': 'character_2',
+    'mage': 'character_2',
+    'archer': 'character_3',
+    'rogue': 'character_4',
+    'paladin': 'character_5',
+    'black-warrior': 'character_1',
+    'black-archer': 'character_2',
+    'black-lancer': 'character_3',
+    'black-monk': 'character_4',
+    'blue-warrior': 'character_5',
+    'blue-archer': 'character_6',
+    'blue-lancer': 'character_7',
+    'blue-monk': 'character_8',
+    'red-warrior': 'character_9',
+    'red-archer': 'character_10',
+    'red-lancer': 'character_11',
+    'red-monk': 'character_12',
+    'yellow-warrior': 'character_13',
+    'yellow-archer': 'character_14',
+    'yellow-lancer': 'character_15',
+    'yellow-monk': 'character_16',
   }
   
   // Si el avatar ya es válido, devolverlo
@@ -53,30 +79,46 @@ const migrateAvatar = (oldAvatar: string): AvatarKey => {
   }
   
   // Fallback por defecto
-  return 'blue-warrior'
+  return 'character_1'
 }
 
-  // Configuración simplificada de sprites - cada sprite es una imagen de 1536x192 con 4 frames horizontales
+  // Configuración de sprites usando los nuevos avatares de sprite_split
   const avatarSprites = {
-    'black-warrior': '/Tiny Swords (Free Pack)/Units/Black Units/Warrior/Warrior_Idle.png',
-    'black-archer': '/Tiny Swords (Free Pack)/Units/Black Units/Archer/Archer_Idle.png',
-    'black-lancer': '/Tiny Swords (Free Pack)/Units/Black Units/Lancer/Lancer_Idle.png',
-    'black-monk': '/Tiny Swords (Free Pack)/Units/Black Units/Monk/Idle.png',
-    'blue-warrior': '/Tiny Swords (Free Pack)/Units/Blue Units/Warrior/Warrior_Idle.png',
-    'blue-archer': '/Tiny Swords (Free Pack)/Units/Blue Units/Archer/Archer_Idle.png',
-    'blue-lancer': '/Tiny Swords (Free Pack)/Units/Blue Units/Lancer/Lancer_Idle.png',
-    'blue-monk': '/Tiny Swords (Free Pack)/Units/Blue Units/Monk/Idle.png',
-    'red-warrior': '/Tiny Swords (Free Pack)/Units/Red Units/Warrior/Warrior_Idle.png',
-    'red-archer': '/Tiny Swords (Free Pack)/Units/Red Units/Archer/Archer_Idle.png',
-    'red-lancer': '/Tiny Swords (Free Pack)/Units/Red Units/Lancer/Lancer_Idle.png',
-    'red-monk': '/Tiny Swords (Free Pack)/Units/Red Units/Monk/Idle.png',
-    'yellow-warrior': '/Tiny Swords (Free Pack)/Units/Yellow Units/Warrior/Warrior_Idle.png',
-    'yellow-archer': '/Tiny Swords (Free Pack)/Units/Yellow Units/Archer/Archer_Idle.png',
-    'yellow-lancer': '/Tiny Swords (Free Pack)/Units/Yellow Units/Lancer/Lancer_Idle.png',
-    'yellow-monk': '/Tiny Swords (Free Pack)/Units/Yellow Units/Monk/Idle.png',
+    'character_1': '/sprite_split/character_1/character_1_frame32x32.png',
+    'character_2': '/sprite_split/character_2/character_2_frame32x32.png',
+    'character_3': '/sprite_split/character_3/character_3_frame32x32.png',
+    'character_4': '/sprite_split/character_4/character_4_frame32x32.png',
+    'character_5': '/sprite_split/character_5/character_5_frame32x32.png',
+    'character_6': '/sprite_split/character_6/character_6_frame32x32.png',
+    'character_7': '/sprite_split/character_7/character_7_frame32x32.png',
+    'character_8': '/sprite_split/character_8/character_8_frame32x32.png',
+    'character_9': '/sprite_split/character_9/character_9_frame32x32.png',
+    'character_10': '/sprite_split/character_10/character_10_frame32x32.png',
+    'character_11': '/sprite_split/character_11/character_11_frame32x32.png',
+    'character_12': '/sprite_split/character_12/character_12_frame32x32.png',
+    'character_13': '/sprite_split/character_13/character_13_frame32x32.png',
+    'character_14': '/sprite_split/character_14/character_14_frame32x32.png',
+    'character_15': '/sprite_split/character_15/character_15_frame32x32.png',
+    'character_16': '/sprite_split/character_16/character_16_frame32x32.png',
+    'character_17': '/sprite_split/character_17/character_17_frame32x32.png',
+    'character_18': '/sprite_split/character_18/character_18_frame32x32.png',
+    'character_19': '/sprite_split/character_19/character_19_frame32x32.png',
+    'character_20': '/sprite_split/character_20/character_20_frame32x32.png',
+    'character_21': '/sprite_split/character_21/character_21_frame32x32.png',
+    'character_22': '/sprite_split/character_22/character_22_frame32x32.png',
+    'character_23': '/sprite_split/character_23/character_23_frame32x32.png',
+    'character_24': '/sprite_split/character_24/character_24_frame32x32.png',
+    'character_25': '/sprite_split/character_25/character_25_frame32x32.png',
+    'character_26': '/sprite_split/character_26/character_26_frame32x32.png',
+    'character_27': '/sprite_split/character_27/character_27_frame32x32.png',
+    'character_28': '/sprite_split/character_28/character_28_frame32x32.png',
+    'character_29': '/sprite_split/character_29/character_29_frame32x32.png',
+    'character_30': '/sprite_split/character_30/character_30_frame32x32.png',
+    'character_31': '/sprite_split/character_31/character_31_frame32x32.png',
+    'character_32': '/sprite_split/character_32/character_32_frame32x32.png',
   }
 
-  // Configuraciones específicas para cada tipo de sprite
+  // Configuración para sprites multidireccionales de 32x32
   const SPRITE_CONFIGS: Record<string, {
     totalWidth: number
     totalHeight: number
@@ -84,81 +126,92 @@ const migrateAvatar = (oldAvatar: string): AvatarKey => {
     frameWidth: number
     frameHeight: number
     renderSize: number
+    directions: {
+      down: number
+      up: number
+      left: number
+      right: number
+    }
   }> = {
-    // Configuración para Archer (1536x192)
-    'archer': {
-      totalWidth: 1536,
-      totalHeight: 192,
-      frameCount: 8,
-      frameWidth: 192,
-      frameHeight: 192,
-      renderSize: 80
-    },
-    // Configuración para Warrior (necesita verificación)
-    'warrior': {
-      totalWidth: 1536,
-      totalHeight: 192,
-      frameCount: 8,
-      frameWidth: 192,
-      frameHeight: 192,
-      renderSize: 80
-    },
-    // Configuración para Monk (necesita verificación)
-    'monk': {
-      totalWidth: 1536,
-      totalHeight: 192,
-      frameCount: 8,
-      frameWidth: 192,
-      frameHeight: 192,
-      renderSize: 80
-    },
-    // Configuración para Lancer (3840x320)
-    'lancer': {
-      totalWidth: 3840,
-      totalHeight: 320,
-      frameCount: 12,      // 3840 / 320 = 12 frames
-      frameWidth: 320,
-      frameHeight: 320,
-      renderSize: 140      // Aún más grande para mejor visibilidad
+    // Configuración para sprites con 4 direcciones (asumiendo 4 frames por dirección)
+    'default': {
+      totalWidth: 128, // 4 frames * 32px
+      totalHeight: 128, // 4 direcciones * 32px
+      frameCount: 4,
+      frameWidth: 32,
+      frameHeight: 32,
+      renderSize: 64,
+      directions: {
+        down: 0,   // Primera fila (frames 0-3)
+        left: 1,   // Segunda fila (frames 4-7)
+        right: 2,  // Tercera fila (frames 8-11)
+        up: 3      // Cuarta fila (frames 12-15)
+      }
     }
   }
 
   // Función para obtener la configuración correcta según el avatar
   const getSpriteConfig = (avatarKey: string) => {
-    if (avatarKey.includes('lancer')) {
-      return SPRITE_CONFIGS.lancer
-    }
-    if (avatarKey.includes('warrior')) {
-      return SPRITE_CONFIGS.warrior
-    }
-    if (avatarKey.includes('monk')) {
-      return SPRITE_CONFIGS.monk
-    }
-    if (avatarKey.includes('archer')) {
-      return SPRITE_CONFIGS.archer
-    }
-    // Fallback por defecto
-    return SPRITE_CONFIGS.archer
+    // Todos los nuevos avatares usan la misma configuración
+    return SPRITE_CONFIGS.default
   }
 
 const avatarColors: Record<string, string> = {
-  'black-warrior': "#1f2937",
-  'black-archer': "#1f2937", 
-  'black-lancer': "#1f2937",
-  'black-monk': "#1f2937",
-  'blue-warrior': "#3b82f6",
-  'blue-archer': "#3b82f6",
-  'blue-lancer': "#3b82f6", 
-  'blue-monk': "#3b82f6",
-  'red-warrior': "#dc2626",
-  'red-archer': "#dc2626",
-  'red-lancer': "#dc2626",
-  'red-monk': "#dc2626",
-  'yellow-warrior': "#f59e0b",
-  'yellow-archer': "#f59e0b",
-  'yellow-lancer': "#f59e0b",
-  'yellow-monk': "#f59e0b",
+  'character_1': "#3b82f6",
+  'character_2': "#dc2626",
+  'character_3': "#f59e0b",
+  'character_4': "#1f2937",
+  'character_5': "#10b981",
+  'character_6': "#8b5cf6",
+  'character_7': "#ef4444",
+  'character_8': "#f97316",
+  'character_9': "#06b6d4",
+  'character_10': "#84cc16",
+  'character_11': "#ec4899",
+  'character_12': "#6366f1",
+  'character_13': "#14b8a6",
+  'character_14': "#f59e0b",
+  'character_15': "#ef4444",
+  'character_16': "#8b5cf6",
+  'character_17': "#06b6d4",
+  'character_18': "#84cc16",
+  'character_19': "#ec4899",
+  'character_20': "#6366f1",
+  'character_21': "#14b8a6",
+  'character_22': "#f59e0b",
+  'character_23': "#ef4444",
+  'character_24': "#8b5cf6",
+  'character_25': "#06b6d4",
+  'character_26': "#84cc16",
+  'character_27': "#ec4899",
+  'character_28': "#6366f1",
+  'character_29': "#14b8a6",
+  'character_30': "#f59e0b",
+  'character_31': "#ef4444",
+  'character_32': "#8b5cf6",
 }
+
+// Configuración de NPCs
+  const npcs: NPC[] = [
+    {
+      id: "npc_1",
+      name: "Village Elder",
+      x: 1364,
+      y: 554,
+      avatar: "character_18",
+      message: "Welcome, brave adventurer! I have been waiting for someone like you. The village needs your help!",
+      interactionRadius: 80
+    },
+    {
+      id: "npc_2",
+      name: "Mysterious Stranger",
+      x: 1364,
+      y: 698,
+      avatar: "character_27",
+      message: "Greetings, traveler. I sense great power within you. The ancient secrets of this land await those who are worthy...",
+      interactionRadius: 80
+    }
+  ]
 
 export default function GameWorld({ character, onCharacterUpdate, onBackToCreation }: GameWorldProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -183,6 +236,9 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
   const movementTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const lastPositionUpdateRef = useRef<number>(0)
   const connectionStatusRef = useRef<{ connected: boolean; lastCheck: number }>({ connected: false, lastCheck: 0 })
+  const [nearbyNPC, setNearbyNPC] = useState<NPC | null>(null)
+  const [showNPCDialog, setShowNPCDialog] = useState(false)
+  const [playerDirection, setPlayerDirection] = useState<'down' | 'up' | 'left' | 'right'>('down')
 
   const CANVAS_WIDTH = 800
   const CANVAS_HEIGHT = 600
@@ -247,6 +303,25 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
       )
     })
   }, [collisionObjects])
+
+  // Función para detectar NPCs cercanos
+  const checkNearbyNPCs = useCallback((playerX: number, playerY: number) => {
+    const nearby = npcs.find(npc => {
+      const distance = Math.sqrt(
+        Math.pow(playerX - npc.x, 2) + Math.pow(playerY - npc.y, 2)
+      )
+      return distance <= npc.interactionRadius
+    })
+    
+    setNearbyNPC(nearby || null)
+  }, [])
+
+  // Función para interactuar con NPC
+  const interactWithNPC = useCallback(() => {
+    if (nearbyNPC) {
+      setShowNPCDialog(true)
+    }
+  }, [nearbyNPC])
 
   // Function to find a safe spawn point (sin useCallback para evitar dependencias circulares)
   const findSafeSpawnPoint = (preferredX: number, preferredY: number) => {
@@ -728,6 +803,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
       cameraY: number,
       chatMessage?: { text: string; timestamp: number },
       avatar?: string,
+      direction: 'down' | 'up' | 'left' | 'right' = 'down',
     ) => {
       ctx.imageSmoothingEnabled = false
 
@@ -812,7 +888,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
         }
 
         // Sistema completamente nuevo de renderizado de sprites
-        const avatarKey = avatar ? migrateAvatar(avatar) : 'blue-warrior'
+        const avatarKey = avatar ? migrateAvatar(avatar) : 'character_1'
         const spriteImage = spriteImages[avatarKey]
         const currentFrame = animationFrames[avatarKey] || 0
         const spriteConfig = getSpriteConfig(avatarKey)
@@ -824,7 +900,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
           const maxFrames = Math.floor(spriteImage.naturalWidth / spriteConfig.frameWidth)
           const safeFrame = Math.min(currentFrame, maxFrames - 1)
           const frameX = safeFrame * spriteConfig.frameWidth
-          const frameY = 0 // Solo una fila
+          const frameY = spriteConfig.directions[direction] * spriteConfig.frameHeight
           
           // Dibujar SOLO el sprite (sin fallback) con pixel-perfect rendering
           const drawX = Math.floor(screenX - spriteConfig.renderSize / 2)
@@ -883,11 +959,12 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
     let newY = localCharacter.y
     let moved = false
 
-    // Process movement with simplified logic
+    // Process movement with simplified logic and direction tracking
     if (keys.has("ArrowLeft") || keys.has("KeyA")) {
       const testX = newX - MOVE_SPEED
       if (testX >= PLAYER_SIZE / 2 && !checkCollision(testX, newY)) {
         newX = testX
+        setPlayerDirection('left')
         moved = true
       }
     }
@@ -896,6 +973,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
       const testX = newX + MOVE_SPEED
       if (testX <= MAP_WIDTH - PLAYER_SIZE / 2 && !checkCollision(testX, newY)) {
         newX = testX
+        setPlayerDirection('right')
         moved = true
       }
     }
@@ -904,6 +982,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
       const testY = newY - MOVE_SPEED
       if (testY >= PLAYER_SIZE / 2 && !checkCollision(newX, testY)) {
         newY = testY
+        setPlayerDirection('up')
         moved = true
       }
     }
@@ -912,6 +991,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
       const testY = newY + MOVE_SPEED
       if (testY <= MAP_HEIGHT - PLAYER_SIZE / 2 && !checkCollision(newX, testY)) {
         newY = testY
+        setPlayerDirection('down')
         moved = true
       }
     }
@@ -963,11 +1043,15 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
       const clampedCameraX = Math.max(0, Math.min(MAP_WIDTH - CANVAS_WIDTH, targetCameraX))
       const clampedCameraY = Math.max(0, Math.min(MAP_HEIGHT - CANVAS_HEIGHT, targetCameraY))
       setCamera({ x: clampedCameraX, y: clampedCameraY })
+      
+      // Check for nearby NPCs
+      checkNearbyNPCs(newX, newY)
+      
       return true // Indica que hubo cambios
     }
     
     return false // No hubo cambios
-  }, [localCharacter, keys, onCharacterUpdate, multiplayerClient, checkCollision])
+  }, [localCharacter, keys, onCharacterUpdate, multiplayerClient, checkCollision, checkNearbyNPCs])
 
   const render = useCallback(() => {
     const canvas = canvasRef.current
@@ -996,7 +1080,8 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
       camera.x, 
       camera.y,
       localPlayer?.currentMessage, // Usar el mensaje del jugador local
-      localCharacter.avatar
+      localCharacter.avatar,
+      playerDirection
     )
 
     // Dibujar otros jugadores desde allPlayers (excluyendo el jugador actual)
@@ -1017,8 +1102,43 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
           camera.x, 
           camera.y,
           player.currentMessage,
-          player.avatar
+          player.avatar,
+          'down' // Dirección por defecto para otros jugadores
         )
+      }
+    })
+
+    // Dibujar NPCs
+    npcs.forEach((npc) => {
+      const screenX = npc.x - camera.x
+      const screenY = npc.y - camera.y
+      
+      // Solo dibujar si el NPC está en pantalla
+      if (screenX > -100 && screenX < CANVAS_WIDTH + 100 && 
+          screenY > -100 && screenY < CANVAS_HEIGHT + 100) {
+        
+        // Dibujar NPC usando la misma función que los jugadores
+        drawPlayer(
+          ctx,
+          npc.x,
+          npc.y,
+          "#8b5cf6", // Color púrpura para NPCs
+          npc.name,
+          false,
+          camera.x,
+          camera.y,
+          undefined,
+          npc.avatar,
+          'down' // NPCs siempre miran hacia abajo
+        )
+        
+        // Dibujar indicador de interacción si está cerca
+        if (nearbyNPC && nearbyNPC.id === npc.id) {
+          // Dibujar texto de interacción
+          ctx.fillStyle = "#ffffff"
+          ctx.font = "14px monospace"
+          ctx.fillText("Press E to interact", screenX - 50, screenY - 20)
+        }
       }
     })
 
@@ -1072,6 +1192,13 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
         return
       }
       
+      // Interactuar con NPC con E
+      if (e.code === "KeyE") {
+        e.preventDefault()
+        interactWithNPC()
+        return
+      }
+      
       // Teclas de movimiento
       setKeys((prev) => new Set(prev).add(e.code))
     }
@@ -1094,7 +1221,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
       window.removeEventListener("keydown", handleKeyDown)
       window.removeEventListener("keyup", handleKeyUp)
     }
-  }, [showChatInput, currentMessage, multiplayerClient])
+  }, [showChatInput, currentMessage, multiplayerClient, interactWithNPC])
 
   useEffect(() => {
     animationRef.current = requestAnimationFrame(gameLoop)
@@ -1146,6 +1273,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
               <p className="font-bold mb-1">{"Controls:"}</p>
               <p>{"Use WASD or Arrow Keys to move"}</p>
               <p>{"Press Enter or T to chat"}</p>
+              <p>{"Press E to interact with NPCs"}</p>
               <p className="text-xs mt-1 text-muted-foreground">{"Messages appear above players for 5 seconds"}</p>
             </div>
 
@@ -1157,6 +1285,41 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
           </div>
         </CardContent>
       </Card>
+
+      {/* Diálogo de NPC */}
+      {showNPCDialog && nearbyNPC && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <Card className="w-full max-w-md mx-4">
+            <CardHeader className="text-center">
+              <CardTitle className="text-xl font-bold">{nearbyNPC.name}</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center space-x-4">
+                <div className="w-16 h-16 relative">
+                  <img
+                    src={avatarSprites[nearbyNPC.avatar as keyof typeof avatarSprites]}
+                    alt={nearbyNPC.name}
+                    className="w-full h-full object-contain pixel-art"
+                  />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    {nearbyNPC.message}
+                  </p>
+                </div>
+              </div>
+              <div className="flex justify-end">
+                <Button 
+                  onClick={() => setShowNPCDialog(false)}
+                  className="pixel-button"
+                >
+                  Close
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
     </div>
   )
