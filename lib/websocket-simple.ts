@@ -80,7 +80,7 @@ export class WebSocketSimpleClient {
         }
 
         this.ws.onclose = () => {
-          console.log('🔌 Conexión cerrada')
+          console.log('🔌 Connection closed')
           this.isConnected = false
           this.startReconnect()
         }
@@ -175,7 +175,7 @@ export class WebSocketSimpleClient {
     })
     
     this.onPlayerJoin(newPlayer)
-    console.log(`🎮 Jugador ${newPlayer.name} se unió. Total: ${Object.keys(this.currentState.players).length}`)
+    console.log(`🎮 Player ${newPlayer.name} joined. Total: ${Object.keys(this.currentState.players).length}`)
   }
 
   updatePlayerPosition(x: number, y: number): void {
@@ -229,7 +229,7 @@ export class WebSocketSimpleClient {
 
   // Función para limpiar manualmente todos los jugadores
   static clearAllPlayers(): void {
-    console.log('🧹 Limpiar jugadores - requiere implementación del servidor')
+    console.log('🧹 Clean players - requires server implementation')
   }
 }
 

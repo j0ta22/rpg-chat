@@ -203,7 +203,7 @@ export class HybridMultiplayerClient {
         
         // Notificar cambios en el estado
         if (JSON.stringify(previousState) !== JSON.stringify(this.currentState)) {
-          console.log('🔄 Estado actualizado desde sincronización')
+          console.log('🔄 State updated from sync')
           this.onStateUpdate(this.currentState)
         }
       } catch (error) {
@@ -237,7 +237,7 @@ export class HybridMultiplayerClient {
       try {
         const newState = JSON.parse(e.newValue)
         if (newState.players && typeof newState.lastUpdate === 'number') {
-          console.log('🔄 Sincronización desde otra pestaña:', newState)
+          console.log('🔄 Sync from another tab:', newState)
           this.currentState = newState
           this.cleanupInactivePlayers()
           this.onStateUpdate(this.currentState)
@@ -280,7 +280,7 @@ export class HybridMultiplayerClient {
     this.saveState()
     this.onPlayerJoin(newPlayer)
     
-    console.log(`🎮 Jugador ${newPlayer.name} se unió. Total: ${Object.keys(this.currentState.players).length}`)
+    console.log(`🎮 Player ${newPlayer.name} joined. Total: ${Object.keys(this.currentState.players).length}`)
     console.log(`🌍 Estado actual:`, this.currentState)
     console.log(`🔑 Modo: ${this.useLocalStorage ? 'localStorage' : 'servicio externo'}`)
   }

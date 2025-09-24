@@ -4,7 +4,10 @@ import { useEffect, useRef, useState, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { SocketMultiplayerClient, type Player, type GameState, type ChatMessage } from "@/lib/socket-multiplayer"
+import { SocketMultiplayerClient, type Player, type GameState, type ChatMessage, type CombatChallenge, type CombatState, type CombatAction } from "@/lib/socket-multiplayer"
+import { CombatUtils, COMBAT_CONSTANTS } from "@/lib/combat-system"
+import CombatInterface from "./combat-interface"
+import CombatChallengeComponent from "./combat-challenge"
 
 interface Character {
   name: string
@@ -240,6 +243,15 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
   const [nearbyNPC, setNearbyNPC] = useState<NPC | null>(null)
   const [showNPCDialog, setShowNPCDialog] = useState(false)
   const [playerDirection, setPlayerDirection] = useState<'down' | 'up' | 'left' | 'right'>('down')
+  const [isMusicMuted, setIsMusicMuted] = useState(false)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
+  
+  // Estados del sistema de combate
+  const [nearbyPlayer, setNearbyPlayer] = useState<Player | null>(null)
+  const [combatChallenge, setCombatChallenge] = useState<CombatChallenge | null>(null)
+  const [combatState, setCombatState] = useState<CombatState | null>(null)
+  const [showCombatInterface, setShowCombatInterface] = useState(false)
+  const [systemMessage, setSystemMessage] = useState<{ text: string; timestamp: number } | null>(null)
 
   const CANVAS_WIDTH = 800
   const CANVAS_HEIGHT = 600
@@ -317,12 +329,73 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
     setNearbyNPC(nearby || null)
   }, [])
 
+  // Función para detectar jugadores cercanos para combate
+  const checkNearbyPlayers = useCallback((playerX: number, playerY: number) => {
+    if (!playerId || Object.keys(otherPlayers).length === 0) {
+      setNearbyPlayer(null)
+      return
+    }
+
+    const nearby = Object.values(otherPlayers).find(player => {
+      const distance = Math.sqrt(
+        Math.pow(playerX - player.x, 2) + Math.pow(playerY - player.y, 2)
+      )
+      return distance <= COMBAT_CONSTANTS.CHALLENGE_RANGE
+    })
+    
+    setNearbyPlayer(nearby || null)
+  }, [playerId, otherPlayers])
+
   // Función para interactuar con NPC
   const interactWithNPC = useCallback(() => {
     if (nearbyNPC) {
       setShowNPCDialog(true)
     }
   }, [nearbyNPC])
+
+  // Función para desafiar a un jugador
+  const challengePlayer = useCallback(() => {
+    if (nearbyPlayer && multiplayerClient) {
+      multiplayerClient.challengePlayer(nearbyPlayer.id)
+    }
+  }, [nearbyPlayer, multiplayerClient])
+
+  // Función para manejar desafíos de combate
+  const handleCombatChallenge = useCallback((challenge: CombatChallenge) => {
+    setCombatChallenge(challenge)
+  }, [])
+
+  // Función para manejar actualizaciones del estado de combate
+  const handleCombatStateUpdate = useCallback((newCombatState: CombatState) => {
+    setCombatState(newCombatState)
+    setShowCombatInterface(true)
+    
+    // Si el combate terminó, limpiar después de un delay más corto
+    if (newCombatState.status === 'finished') {
+      // Cerrar inmediatamente la ventana de desafío si está abierta
+      setCombatChallenge(null)
+      
+      setTimeout(() => {
+        setCombatState(null)
+        setShowCombatInterface(false)
+      }, 3000) // Reducido a 3 segundos para que se cierre más rápido
+    }
+  }, [])
+
+  // Función para responder a un desafío
+  const respondToChallenge = useCallback((accepted: boolean) => {
+    if (combatChallenge && multiplayerClient) {
+      multiplayerClient.respondToChallenge(combatChallenge.id, accepted)
+      setCombatChallenge(null)
+    }
+  }, [combatChallenge, multiplayerClient])
+
+  // Función para enviar una acción de combate
+  const sendCombatAction = useCallback((action: CombatAction) => {
+    if (combatState && multiplayerClient) {
+      multiplayerClient.sendCombatAction(combatState.id, action)
+    }
+  }, [combatState, multiplayerClient])
 
   // Function to find a safe spawn point (sin useCallback para evitar dependencias circulares)
   const findSafeSpawnPoint = (preferredX: number, preferredY: number) => {
@@ -373,6 +446,39 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
     onCharacterUpdate(initialCharacter)
   }, [character.name, character.avatar]) // Solo depender de propiedades que no cambien
 
+  // Configurar audio de fondo
+  useEffect(() => {
+    const audio = new Audio('/tavern.mp3')
+    audio.loop = true
+    audio.volume = 0.05 // Volumen moderado
+    audioRef.current = audio
+
+    // Intentar reproducir automáticamente (puede fallar por políticas del navegador)
+    const playAudio = async () => {
+      try {
+        await audio.play()
+      } catch (error) {
+        console.log('Could not auto-play audio:', error)
+      }
+    }
+
+    playAudio()
+
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause()
+        audioRef.current = null
+      }
+    }
+  }, [])
+
+  // Manejar mute/unmute
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.muted = isMusicMuted
+    }
+  }, [isMusicMuted])
+
   useEffect(() => {
     const client = new SocketMultiplayerClient(
       (state: GameState) => {
@@ -396,17 +502,17 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
       },
       (player: Player) => {
         // Player joined
-        console.log(`🎮 Jugador ${player.name} se unió al juego`)
+        console.log(`🎮 Player ${player.name} joined the game`)
         
       },
       (playerId: string) => {
         // Player left
-        console.log(`👋 Jugador ${playerId} se fue del juego`)
+        console.log(`👋 Player ${playerId} left the game`)
         
       },
       (playerId: string, x: number, y: number) => {
         // Player moved - actualizar posición inmediatamente
-        console.log(`🔄 Jugador ${playerId} se movió a (${x}, ${y})`)
+        console.log(`🔄 Player ${playerId} moved to (${x}, ${y})`)
         
         // Solo actualizar allPlayers - otherPlayers se actualizará automáticamente via useEffect
         setAllPlayers(prev => ({
@@ -428,8 +534,20 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
       (message: ChatMessage) => {
         // Chat message received
         console.log(`💬 ${message.playerName}: ${message.text}`)
-        setChatMessages(prev => [...prev, message].slice(-10)) // Mantener solo los últimos 10 mensajes
-      }
+        
+        // Si es un mensaje del sistema, mostrarlo de manera especial
+        if (message.playerId === 'system' || message.playerName === 'System') {
+          setSystemMessage({ text: message.text, timestamp: Date.now() })
+          // Limpiar el mensaje del sistema después de 8 segundos
+          setTimeout(() => {
+            setSystemMessage(null)
+          }, 8000)
+        } else {
+          setChatMessages(prev => [...prev, message].slice(-10)) // Mantener solo los últimos 10 mensajes
+        }
+      },
+      handleCombatChallenge,
+      handleCombatStateUpdate
     )
 
     client.connect().then(() => {
@@ -467,11 +585,11 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
         
         if (connectionStatusRef.current.connected !== isConnected) {
           connectionStatusRef.current = { connected: isConnected, lastCheck: now }
-          console.log(`🔌 Estado de conexión: ${isConnected ? 'Conectado' : 'Desconectado'}`)
+          console.log(`🔌 Connection status: ${isConnected ? 'Connected' : 'Disconnected'}`)
           
           // Si se perdió la conexión, no intentar reconectar automáticamente
           if (!isConnected) {
-            console.log('🔌 Conexión perdida - el jugador permanecerá en el juego localmente')
+            console.log('🔌 Connection lost - player will remain in game locally')
           }
         }
       }
@@ -503,7 +621,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
       const others = { ...allPlayers }
       delete others[playerId]
       setOtherPlayers(others)
-      console.log(`🔄 Sincronizando otherPlayers: ${Object.keys(others).length} jugadores`)
+      console.log(`🔄 Syncing otherPlayers: ${Object.keys(others).length} players`)
     }
   }, [allPlayers, playerId])
 
@@ -1055,14 +1173,15 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
       const clampedCameraY = Math.max(0, Math.min(MAP_HEIGHT - CANVAS_HEIGHT, targetCameraY))
       setCamera({ x: clampedCameraX, y: clampedCameraY })
       
-      // Check for nearby NPCs
+      // Check for nearby NPCs and players
       checkNearbyNPCs(newX, newY)
+      checkNearbyPlayers(newX, newY)
       
       return true // Indica que hubo cambios
     }
     
     return false // No hubo cambios
-  }, [localCharacter, keys, onCharacterUpdate, multiplayerClient, checkCollision, checkNearbyNPCs])
+  }, [localCharacter, keys, onCharacterUpdate, multiplayerClient, checkCollision, checkNearbyNPCs, checkNearbyPlayers])
 
   const render = useCallback(() => {
     const canvas = canvasRef.current
@@ -1101,7 +1220,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
       if (player.id !== playerId && playerVisibility[player.id] !== false) {
         // Solo loggear ocasionalmente para evitar spam
         if (Math.random() < 0.001) { // 0.1% de las veces
-          console.log(`🎨 Dibujando jugador ${player.name} en (${player.x}, ${player.y})`)
+          console.log(`🎨 Drawing player ${player.name} at (${player.x}, ${player.y})`)
         }
         drawPlayer(
           ctx, 
@@ -1114,8 +1233,17 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
           camera.y,
           player.currentMessage,
           player.avatar,
-          player.direction || 'down' // Usar la dirección del jugador o 'down' por defecto
+          (player.direction as 'down' | 'up' | 'left' | 'right') || 'down' // Usar la dirección del jugador o 'down' por defecto
         )
+
+        // Dibujar indicador de desafío si está cerca
+        if (nearbyPlayer && nearbyPlayer.id === player.id) {
+          const screenX = player.x - camera.x
+          const screenY = player.y - camera.y
+          ctx.fillStyle = "#ff6b6b"
+          ctx.font = "14px monospace"
+          ctx.fillText("Press E to challenge", screenX - 60, screenY - 20)
+        }
       }
     })
 
@@ -1160,8 +1288,10 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
     ctx.fillText(`Hero: ${localCharacter.name}`, 20, 30)
     ctx.fillText(`Position: ${Math.floor(localCharacter.x)}, ${Math.floor(localCharacter.y)}`, 20, 50)
     ctx.fillText(`Players Online: ${Object.keys(allPlayers).length}`, 20, 70)
-    ctx.fillText(`Location: Medieval Tavern`, 20, 90)
-  }, [localCharacter, camera, allPlayers, playerId, playerVisibility])
+    ctx.fillText(`Location: Drunken Monkey Tavern
+
+`, 20, 90)
+  }, [localCharacter, camera, allPlayers, playerId, playerVisibility, nearbyPlayer])
 
   const gameLoop = useCallback(() => {
     const hasChanges = updateGame()
@@ -1203,10 +1333,14 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
         return
       }
       
-      // Interactuar con NPC con E
+      // Interactuar con NPC o desafiar jugador con E
       if (e.code === "KeyE") {
         e.preventDefault()
-        interactWithNPC()
+        if (nearbyPlayer) {
+          challengePlayer()
+        } else if (nearbyNPC) {
+          interactWithNPC()
+        }
         return
       }
       
@@ -1232,7 +1366,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
       window.removeEventListener("keydown", handleKeyDown)
       window.removeEventListener("keyup", handleKeyUp)
     }
-  }, [showChatInput, currentMessage, multiplayerClient, interactWithNPC])
+  }, [showChatInput, currentMessage, multiplayerClient, interactWithNPC, nearbyPlayer, challengePlayer, nearbyNPC])
 
   useEffect(() => {
     animationRef.current = requestAnimationFrame(gameLoop)
@@ -1247,7 +1381,23 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
     <div className="flex flex-col lg:flex-row items-start justify-center space-y-6 lg:space-y-0 lg:space-x-6 p-4">
       <Card className="character-card">
         <CardHeader className="text-center pb-4">
-          <CardTitle className="text-2xl font-bold pixel-text">Apestore's tavern</CardTitle>
+          <div className="flex items-center justify-between">
+            <div className="flex-1"></div>
+            <CardTitle className="text-2xl font-bold pixel-text">Drunken Monkey Tavern
+
+</CardTitle>
+            <div className="flex-1 flex justify-end">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsMusicMuted(!isMusicMuted)}
+                className="p-2 h-8 w-8"
+                title={isMusicMuted ? "Unmute music" : "Mute music"}
+              >
+                {isMusicMuted ? "🔇" : "🔊"}
+              </Button>
+            </div>
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="relative">
@@ -1279,7 +1429,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
               <p className="font-bold mb-1">{"Controls:"}</p>
               <p>{"Use WASD or Arrow Keys to move"}</p>
               <p>{"Press Enter or T to chat"}</p>
-              <p>{"Press E to interact with NPCs"}</p>
+              <p>{"Press E to interact with NPCs or challenge players"}</p>
               <p className="text-xs mt-1 text-muted-foreground">{"Messages appear above players for 5 seconds"}</p>
             </div>
 
@@ -1324,6 +1474,42 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
               </div>
             </CardContent>
           </Card>
+        </div>
+      )}
+
+      {/* Desafío de combate */}
+      {combatChallenge && (
+        <CombatChallengeComponent
+          challenge={combatChallenge}
+          onAccept={() => respondToChallenge(true)}
+          onDecline={() => respondToChallenge(false)}
+          onExpire={() => setCombatChallenge(null)}
+        />
+      )}
+
+      {/* Interfaz de combate */}
+      {showCombatInterface && combatState && (
+        <CombatInterface
+          combatState={combatState}
+          currentPlayerId={playerId}
+          onAction={sendCombatAction}
+          onClose={() => setShowCombatInterface(false)}
+        />
+      )}
+
+      {/* Mensaje del sistema */}
+      {systemMessage && (
+        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 max-w-2xl mx-4">
+          <div className="bg-yellow-600 border-4 border-yellow-400 rounded-lg p-4 shadow-lg">
+            <div className="text-center">
+              <div className="text-yellow-100 font-bold text-lg pixel-text mb-2">
+                🏆 ANUNCIO DEL SISTEMA
+              </div>
+              <div className="text-white text-sm pixel-text">
+                {systemMessage.text}
+              </div>
+            </div>
+          </div>
         </div>
       )}
 

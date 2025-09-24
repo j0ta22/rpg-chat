@@ -36,6 +36,10 @@ let gameState = {
   lastUpdate: Date.now()
 };
 
+// Almacenamiento de combates y desafíos
+let combatChallenges = {};
+let combatStates = {};
+
 // Limpiar jugadores inactivos cada 60 segundos (más tolerante)
 setInterval(() => {
   const now = Date.now();
@@ -43,7 +47,7 @@ setInterval(() => {
   
   Object.keys(gameState.players).forEach(playerId => {
     if (now - gameState.players[playerId].lastSeen > timeout) {
-      console.log(`👋 Jugador ${gameState.players[playerId].name} desconectado por inactividad`);
+      console.log(`👋 Player ${gameState.players[playerId].name} disconnected due to inactivity`);
       delete gameState.players[playerId];
     }
   });
@@ -97,7 +101,7 @@ app.delete('/api/players', (req, res) => {
 
 // Socket.IO connection handling
 io.on('connection', (socket) => {
-  console.log(`🔌 Cliente conectado: ${socket.id}`);
+  console.log(`🔌 Client connected: ${socket.id}`);
 
   // Enviar estado actual al cliente que se conecta
   socket.emit('gameState', gameState);
@@ -113,7 +117,7 @@ io.on('connection', (socket) => {
     gameState.players[socket.id] = player;
     gameState.lastUpdate = Date.now();
     
-    console.log(`🎮 Jugador ${player.name} se unió. Total: ${Object.keys(gameState.players).length}`);
+    console.log(`🎮 Player ${player.name} joined. Total: ${Object.keys(gameState.players).length}`);
     
     // Notificar a todos los clientes
     io.emit('playerJoined', player);
@@ -130,7 +134,7 @@ io.on('connection', (socket) => {
         gameState.players[socket.id].lastSeen = Date.now();
         gameState.lastUpdate = Date.now();
         
-        console.log(`🔄 Jugador ${gameState.players[socket.id].name} se movió a (${positionData.x}, ${positionData.y}) dirección: ${positionData.direction || 'down'}`);
+        console.log(`🔄 Player ${gameState.players[socket.id].name} moved to (${positionData.x}, ${positionData.y}) direction: ${positionData.direction || 'down'}`);
         
         // Notificar a todos los clientes excepto al que envió la actualización
         socket.broadcast.emit('playerMoved', {
@@ -192,7 +196,7 @@ io.on('connection', (socket) => {
       delete gameState.players[socket.id];
       gameState.lastUpdate = Date.now();
       
-      console.log(`👋 Jugador ${player.name} desconectado`);
+      console.log(`👋 Player ${player.name} disconnected`);
       
       // Notificar a todos los clientes
       io.emit('playerLeft', socket.id);
@@ -210,10 +214,230 @@ io.on('connection', (socket) => {
       socket.emit('gameState', gameState);
     }
   });
+
+  // ===== EVENTOS DE COMBATE =====
+
+  // Manejar desafío de combate
+  socket.on('challengePlayer', (data) => {
+    const challenger = gameState.players[socket.id];
+    const challenged = gameState.players[data.challengedPlayerId];
+    
+    if (!challenger || !challenged) {
+      console.log('❌ Challenge failed: player not found');
+      return;
+    }
+
+    // Verificar distancia (80 píxeles)
+    const distance = Math.sqrt(
+      Math.pow(challenger.x - challenged.x, 2) + Math.pow(challenger.y - challenged.y, 2)
+    );
+    
+    if (distance > 80) {
+      console.log('❌ Challenge failed: players too far apart');
+      return;
+    }
+
+    // Crear desafío
+    const challengeId = `challenge_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const challenge = {
+      id: challengeId,
+      challengerId: socket.id,
+      challengerName: challenger.name,
+      challengedId: data.challengedPlayerId,
+      challengedName: challenged.name,
+      timestamp: Date.now(),
+      status: 'pending'
+    };
+
+    combatChallenges[challengeId] = challenge;
+    
+    console.log(`⚔️ Challenge created: ${challenger.name} challenges ${challenged.name}`);
+    
+    // Enviar desafío al jugador desafiado
+    io.to(data.challengedPlayerId).emit('combatChallenge', challenge);
+    
+    // Timeout del desafío (30 segundos)
+    setTimeout(() => {
+      if (combatChallenges[challengeId] && combatChallenges[challengeId].status === 'pending') {
+        combatChallenges[challengeId].status = 'expired';
+        io.to(data.challengedPlayerId).emit('combatChallenge', combatChallenges[challengeId]);
+        delete combatChallenges[challengeId];
+        console.log(`⚔️ Challenge expired: ${challengeId}`);
+      }
+    }, 30000);
+  });
+
+  // Manejar respuesta al desafío
+  socket.on('respondToChallenge', (data) => {
+    const challenge = combatChallenges[data.challengeId];
+    
+    if (!challenge) {
+      console.log('❌ Challenge response failed: challenge not found');
+      return;
+    }
+
+    if (challenge.challengedId !== socket.id) {
+      console.log('❌ Challenge response failed: not the challenged player');
+      return;
+    }
+
+    challenge.status = data.accepted ? 'accepted' : 'declined';
+    
+    console.log(`⚔️ Challenge ${data.accepted ? 'accepted' : 'declined'}: ${challenge.challengerName} vs ${challenge.challengedName}`);
+    
+    // Notificar a ambos jugadores
+    io.to(challenge.challengerId).emit('combatChallenge', challenge);
+    io.to(challenge.challengedId).emit('combatChallenge', challenge);
+    
+    if (data.accepted) {
+      // Crear estado de combate
+      const combatId = `combat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const challenger = gameState.players[challenge.challengerId];
+      const challenged = gameState.players[challenge.challengedId];
+      
+      const combatState = {
+        id: combatId,
+        challenger: {
+          id: challenger.id,
+          name: challenger.name,
+          avatar: challenger.avatar,
+          health: 100,
+          maxHealth: 100,
+          isAlive: true
+        },
+        challenged: {
+          id: challenged.id,
+          name: challenged.name,
+          avatar: challenged.avatar,
+          health: 100,
+          maxHealth: 100,
+          isAlive: true
+        },
+        currentTurn: challenge.challengerId,
+        turns: [],
+        status: 'active',
+        startTime: Date.now()
+      };
+
+      combatStates[combatId] = combatState;
+      
+      console.log(`⚔️ Combat started: ${combatId}`);
+      
+      // Notificar a ambos jugadores
+      io.to(challenge.challengerId).emit('combatStateUpdate', combatState);
+      io.to(challenge.challengedId).emit('combatStateUpdate', combatState);
+    }
+    
+    // Limpiar desafío
+    delete combatChallenges[data.challengeId];
+  });
+
+  // Manejar acción de combate
+  socket.on('combatAction', (data) => {
+    const combatState = combatStates[data.combatId];
+    
+    if (!combatState) {
+      console.log('❌ Combat action failed: combat not found');
+      return;
+    }
+
+    if (combatState.status !== 'active') {
+      console.log('❌ Combat action failed: combat not active');
+      return;
+    }
+
+    if (combatState.currentTurn !== socket.id) {
+      console.log('❌ Combat action failed: not player turn');
+      return;
+    }
+
+    // Procesar acción
+    const action = data.action;
+    const isChallenger = socket.id === combatState.challenger.id;
+    const attacker = isChallenger ? combatState.challenger : combatState.challenged;
+    const target = isChallenger ? combatState.challenged : combatState.challenger;
+    
+    let processedAction = { ...action };
+    
+    if (action.type === 'attack') {
+      // Calcular daño
+      const baseDamage = Math.floor(Math.random() * (25 - 15 + 1)) + 15;
+      const isBlocked = Math.random() < 0.2; // 20% chance de bloqueo automático
+      const isDodged = Math.random() < 0.3; // 30% chance de esquivar
+      
+      if (!isDodged) {
+        const finalDamage = isBlocked ? Math.floor(baseDamage * 0.5) : baseDamage;
+        target.health = Math.max(0, target.health - finalDamage);
+        target.isAlive = target.health > 0;
+        
+        processedAction.damage = finalDamage;
+        processedAction.blocked = isBlocked;
+        processedAction.dodged = false;
+      } else {
+        processedAction.dodged = true;
+        processedAction.damage = 0;
+      }
+    }
+    
+    // Agregar turno
+    const turn = {
+      playerId: socket.id,
+      action: processedAction,
+      timestamp: Date.now()
+    };
+    
+    combatState.turns.push(turn);
+    
+    // Cambiar turno
+    combatState.currentTurn = isChallenger ? combatState.challenged.id : combatState.challenger.id;
+    
+    // Verificar si alguien ganó
+    if (!combatState.challenger.isAlive) {
+      combatState.winner = combatState.challenged.id;
+      combatState.status = 'finished';
+      combatState.endTime = Date.now();
+    } else if (!combatState.challenged.isAlive) {
+      combatState.winner = combatState.challenger.id;
+      combatState.status = 'finished';
+      combatState.endTime = Date.now();
+    }
+    
+    console.log(`⚔️ Combat action: ${attacker.name} ${action.type}${processedAction.damage ? ` (${processedAction.damage} damage)` : ''}`);
+    
+    // Notificar a ambos jugadores
+    io.to(combatState.challenger.id).emit('combatStateUpdate', combatState);
+    io.to(combatState.challenged.id).emit('combatStateUpdate', combatState);
+    
+    // Limpiar combate si terminó
+    if (combatState.status === 'finished') {
+      // Enviar mensaje global de victoria
+      const winner = combatState.winner === combatState.challenger.id ? combatState.challenger : combatState.challenged;
+      const loser = combatState.winner === combatState.challenger.id ? combatState.challenged : combatState.challenger;
+      
+      const victoryMessage = {
+        id: Math.random().toString(36).substring(2, 15),
+        text: `A fierce brawl broke out at the Drunken Monkey Tavern! ${winner.name} emerged victorious, while ${loser.name} was defeated.`,
+        timestamp: Date.now(),
+        playerId: 'system',
+        playerName: 'System'
+      };
+      
+      // Enviar mensaje global a todos los jugadores
+      io.emit('chatMessage', victoryMessage);
+      
+      console.log(`🏆 Combat finished: ${winner.name} defeated ${loser.name}`);
+      console.log(`📢 Global message sent: "${victoryMessage.text}"`);
+      
+      setTimeout(() => {
+        delete combatStates[data.combatId];
+        console.log(`⚔️ Combat finalized: ${data.combatId}`);
+      }, 5000);
+    }
+  });
 });
 
 // Iniciar servidor
 server.listen(PORT, () => {
-  console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
-  console.log(`🌐 WebSocket disponible en ws://localhost:${PORT}`);
+  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`🌐 WebSocket available at ws://localhost:${PORT}`);
 });

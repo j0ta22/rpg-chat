@@ -8,6 +8,58 @@ export interface ChatMessage {
   playerName: string
 }
 
+export interface CombatChallenge {
+  id: string
+  challengerId: string
+  challengerName: string
+  challengedId: string
+  challengedName: string
+  timestamp: number
+  status: 'pending' | 'accepted' | 'declined' | 'expired'
+}
+
+export interface CombatState {
+  id: string
+  challenger: {
+    id: string
+    name: string
+    avatar: string
+    health: number
+    maxHealth: number
+    isAlive: boolean
+  }
+  challenged: {
+    id: string
+    name: string
+    avatar: string
+    health: number
+    maxHealth: number
+    isAlive: boolean
+  }
+  currentTurn: string
+  turns: Array<{
+    playerId: string
+    action: {
+      type: 'attack' | 'block' | 'dodge'
+      damage?: number
+      blocked?: boolean
+      dodged?: boolean
+    }
+    timestamp: number
+  }>
+  status: 'waiting' | 'active' | 'finished'
+  winner?: string
+  startTime: number
+  endTime?: number
+}
+
+export interface CombatAction {
+  type: 'attack' | 'block' | 'dodge'
+  damage?: number
+  blocked?: boolean
+  dodged?: boolean
+}
+
 export interface Player {
   id: string
   name: string
@@ -17,6 +69,7 @@ export interface Player {
   color: string
   lastSeen: number
   currentMessage?: ChatMessage
+  direction?: string
 }
 
 export interface GameState {
@@ -31,6 +84,8 @@ export class SocketMultiplayerClient {
   private onPlayerLeave: (playerId: string) => void
   private onPlayerMove: (playerId: string, x: number, y: number) => void
   private onChatMessage: (message: ChatMessage) => void
+  private onCombatChallenge?: (challenge: CombatChallenge) => void
+  private onCombatStateUpdate?: (combatState: CombatState) => void
   private heartbeatInterval: NodeJS.Timeout | null = null
   private keepAliveInterval: NodeJS.Timeout | null = null
   private connectionTimeout: NodeJS.Timeout | null = null
@@ -55,12 +110,16 @@ export class SocketMultiplayerClient {
     onPlayerLeave: (playerId: string) => void,
     onPlayerMove: (playerId: string, x: number, y: number) => void,
     onChatMessage: (message: ChatMessage) => void,
+    onCombatChallenge?: (challenge: CombatChallenge) => void,
+    onCombatStateUpdate?: (combatState: CombatState) => void,
   ) {
     this.onStateUpdate = onStateUpdate
     this.onPlayerJoin = onPlayerJoin
     this.onPlayerLeave = onPlayerLeave
     this.onPlayerMove = onPlayerMove
     this.onChatMessage = onChatMessage
+    this.onCombatChallenge = onCombatChallenge
+    this.onCombatStateUpdate = onCombatStateUpdate
   }
 
   async connect(): Promise<void> {
@@ -73,7 +132,7 @@ export class SocketMultiplayerClient {
 
     return new Promise((resolve, reject) => {
       try {
-        console.log(`🌍 Conectando al servidor... (intento ${this.connectionAttempts}/${this.maxConnectionAttempts})`, this.SERVER_URL)
+        console.log(`🌍 Connecting to server... (attempt ${this.connectionAttempts}/${this.maxConnectionAttempts})`, this.SERVER_URL)
         
         // Clear any existing connection
         if (this.socket) {
@@ -137,7 +196,7 @@ export class SocketMultiplayerClient {
       this.connectionTimeout = null
     }
 
-    console.log('✅ Conectado al servidor')
+    console.log('✅ Connected to server')
     this.startHeartbeat()
     this.startKeepAlive()
   }
@@ -165,7 +224,7 @@ export class SocketMultiplayerClient {
 
     // Jugador se unió
     this.socket.on('playerJoined', (player: Player) => {
-      console.log(`🎮 Jugador ${player.name} se unió`)
+      console.log(`🎮 Player ${player.name} joined`)
       this.onPlayerJoin(player)
     })
 
@@ -186,14 +245,30 @@ export class SocketMultiplayerClient {
       this.onChatMessage(message)
     })
 
+    // Desafío de combate
+    this.socket.on('combatChallenge', (challenge: CombatChallenge) => {
+      console.log(`⚔️ Combat challenge from ${challenge.challengerName}`)
+      if (this.onCombatChallenge) {
+        this.onCombatChallenge(challenge)
+      }
+    })
+
+    // Estado de combate actualizado
+    this.socket.on('combatStateUpdate', (combatState: CombatState) => {
+      console.log(`⚔️ Estado de combate actualizado: ${combatState.status}`)
+      if (this.onCombatStateUpdate) {
+        this.onCombatStateUpdate(combatState)
+      }
+    })
+
     // Desconexión
     this.socket.on('disconnect', (reason) => {
-      console.log('🔌 Desconectado del servidor:', reason)
+      console.log('🔌 Disconnected from server:', reason)
       this.isConnected = false
       this.isReconnecting = false
       
       // Let Socket.IO handle reconnection automatically
-      console.log('🔌 Conexión perdida - Socket.IO intentará reconectar automáticamente')
+      console.log('🔌 Connection lost - Socket.IO will attempt to reconnect automatically')
     })
 
     // Error handling
@@ -249,7 +324,7 @@ export class SocketMultiplayerClient {
   joinGame(player: Omit<Player, "id" | "lastSeen">): void {
     if (this.socket && this.socket.connected && this.isConnected) {
       this.socket.emit('joinGame', player)
-      console.log(`🎮 Uniéndose al juego como ${player.name}`)
+      console.log(`🎮 Joining game as ${player.name}`)
     } else {
       console.error('❌ No conectado al servidor')
       // Reintentar después de un breve delay
@@ -280,6 +355,28 @@ export class SocketMultiplayerClient {
     }
   }
 
+  // Métodos de combate
+  challengePlayer(challengedPlayerId: string): void {
+    if (this.socket && this.socket.connected && this.isConnected) {
+      this.socket.emit('challengePlayer', { challengedPlayerId })
+      console.log(`⚔️ Challenging player ${challengedPlayerId}`)
+    }
+  }
+
+  respondToChallenge(challengeId: string, accepted: boolean): void {
+    if (this.socket && this.socket.connected && this.isConnected) {
+      this.socket.emit('respondToChallenge', { challengeId, accepted })
+      console.log(`⚔️ ${accepted ? 'Accepting' : 'Declining'} challenge ${challengeId}`)
+    }
+  }
+
+  sendCombatAction(combatId: string, action: CombatAction): void {
+    if (this.socket && this.socket.connected && this.isConnected) {
+      this.socket.emit('combatAction', { combatId, action })
+      console.log(`⚔️ Sending combat action: ${action.type}`)
+    }
+  }
+
   disconnect(): void {
     this.isReconnecting = false
     this.connectionAttempts = 0
@@ -305,7 +402,7 @@ export class SocketMultiplayerClient {
     }
     
     this.isConnected = false
-    console.log('🔌 Desconectado del servidor')
+    console.log('🔌 Disconnected from server')
   }
 
   getPlayerId(): string {

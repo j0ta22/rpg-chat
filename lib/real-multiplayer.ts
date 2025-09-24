@@ -160,7 +160,7 @@ export class RealMultiplayerClient {
     this.saveState()
     this.onPlayerJoin(newPlayer)
     
-    console.log(`🎮 Jugador ${newPlayer.name} se unió. Total: ${Object.keys(this.currentState.players).length}`)
+    console.log(`🎮 Player ${newPlayer.name} joined. Total: ${Object.keys(this.currentState.players).length}`)
   }
 
   updatePlayerPosition(x: number, y: number): void {

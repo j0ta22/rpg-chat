@@ -3,9 +3,9 @@ import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'RPG Chat - Multiplayer Game',
-  description: 'Un juego de rol multijugador en tiempo real',
-  generator: 'v0.app',
+  title: 'Drunken Monkey Tavern',
+  description: 'A real-time multiplayer role-playing game',
+  generator: 'Drunken Monkey',
 }
 
 export default function RootLayout({
