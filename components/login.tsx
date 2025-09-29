@@ -24,7 +24,6 @@ export default function Login({ onLogin, onRegister, isLoading, error }: LoginPr
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [passwordError, setPasswordError] = useState("")
-  const [isAnimating, setIsAnimating] = useState(false)
 
   // Validación en tiempo real
   const validatePassword = () => {
@@ -64,15 +63,12 @@ export default function Login({ onLogin, onRegister, isLoading, error }: LoginPr
   }
 
   const toggleMode = () => {
-    setIsAnimating(true)
-    setTimeout(() => {
-      setIsLogin(!isLogin)
-      setUsername("")
-      setPassword("")
-      setConfirmPassword("")
-      setPasswordError("")
-      setIsAnimating(false)
-    }, 150)
+    console.log('🔄 Toggling mode from', isLogin ? 'LOGIN' : 'REGISTER', 'to', !isLogin ? 'LOGIN' : 'REGISTER')
+    setIsLogin(!isLogin)
+    setUsername("")
+    setPassword("")
+    setConfirmPassword("")
+    setPasswordError("")
   }
 
   return (
@@ -85,7 +81,7 @@ export default function Login({ onLogin, onRegister, isLoading, error }: LoginPr
       </div>
 
           {/* Main Login Card */}
-          <Card className={`w-full max-w-lg bg-gradient-to-br from-amber-900/95 to-amber-800/95 border-4 border-amber-600 shadow-2xl relative overflow-hidden transition-all duration-300 ${isAnimating ? 'opacity-50 scale-95' : 'opacity-100 scale-100'}`}>
+          <Card className="w-full max-w-lg bg-gradient-to-br from-amber-900/95 to-amber-800/95 border-4 border-amber-600 shadow-2xl relative overflow-hidden">
             {/* Decorative Border */}
             <div className="absolute inset-0 border-2 border-amber-400/30 rounded-lg"></div>
         
@@ -275,14 +271,17 @@ export default function Login({ onLogin, onRegister, isLoading, error }: LoginPr
                   <button
                     type="button"
                     onClick={() => {
-                      if (!isLogin) {
-                        toggleMode()
-                      }
+                      console.log('🖱️ ENTER clicked - switching to LOGIN')
+                      setIsLogin(true)
+                      setUsername("")
+                      setPassword("")
+                      setConfirmPassword("")
+                      setPasswordError("")
                     }}
-                    className={`px-6 py-2 rounded-full font-mono text-sm font-bold transition-all duration-200 ${
+                    className={`px-6 py-2 rounded-full font-mono text-sm font-bold transition-all duration-200 cursor-pointer ${
                       isLogin 
-                        ? 'bg-amber-600 text-amber-100 shadow-lg cursor-default' 
-                        : 'text-amber-300 hover:text-amber-100 cursor-pointer'
+                        ? 'bg-amber-600 text-amber-100 shadow-lg' 
+                        : 'text-amber-300 hover:text-amber-100'
                     }`}
                   >
                     ENTER
@@ -290,15 +289,20 @@ export default function Login({ onLogin, onRegister, isLoading, error }: LoginPr
                   <button
                     type="button"
                     onClick={() => {
-                      if (isLogin) {
-                        toggleMode()
-                      }
+                      console.log('🖱️ JOIN clicked - switching to REGISTER')
+                      setIsLogin(false)
+                      setUsername("")
+                      setPassword("")
+                      setConfirmPassword("")
+                      setPasswordError("")
                     }}
-                    className={`px-6 py-2 rounded-full font-mono text-sm font-bold transition-all duration-200 ${
-                      !isLogin 
-                        ? 'bg-amber-600 text-amber-100 shadow-lg cursor-default' 
-                        : 'text-amber-300 hover:text-amber-100 cursor-pointer'
-                    }`}
+                    className="px-6 py-2 rounded-full font-mono text-sm font-bold transition-all duration-200 cursor-pointer select-none text-amber-300 hover:text-amber-100 hover:bg-amber-700/20 border-2 border-amber-400"
+                    style={{ 
+                      pointerEvents: 'auto',
+                      zIndex: 10,
+                      position: 'relative',
+                      backgroundColor: 'rgba(245, 158, 11, 0.1)'
+                    }}
                   >
                     JOIN
                   </button>
