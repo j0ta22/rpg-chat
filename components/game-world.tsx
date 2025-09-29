@@ -272,6 +272,8 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
   const connectionStatusRef = useRef<{ connected: boolean; lastCheck: number }>({ connected: false, lastCheck: 0 })
   const [nearbyNPC, setNearbyNPC] = useState<NPC | null>(null)
   const [showNPCDialog, setShowNPCDialog] = useState(false)
+  const [nearbyDoor, setNearbyDoor] = useState<boolean>(false)
+  const [showDoorDialog, setShowDoorDialog] = useState(false)
   const [playerDirection, setPlayerDirection] = useState<'down' | 'up' | 'left' | 'right'>('down')
   const [isMusicMuted, setIsMusicMuted] = useState(false)
   const audioRef = useRef<HTMLAudioElement | null>(null)
@@ -402,12 +404,80 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
     setNearbyPlayer(nearby || null)
   }, [playerId, otherPlayers])
 
+  // Verificar proximidad a la puerta
+  const checkNearbyDoor = useCallback((playerX: number, playerY: number) => {
+    const doorX = 1344
+    const doorY = MAP_HEIGHT - 32
+    const doorWidth = 128
+    const doorHeight = 32
+    const interactionRange = 50
+
+    const isNearDoor = (
+      playerX >= doorX - interactionRange &&
+      playerX <= doorX + doorWidth + interactionRange &&
+      playerY >= doorY - interactionRange &&
+      playerY <= doorY + doorHeight + interactionRange
+    )
+
+    // Debug logs temporales con cálculo detallado
+    const leftBound = doorX - interactionRange
+    const rightBound = doorX + doorWidth + interactionRange
+    const topBound = doorY - interactionRange
+    const bottomBound = doorY + doorHeight + interactionRange
+    
+    console.log('🚪 Door proximity check:', { 
+      playerX, 
+      playerY, 
+      doorX, 
+      doorY, 
+      doorWidth, 
+      doorHeight,
+      interactionRange,
+      leftBound,
+      rightBound,
+      topBound,
+      bottomBound,
+      isNearDoor,
+      currentNearbyDoor: nearbyDoor,
+      xCheck: `${playerX} >= ${leftBound} && ${playerX} <= ${rightBound}`,
+      yCheck: `${playerY} >= ${topBound} && ${playerY} <= ${bottomBound}`
+    })
+
+    if (isNearDoor !== nearbyDoor) {
+      console.log('🚪 Door proximity CHANGED:', { 
+        from: nearbyDoor,
+        to: isNearDoor
+      })
+    }
+
+    setNearbyDoor(isNearDoor)
+  }, [nearbyDoor])
+
+  // Verificar proximidad inicial a la puerta
+  useEffect(() => {
+    if (localCharacter.x && localCharacter.y) {
+      checkNearbyDoor(localCharacter.x, localCharacter.y)
+    }
+  }, [localCharacter.x, localCharacter.y, checkNearbyDoor])
+
+  // Monitorear cambios en nearbyDoor
+  useEffect(() => {
+    console.log('🚪 nearbyDoor state changed:', nearbyDoor)
+  }, [nearbyDoor])
+
   // Función para interactuar con NPC
   const interactWithNPC = useCallback(() => {
     if (nearbyNPC) {
       setShowNPCDialog(true)
     }
   }, [nearbyNPC])
+
+  // Función para interactuar con la puerta
+  const interactWithDoor = useCallback(() => {
+    if (nearbyDoor) {
+      setShowDoorDialog(true)
+    }
+  }, [nearbyDoor])
 
   // Función para desafiar a un jugador
   const challengePlayer = useCallback(() => {
@@ -1298,73 +1368,132 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
 
     // Dibujar puerta cerrada en la parte inferior (para futura expansión)
     const doorX = 1344 - cameraX
-    const doorY = 1500 - cameraY
-    const doorWidth = 156 // 1344 + 156 = 1500
+    const doorY = MAP_HEIGHT - 32 - cameraY // En la misma línea del zócalo inferior
+    const doorWidth = 128 // Más larga horizontalmente
     
     // Solo dibujar si está visible en pantalla
     if (doorX + doorWidth > -50 && doorX < CANVAS_WIDTH + 50 && doorY > -50 && doorY < CANVAS_HEIGHT + 50) {
-      // Marco de la puerta (madera oscura)
-      const doorFrameGradient = ctx.createLinearGradient(doorX, doorY, doorX, doorY + 200)
+      // Marco de la puerta (madera oscura) - mismo ancho que el zócalo
+      const doorFrameGradient = ctx.createLinearGradient(doorX, doorY, doorX, doorY + 32)
       doorFrameGradient.addColorStop(0, "#4a2c17")
       doorFrameGradient.addColorStop(0.5, "#3d1f0a")
       doorFrameGradient.addColorStop(1, "#2d1508")
       ctx.fillStyle = doorFrameGradient
-      ctx.fillRect(doorX, doorY, doorWidth, 200)
+      ctx.fillRect(doorX, doorY, doorWidth, 32)
       
       // Puerta principal (madera más clara)
-      const doorGradient = ctx.createLinearGradient(doorX + 8, doorY + 8, doorX + 8, doorY + 192)
+      const doorGradient = ctx.createLinearGradient(doorX + 2, doorY + 2, doorX + 2, doorY + 30)
       doorGradient.addColorStop(0, "#8b4513")
       doorGradient.addColorStop(0.3, "#654321")
       doorGradient.addColorStop(0.7, "#5a3a1a")
       doorGradient.addColorStop(1, "#4a2c17")
       ctx.fillStyle = doorGradient
-      ctx.fillRect(doorX + 8, doorY + 8, doorWidth - 16, 184)
+      ctx.fillRect(doorX + 2, doorY + 2, doorWidth - 4, 28)
       
-      // Paneles de la puerta
+      // Paneles de la puerta (para ancho de 128px)
       ctx.fillStyle = "#3d1f0a"
       // Panel superior
-      ctx.fillRect(doorX + 16, doorY + 16, doorWidth - 32, 40)
+      ctx.fillRect(doorX + 8, doorY + 4, doorWidth - 16, 8)
       // Panel medio
-      ctx.fillRect(doorX + 16, doorY + 80, doorWidth - 32, 40)
+      ctx.fillRect(doorX + 8, doorY + 14, doorWidth - 16, 8)
       // Panel inferior
       ctx.fillStyle = "#2d1508"
-      ctx.fillRect(doorX + 16, doorY + 144, doorWidth - 32, 40)
+      ctx.fillRect(doorX + 8, doorY + 24, doorWidth - 16, 4)
       
       // Refuerzos horizontales
       ctx.fillStyle = "#2d1508"
-      ctx.fillRect(doorX + 8, doorY + 60, doorWidth - 16, 4)
-      ctx.fillRect(doorX + 8, doorY + 120, doorWidth - 16, 4)
-      ctx.fillRect(doorX + 8, doorY + 180, doorWidth - 16, 4)
+      ctx.fillRect(doorX + 4, doorY + 10, doorWidth - 8, 2)
+      ctx.fillRect(doorX + 4, doorY + 20, doorWidth - 8, 2)
       
-      // Refuerzos verticales
-      ctx.fillRect(doorX + 40, doorY + 8, 4, 184)
-      ctx.fillRect(doorX + 80, doorY + 8, 4, 184)
-      ctx.fillRect(doorX + 120, doorY + 8, 4, 184)
+      // Refuerzos verticales (más espaciados)
+      ctx.fillRect(doorX + 32, doorY + 4, 2, 24)
+      ctx.fillRect(doorX + 64, doorY + 4, 2, 24)
+      ctx.fillRect(doorX + 96, doorY + 4, 2, 24)
       
       // Cerradura (círculo dorado)
       ctx.fillStyle = "#daa520"
       ctx.beginPath()
-      ctx.arc(doorX + doorWidth / 2, doorY + 100, 12, 0, Math.PI * 2)
+      ctx.arc(doorX + doorWidth / 2, doorY + 16, 6, 0, Math.PI * 2)
       ctx.fill()
       
       // Agujero de la cerradura
       ctx.fillStyle = "#1a1a1a"
       ctx.beginPath()
-      ctx.arc(doorX + doorWidth / 2, doorY + 100, 6, 0, Math.PI * 2)
+      ctx.arc(doorX + doorWidth / 2, doorY + 16, 3, 0, Math.PI * 2)
       ctx.fill()
       
-      // Bisagras (círculos pequeños)
+      // Bisagras (una en cada extremo)
       ctx.fillStyle = "#8b7355"
       ctx.beginPath()
-      ctx.arc(doorX + 20, doorY + 50, 6, 0, Math.PI * 2)
+      ctx.arc(doorX + 12, doorY + 8, 3, 0, Math.PI * 2)
       ctx.fill()
       ctx.beginPath()
-      ctx.arc(doorX + 20, doorY + 150, 6, 0, Math.PI * 2)
+      ctx.arc(doorX + 12, doorY + 24, 3, 0, Math.PI * 2)
+      ctx.fill()
+      ctx.beginPath()
+      ctx.arc(doorX + doorWidth - 12, doorY + 8, 3, 0, Math.PI * 2)
+      ctx.fill()
+      ctx.beginPath()
+      ctx.arc(doorX + doorWidth - 12, doorY + 24, 3, 0, Math.PI * 2)
       ctx.fill()
       
       // Sombra de la puerta
       ctx.fillStyle = "rgba(0, 0, 0, 0.3)"
-      ctx.fillRect(doorX + 2, doorY + 2, doorWidth, 200)
+      ctx.fillRect(doorX + 1, doorY + 1, doorWidth, 32)
+      
+      // Texto indicativo sobre la puerta (usando lógica de NPCs)
+      // Verificar proximidad directamente en el renderizado para evitar problemas de sincronización
+      const doorXPos = 1344
+      const doorYPos = MAP_HEIGHT - 32
+      const doorWidthPos = 128
+      const doorHeightPos = 32
+      const interactionRangePos = 50
+      
+      const leftBound = doorXPos - interactionRangePos
+      const rightBound = doorXPos + doorWidthPos + interactionRangePos
+      const topBound = doorYPos - interactionRangePos
+      const bottomBound = doorYPos + doorHeightPos + interactionRangePos
+      
+      const isNearDoorNow = (
+        localCharacter.x >= leftBound &&
+        localCharacter.x <= rightBound &&
+        localCharacter.y >= topBound &&
+        localCharacter.y <= bottomBound
+      )
+      
+      console.log('🎨 Door render check:', { 
+        nearbyDoor, 
+        isNearDoorNow,
+        localCharacterX: localCharacter.x,
+        localCharacterY: localCharacter.y,
+        doorXPos, 
+        doorYPos, 
+        leftBound,
+        rightBound,
+        topBound,
+        bottomBound,
+        xCheck: `${localCharacter.x} >= ${leftBound} && ${localCharacter.x} <= ${rightBound}`,
+        yCheck: `${localCharacter.y} >= ${topBound} && ${localCharacter.y} <= ${bottomBound}`,
+        xResult: localCharacter.x >= leftBound && localCharacter.x <= rightBound,
+        yResult: localCharacter.y >= topBound && localCharacter.y <= bottomBound,
+        cameraX, 
+        cameraY,
+        screenX: doorXPos - cameraX,
+        screenY: doorYPos - cameraY
+      })
+      
+      if (isNearDoorNow) {
+        console.log('🎨 Drawing door text - isNearDoorNow is true')
+        // Dibujar texto de interacción (igual que NPCs)
+        ctx.fillStyle = "#ffffff"
+        ctx.font = "14px monospace"
+        const textX = doorXPos + doorWidthPos / 2 - 50
+        const textY = doorYPos - 20
+        console.log('🎨 Drawing text at:', { textX, textY, screenX: textX - cameraX, screenY: textY - cameraY })
+        ctx.fillText("Press E to open", textX, textY)
+      } else {
+        console.log('🎨 Not drawing door text - isNearDoorNow is false')
+      }
     }
 
     // Dibujar logo de la taberna
@@ -1649,15 +1778,16 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
       const clampedCameraY = Math.max(0, Math.min(MAP_HEIGHT - CANVAS_HEIGHT, targetCameraY))
       setCamera({ x: clampedCameraX, y: clampedCameraY })
       
-      // Check for nearby NPCs and players
+      // Check for nearby NPCs, players, and door
       checkNearbyNPCs(newX, newY)
       checkNearbyPlayers(newX, newY)
+      checkNearbyDoor(newX, newY)
       
       return true // Indica que hubo cambios
     }
     
     return false // No hubo cambios
-  }, [localCharacter, keys, onCharacterUpdate, websocketClient, checkCollision, checkNearbyNPCs, checkNearbyPlayers])
+  }, [localCharacter, keys, onCharacterUpdate, websocketClient, checkCollision, checkNearbyNPCs, checkNearbyPlayers, checkNearbyDoor])
 
   const render = useCallback(() => {
     const canvas = canvasRef.current
@@ -1865,13 +1995,15 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
         return
       }
       
-      // Interactuar con NPC o desafiar jugador con E
+      // Interactuar con NPC, puerta o desafiar jugador con E
       if (e.code === "KeyE") {
         e.preventDefault()
         if (nearbyPlayer) {
           challengePlayer()
         } else if (nearbyNPC) {
           interactWithNPC()
+        } else if (nearbyDoor) {
+          interactWithDoor()
         }
         return
       }
@@ -1898,7 +2030,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
       window.removeEventListener("keydown", handleKeyDown)
       window.removeEventListener("keyup", handleKeyUp)
     }
-  }, [showChatInput, currentMessage, websocketClient, interactWithNPC, nearbyPlayer, challengePlayer, nearbyNPC])
+  }, [showChatInput, currentMessage, websocketClient, interactWithNPC, nearbyPlayer, challengePlayer, nearbyNPC, nearbyDoor, interactWithDoor])
 
   useEffect(() => {
     animationRef.current = requestAnimationFrame(gameLoop)
@@ -2165,6 +2297,30 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
           }}
           onClose={handleCloseCombatInterface}
         />
+      )}
+
+      {/* Door Dialog */}
+      {showDoorDialog && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-gradient-to-b from-amber-800 to-amber-900 border-4 border-amber-600 rounded-lg p-6 max-w-md mx-4 shadow-2xl">
+            <div className="text-center">
+              <div className="text-3xl mb-4"></div>
+              <div className="text-2xl font-bold text-amber-100 pixel-text mb-4">
+                FUTURE EXPANSION
+              </div>
+              <div className="text-amber-200 pixel-text mb-6">
+                This door leads to a new area that will be available in a future update. 
+                Stay tuned for exciting new adventures!
+              </div>
+              <Button
+                onClick={() => setShowDoorDialog(false)}
+                className="pixel-button bg-amber-600 hover:bg-amber-700 text-white font-bold px-6 py-2"
+              >
+                Close
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
 
     </div>
