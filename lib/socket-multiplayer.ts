@@ -18,6 +18,28 @@ export interface CombatChallenge {
   status: 'pending' | 'accepted' | 'declined' | 'expired'
 }
 
+export interface XPUpdate {
+  xpGained: number
+  newStats: {
+    level: number
+    experience: number
+    experienceToNext: number
+    health: number
+    maxHealth: number
+    attack: number
+    defense: number
+    speed: number
+  }
+  leveledUp: boolean
+  levelsGained: number
+  levelUpReward?: {
+    healthIncrease: number
+    attackIncrease: number
+    defenseIncrease: number
+    speedIncrease: number
+  }
+}
+
 export interface CombatState {
   id: string
   challenger: {
@@ -70,6 +92,16 @@ export interface Player {
   lastSeen: number
   currentMessage?: ChatMessage
   direction?: string
+  stats?: {
+    level: number
+    experience: number
+    experienceToNext: number
+    health: number
+    maxHealth: number
+    attack: number
+    defense: number
+    speed: number
+  }
 }
 
 export interface GameState {
@@ -82,15 +114,17 @@ export class SocketMultiplayerClient {
   private onStateUpdate: (state: GameState) => void
   private onPlayerJoin: (player: Player) => void
   private onPlayerLeave: (playerId: string) => void
-  private onPlayerMove: (playerId: string, x: number, y: number) => void
+  private onPlayerMove: (playerId: string, x: number, y: number, direction?: string) => void
   private onChatMessage: (message: ChatMessage) => void
   private onCombatChallenge?: (challenge: CombatChallenge) => void
   private onCombatStateUpdate?: (combatState: CombatState) => void
+  private onXPUpdate?: (xpUpdate: XPUpdate) => void
   private heartbeatInterval: NodeJS.Timeout | null = null
   private keepAliveInterval: NodeJS.Timeout | null = null
+  private currentPosition: { x: number; y: number; direction: string } | null = null
   private connectionTimeout: NodeJS.Timeout | null = null
-  private readonly HEARTBEAT_INTERVAL = 8000 // 8 segundos
-  private readonly KEEPALIVE_INTERVAL = 15000 // 15 segundos
+  private readonly HEARTBEAT_INTERVAL = 30000 // 30 segundos (muy reducido para evitar spam)
+  private readonly KEEPALIVE_INTERVAL = 60000 // 60 segundos (muy tolerante)
   private readonly CONNECTION_TIMEOUT = 8000 // 8 segundos
   private readonly SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL || 
     (process.env.NODE_ENV === 'production' 
@@ -108,10 +142,11 @@ export class SocketMultiplayerClient {
     onStateUpdate: (state: GameState) => void,
     onPlayerJoin: (player: Player) => void,
     onPlayerLeave: (playerId: string) => void,
-    onPlayerMove: (playerId: string, x: number, y: number) => void,
+    onPlayerMove: (playerId: string, x: number, y: number, direction?: string) => void,
     onChatMessage: (message: ChatMessage) => void,
     onCombatChallenge?: (challenge: CombatChallenge) => void,
     onCombatStateUpdate?: (combatState: CombatState) => void,
+    onXPUpdate?: (xpUpdate: XPUpdate) => void,
   ) {
     this.onStateUpdate = onStateUpdate
     this.onPlayerJoin = onPlayerJoin
@@ -120,6 +155,7 @@ export class SocketMultiplayerClient {
     this.onChatMessage = onChatMessage
     this.onCombatChallenge = onCombatChallenge
     this.onCombatStateUpdate = onCombatStateUpdate
+    this.onXPUpdate = onXPUpdate
   }
 
   async connect(): Promise<void> {
@@ -144,17 +180,17 @@ export class SocketMultiplayerClient {
           transports: ['polling', 'websocket'],
           timeout: this.CONNECTION_TIMEOUT,
           forceNew: false, // Reuse existing connection if possible
-          reconnection: true, // Enable automatic reconnection
-          reconnectionDelay: 1000, // 1 second delay
-          reconnectionAttempts: 5, // Max 5 attempts
-          reconnectionDelayMax: 5000, // Max 5 seconds delay
-          autoConnect: true,
+          reconnection: false, // DISABLED: Automatic reconnection causes issues
+          autoConnect: false, // Manual connection control
           upgrade: true,
           rememberUpgrade: true, // Remember successful transport
           withCredentials: false
         })
 
         this.setupEventListeners()
+        
+        // Connect manually
+        this.socket.connect()
         
         // Connection timeout
         this.connectionTimeout = setTimeout(() => {
@@ -261,6 +297,21 @@ export class SocketMultiplayerClient {
       }
     })
 
+    this.socket.on('xpUpdate', (xpUpdate: XPUpdate) => {
+      console.log(`📊 XP Update received: +${xpUpdate.xpGained} XP, Level ${xpUpdate.newStats.level}`)
+      if (this.onXPUpdate) {
+        this.onXPUpdate(xpUpdate)
+      }
+    })
+
+    // Sistema de playerMoved deshabilitado temporalmente para estabilidad
+
+    // Manejar limpieza de mensajes de jugadores
+    this.socket.on('playerMessageCleared', (playerId: string) => {
+      // Este evento se puede usar para limpiar mensajes específicos si es necesario
+      console.log(`💬 Message cleared for player: ${playerId}`)
+    })
+
     // Desconexión
     this.socket.on('disconnect', (reason) => {
       console.log('🔌 Disconnected from server:', reason)
@@ -285,8 +336,13 @@ export class SocketMultiplayerClient {
 
     this.heartbeatInterval = setInterval(() => {
       if (this.socket && this.socket.connected && this.isConnected) {
-        this.socket.emit('heartbeat')
-        console.log('💓 Heartbeat enviado')
+        // Enviar heartbeat con posición actual del jugador
+        this.socket.emit('heartbeat', {
+          x: this.currentPosition?.x || 0,
+          y: this.currentPosition?.y || 0,
+          direction: this.currentPosition?.direction || 'down'
+        })
+        console.log('💓 Heartbeat enviado con posición')
       }
     }, this.HEARTBEAT_INTERVAL)
   }
@@ -338,13 +394,8 @@ export class SocketMultiplayerClient {
   }
 
   updatePlayerPosition(x: number, y: number, direction?: string): void {
-    if (this.socket && this.socket.connected && this.isConnected) {
-      try {
-        this.socket.emit('updatePosition', { x, y, direction: direction || 'down' })
-      } catch (error) {
-        console.warn('⚠️ Error enviando posición:', error)
-      }
-    }
+    // Solo actualizar posición local, se enviará en el próximo heartbeat
+    this.currentPosition = { x, y, direction: direction || 'down' }
   }
 
   sendChatMessage(message: string): void {

@@ -40,15 +40,168 @@ let gameState = {
 let combatChallenges = {};
 let combatStates = {};
 
+// Player stats and XP system
+let playerStats = {};
+
+// XP System Constants (matching frontend)
+const XP_CONSTANTS = {
+  BASE_XP_REQUIRED: 100,
+  XP_MULTIPLIER: 1.5,
+  MAX_LEVEL: 50,
+  BASE_HEALTH: 100,
+  BASE_ATTACK: 15,
+  BASE_DEFENSE: 5,
+  BASE_SPEED: 10,
+  HEALTH_PER_LEVEL: 10,
+  ATTACK_PER_LEVEL: 2,
+  DEFENSE_PER_LEVEL: 1,
+  SPEED_PER_LEVEL: 0.5,
+  COMBAT_VICTORY_XP: 50,
+  COMBAT_DEFEAT_XP: 10,
+  FIRST_BLOOD_XP: 25,
+  PERFECT_VICTORY_XP: 75,
+};
+
+// Helper function to add stats to game state
+function addStatsToGameState(gameState, playerStats) {
+  return {
+    ...gameState,
+    players: Object.keys(gameState.players).reduce((acc, playerId) => {
+      acc[playerId] = {
+        ...gameState.players[playerId],
+        stats: playerStats[playerId]
+      };
+      return acc;
+    }, {})
+  };
+}
+
+// XP System Functions
+function calculateXPRequired(level) {
+  if (level <= 1) return 0;
+  
+  let totalXP = 0;
+  for (let i = 2; i <= level; i++) {
+    totalXP += Math.floor(XP_CONSTANTS.BASE_XP_REQUIRED * Math.pow(XP_CONSTANTS.XP_MULTIPLIER, i - 2));
+  }
+  return totalXP;
+}
+
+function calculateXPToNext(currentLevel, currentXP) {
+  const nextLevelXP = calculateXPRequired(currentLevel + 1);
+  return nextLevelXP - currentXP;
+}
+
+function createInitialStats() {
+  return {
+    level: 1,
+    experience: 0,
+    experienceToNext: XP_CONSTANTS.BASE_XP_REQUIRED,
+    health: XP_CONSTANTS.BASE_HEALTH,
+    maxHealth: XP_CONSTANTS.BASE_HEALTH,
+    attack: XP_CONSTANTS.BASE_ATTACK,
+    defense: XP_CONSTANTS.BASE_DEFENSE,
+    speed: XP_CONSTANTS.BASE_SPEED,
+  };
+}
+
+function addExperience(stats, xpGained) {
+  let newStats = { ...stats };
+  let leveledUp = false;
+  let levelsGained = 0;
+  let levelUpReward = null;
+
+  newStats.experience += xpGained;
+
+  // Check for level ups
+  while (newStats.level < XP_CONSTANTS.MAX_LEVEL) {
+    const xpNeededForNext = calculateXPToNext(newStats.level, newStats.experience);
+    
+    if (xpNeededForNext <= 0) {
+      // Level up!
+      leveledUp = true;
+      levelsGained++;
+      
+      // Calculate stat increases
+      const healthIncrease = XP_CONSTANTS.HEALTH_PER_LEVEL;
+      const attackIncrease = XP_CONSTANTS.ATTACK_PER_LEVEL;
+      const defenseIncrease = XP_CONSTANTS.DEFENSE_PER_LEVEL;
+      const speedIncrease = XP_CONSTANTS.SPEED_PER_LEVEL;
+      
+      // Apply stat increases
+      newStats.level++;
+      newStats.maxHealth += healthIncrease;
+      newStats.health += healthIncrease; // Heal on level up
+      newStats.attack += attackIncrease;
+      newStats.defense += defenseIncrease;
+      newStats.speed += speedIncrease;
+      
+      // Store level up reward for UI display
+      levelUpReward = {
+        healthIncrease,
+        attackIncrease,
+        defenseIncrease,
+        speedIncrease
+      };
+      
+      // Update XP to next level
+      newStats.experienceToNext = calculateXPToNext(newStats.level, newStats.experience);
+    } else {
+      // No more level ups possible
+      newStats.experienceToNext = xpNeededForNext;
+      break;
+    }
+  }
+
+  return { newStats, leveledUp, levelsGained, levelUpReward };
+}
+
+function calculateCombatXP(isVictory, damageDealt, damageTaken, turnsTaken, isFirstBlood = false) {
+  let xp = 0;
+
+  if (isVictory) {
+    xp += XP_CONSTANTS.COMBAT_VICTORY_XP;
+    
+    // Bonus for perfect victory (no damage taken)
+    if (damageTaken === 0) {
+      xp += XP_CONSTANTS.PERFECT_VICTORY_XP;
+    }
+    
+    // Bonus for first blood
+    if (isFirstBlood) {
+      xp += XP_CONSTANTS.FIRST_BLOOD_XP;
+    }
+    
+    // Bonus for quick victory (fewer turns)
+    if (turnsTaken <= 3) {
+      xp += 25;
+    }
+  } else {
+    // Consolation XP for defeat
+    xp += XP_CONSTANTS.COMBAT_DEFEAT_XP;
+    
+    // Bonus XP based on damage dealt
+    xp += Math.floor(damageDealt / 10);
+  }
+
+  return xp;
+}
+
+// Sistema de throttling simple para estabilidad
+const lastPositionUpdate = new Map();
+const POSITION_UPDATE_INTERVAL = 300; // 300ms entre actualizaciones
+
 // Limpiar jugadores inactivos cada 60 segundos (más tolerante)
 setInterval(() => {
   const now = Date.now();
-  const timeout = 60000; // 60 segundos
+  const timeout = 120000; // 120 segundos (2 minutos) - más tolerante
   
   Object.keys(gameState.players).forEach(playerId => {
     if (now - gameState.players[playerId].lastSeen > timeout) {
       console.log(`👋 Player ${gameState.players[playerId].name} disconnected due to inactivity`);
       delete gameState.players[playerId];
+      delete playerStats[playerId]; // Clean up player stats
+      lastPositionUpdate.delete(playerId); // Clean up throttle
     }
   });
   
@@ -104,7 +257,7 @@ io.on('connection', (socket) => {
   console.log(`🔌 Client connected: ${socket.id}`);
 
   // Enviar estado actual al cliente que se conecta
-  socket.emit('gameState', gameState);
+  socket.emit('gameState', addStatsToGameState(gameState, playerStats));
 
   // Manejar unirse al juego
   socket.on('joinGame', (playerData) => {
@@ -117,43 +270,58 @@ io.on('connection', (socket) => {
     gameState.players[socket.id] = player;
     gameState.lastUpdate = Date.now();
     
+    // Initialize player stats if not exists
+    if (!playerStats[socket.id]) {
+      playerStats[socket.id] = createInitialStats();
+      console.log(`📊 Initialized stats for player ${player.name} (Level ${playerStats[socket.id].level})`);
+    }
+    
     console.log(`🎮 Player ${player.name} joined. Total: ${Object.keys(gameState.players).length}`);
     
+    // Send initial stats to the player
+    if (playerStats[socket.id]) {
+      socket.emit('xpUpdate', {
+        xpGained: 0,
+        newStats: playerStats[socket.id],
+        leveledUp: false,
+        levelsGained: 0
+      });
+      console.log(`📊 Sent initial stats to ${player.name}: Level ${playerStats[socket.id].level}`);
+    }
+    
+    // Agregar stats al objeto del jugador antes de enviarlo
+    const playerWithStats = {
+      ...player,
+      stats: playerStats[socket.id]
+    };
+    
     // Notificar a todos los clientes
-    io.emit('playerJoined', player);
-    io.emit('gameState', gameState);
+    io.emit('playerJoined', playerWithStats);
+    
+    // Enviar estado del juego con stats a todos
+    io.emit('gameState', addStatsToGameState(gameState, playerStats));
   });
 
-  // Manejar actualización de posición
-  socket.on('updatePosition', (positionData) => {
-    if (gameState.players[socket.id]) {
-      try {
-        gameState.players[socket.id].x = positionData.x;
-        gameState.players[socket.id].y = positionData.y;
-        gameState.players[socket.id].direction = positionData.direction || 'down'; // Incluir dirección
-        gameState.players[socket.id].lastSeen = Date.now();
-        gameState.lastUpdate = Date.now();
-        
-        console.log(`🔄 Player ${gameState.players[socket.id].name} moved to (${positionData.x}, ${positionData.y}) direction: ${positionData.direction || 'down'}`);
-        
-        // Notificar a todos los clientes excepto al que envió la actualización
-        socket.broadcast.emit('playerMoved', {
-          playerId: socket.id,
-          x: positionData.x,
-          y: positionData.y,
-          direction: positionData.direction || 'down'
-        });
-        
-        // Enviar el estado completo para sincronización (siempre para mantener visibilidad)
-        socket.broadcast.emit('gameState', gameState);
-        
-        // También enviar al cliente que se movió para confirmación
-        socket.emit('gameState', gameState);
-      } catch (error) {
-        console.error('❌ Error procesando actualización de posición:', error);
-      }
-    }
-  });
+  // DISABLED: updatePosition causes immediate disconnections
+  // socket.on('updatePosition', (positionData) => {
+  //   if (gameState.players[socket.id]) {
+  //     try {
+  //       // Actualizar posición del jugador
+  //       gameState.players[socket.id].x = positionData.x;
+  //       gameState.players[socket.id].y = positionData.y;
+  //       gameState.players[socket.id].direction = positionData.direction || 'down';
+  //       gameState.players[socket.id].lastSeen = Date.now();
+  //       gameState.lastUpdate = Date.now();
+  //       
+  //       console.log(`🔄 Player ${gameState.players[socket.id].name} moved to (${positionData.x}, ${positionData.y}) direction: ${positionData.direction || 'down'}`);
+  //       
+  //       // NO enviar gameState para evitar desconexiones
+  //       // socket.broadcast.emit('gameState', addStatsToGameState(gameState, playerStats));
+  //     } catch (error) {
+  //       console.error('❌ Error procesando actualización de posición:', error);
+  //     }
+  //   }
+  // });
 
   // Manejar mensajes de chat
   socket.on('chatMessage', (messageData) => {
@@ -176,16 +344,17 @@ io.on('connection', (socket) => {
       
       // Notificar a todos los clientes
       io.emit('chatMessage', message);
-      io.emit('gameState', gameState); // Enviar estado actualizado
+      // No enviar estado completo en cada mensaje de chat
       
-      // Limpiar el mensaje después de 5 segundos
+      // Limpiar el mensaje después de 10 segundos
       setTimeout(() => {
         if (gameState.players[socket.id]) {
           gameState.players[socket.id].currentMessage = undefined;
           gameState.lastUpdate = Date.now();
-          io.emit('gameState', gameState);
+          // Solo enviar actualización del mensaje, no el estado completo
+          socket.broadcast.emit('playerMessageCleared', socket.id);
         }
-      }, 5000);
+      }, 10000);
     }
   });
 
@@ -194,24 +363,34 @@ io.on('connection', (socket) => {
     if (gameState.players[socket.id]) {
       const player = gameState.players[socket.id];
       delete gameState.players[socket.id];
+      delete playerStats[socket.id]; // Clean up player stats
+      lastPositionUpdate.delete(socket.id); // Clean up throttle
       gameState.lastUpdate = Date.now();
       
       console.log(`👋 Player ${player.name} disconnected`);
       
       // Notificar a todos los clientes
       io.emit('playerLeft', socket.id);
-      io.emit('gameState', gameState);
+      io.emit('gameState', addStatsToGameState(gameState, playerStats));
     }
   });
 
   // Heartbeat para mantener conexión activa
-  socket.on('heartbeat', () => {
+  socket.on('heartbeat', (data) => {
     if (gameState.players[socket.id]) {
       gameState.players[socket.id].lastSeen = Date.now();
       gameState.lastUpdate = Date.now();
       
-      // Enviar estado actualizado para mantener sincronización
-      socket.emit('gameState', gameState);
+      // Si el cliente envía posición en el heartbeat, actualizarla
+      if (data && typeof data.x === 'number' && typeof data.y === 'number') {
+        gameState.players[socket.id].x = data.x;
+        gameState.players[socket.id].y = data.y;
+        gameState.players[socket.id].direction = data.direction || 'down';
+        console.log(`💓 Heartbeat with position: Player ${gameState.players[socket.id].name} at (${data.x}, ${data.y})`);
+      }
+      
+      // Solo enviar confirmación de heartbeat, no el estado completo
+      socket.emit('heartbeatAck');
     }
   });
 
@@ -295,23 +474,39 @@ io.on('connection', (socket) => {
       const challenger = gameState.players[challenge.challengerId];
       const challenged = gameState.players[challenge.challengedId];
       
+      // Get player stats
+      const challengerStats = playerStats[challenge.challengerId] || createInitialStats();
+      const challengedStats = playerStats[challenge.challengedId] || createInitialStats();
+      
       const combatState = {
         id: combatId,
         challenger: {
           id: challenger.id,
           name: challenger.name,
           avatar: challenger.avatar,
-          health: 100,
-          maxHealth: 100,
-          isAlive: true
+          health: challengerStats.health,
+          maxHealth: challengerStats.maxHealth,
+          isAlive: true,
+          stats: {
+            level: challengerStats.level,
+            attack: challengerStats.attack,
+            defense: challengerStats.defense,
+            speed: challengerStats.speed
+          }
         },
         challenged: {
           id: challenged.id,
           name: challenged.name,
           avatar: challenged.avatar,
-          health: 100,
-          maxHealth: 100,
-          isAlive: true
+          health: challengedStats.health,
+          maxHealth: challengedStats.maxHealth,
+          isAlive: true,
+          stats: {
+            level: challengedStats.level,
+            attack: challengedStats.attack,
+            defense: challengedStats.defense,
+            speed: challengedStats.speed
+          }
         },
         currentTurn: challenge.challengerId,
         turns: [],
@@ -427,6 +622,86 @@ io.on('connection', (socket) => {
       
       console.log(`🏆 Combat finished: ${winner.name} defeated ${loser.name}`);
       console.log(`📢 Global message sent: "${victoryMessage.text}"`);
+      
+      // Calculate and award XP
+      const turnsTaken = combatState.turns.length;
+      const winnerStats = playerStats[winner.id];
+      const loserStats = playerStats[loser.id];
+      
+      if (winnerStats && loserStats) {
+        // Calculate damage dealt by each player
+        let winnerDamageDealt = 0;
+        let loserDamageDealt = 0;
+        let winnerDamageTaken = 0;
+        let loserDamageTaken = 0;
+        let isFirstBlood = false;
+        
+        combatState.turns.forEach((turn, index) => {
+          if (turn.action.damage) {
+            if (turn.playerId === winner.id) {
+              winnerDamageDealt += turn.action.damage;
+              loserDamageTaken += turn.action.damage;
+              if (index === 0) isFirstBlood = true;
+            } else {
+              loserDamageDealt += turn.action.damage;
+              winnerDamageTaken += turn.action.damage;
+            }
+          }
+        });
+        
+        // Award XP to winner
+        const winnerXP = calculateCombatXP(true, winnerDamageDealt, winnerDamageTaken, turnsTaken, isFirstBlood);
+        const winnerResult = addExperience(winnerStats, winnerXP);
+        playerStats[winner.id] = winnerResult.newStats;
+        
+        // Award XP to loser
+        const loserXP = calculateCombatXP(false, loserDamageDealt, loserDamageTaken, turnsTaken);
+        const loserResult = addExperience(loserStats, loserXP);
+        playerStats[loser.id] = loserResult.newStats;
+        
+        console.log(`📊 XP Awarded - ${winner.name}: +${winnerXP} XP (Level ${winnerResult.newStats.level})`);
+        console.log(`📊 XP Awarded - ${loser.name}: +${loserXP} XP (Level ${loserResult.newStats.level})`);
+        
+        // Send XP updates to players
+        io.to(winner.id).emit('xpUpdate', {
+          xpGained: winnerXP,
+          newStats: winnerResult.newStats,
+          leveledUp: winnerResult.leveledUp,
+          levelsGained: winnerResult.levelsGained,
+          levelUpReward: winnerResult.levelUpReward
+        });
+        
+        io.to(loser.id).emit('xpUpdate', {
+          xpGained: loserXP,
+          newStats: loserResult.newStats,
+          leveledUp: loserResult.leveledUp,
+          levelsGained: loserResult.levelsGained,
+          levelUpReward: loserResult.levelUpReward
+        });
+        
+        // Send level up notifications if applicable
+        if (winnerResult.leveledUp) {
+          const levelUpMessage = {
+            id: Math.random().toString(36).substring(2, 15),
+            text: `🎉 ${winner.name} reached level ${winnerResult.newStats.level}!`,
+            timestamp: Date.now(),
+            playerId: 'system',
+            playerName: 'System'
+          };
+          io.emit('chatMessage', levelUpMessage);
+        }
+        
+        if (loserResult.leveledUp) {
+          const levelUpMessage = {
+            id: Math.random().toString(36).substring(2, 15),
+            text: `🎉 ${loser.name} reached level ${loserResult.newStats.level}!`,
+            timestamp: Date.now(),
+            playerId: 'system',
+            playerName: 'System'
+          };
+          io.emit('chatMessage', levelUpMessage);
+        }
+      }
       
       setTimeout(() => {
         delete combatStates[data.combatId];

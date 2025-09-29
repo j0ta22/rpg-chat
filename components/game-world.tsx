@@ -4,8 +4,10 @@ import { useEffect, useRef, useState, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { SocketMultiplayerClient, type Player, type GameState, type ChatMessage, type CombatChallenge, type CombatState, type CombatAction } from "@/lib/socket-multiplayer"
+import { SocketMultiplayerClient, type CombatChallenge, type CombatState, type CombatAction } from "@/lib/socket-multiplayer"
+import { NativeWebSocketClient, type Player, type GameState, type ChatMessage } from "@/lib/native-websocket"
 import { CombatUtils, COMBAT_CONSTANTS } from "@/lib/combat-system"
+import { savePlayerProgress, loadPlayerProgress, type PlayerSaveData, type PlayerStats } from "@/lib/player-persistence"
 import CombatInterface from "./combat-interface"
 import CombatChallengeComponent from "./combat-challenge"
 
@@ -14,6 +16,15 @@ interface Character {
   avatar: string
   x: number
   y: number
+  stats?: {
+    level: number
+    experience: number
+    health: number
+    maxHealth: number
+    attack: number
+    defense: number
+    speed: number
+  }
 }
 
 interface NPC {
@@ -26,10 +37,20 @@ interface NPC {
   interactionRadius: number
 }
 
+interface InterpolatedPlayer extends Player {
+  targetX: number
+  targetY: number
+  startX: number
+  startY: number
+  interpolationStartTime: number
+  interpolationDuration: number
+}
+
 interface GameWorldProps {
   character: Character
   onCharacterUpdate: (character: Character) => void
   onBackToCreation: () => void
+  onBackToSelection?: () => void
 }
 
 interface CollisionObject {
@@ -198,16 +219,16 @@ const avatarColors: Record<string, string> = {
   const npcs: NPC[] = [
     {
       id: "npc_1",
-      name: "Village Elder",
+      name: "Tavern keeper",
       x: 1364,
       y: 554,
       avatar: "character_18",
-      message: "Welcome, brave adventurer! I have been waiting for someone like you. The village needs your help!",
+      message: "Hail, good traveller! I am Maeve, keeper of Ye Drunken Monkey. Enter ye, take thy seat by ye hearth, and let ye fine ale and tales flow freely. What bringeth thee to mine humble tavern?",
       interactionRadius: 80
     },
     {
       id: "npc_2",
-      name: "Mysterious Stranger",
+      name: "Tavern Crier",
       x: 1364,
       y: 698,
       avatar: "character_27",
@@ -216,18 +237,21 @@ const avatarColors: Record<string, string> = {
     }
   ]
 
-export default function GameWorld({ character, onCharacterUpdate, onBackToCreation }: GameWorldProps) {
+export default function GameWorld({ character, onCharacterUpdate, onBackToCreation, onBackToSelection }: GameWorldProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [keys, setKeys] = useState<Set<string>>(new Set())
   const animationRef = useRef<number>()
   const [multiplayerClient, setMultiplayerClient] = useState<SocketMultiplayerClient | null>(null)
+  const [websocketClient, setWebsocketClient] = useState<NativeWebSocketClient | null>(null)
   const [otherPlayers, setOtherPlayers] = useState<Record<string, Player>>({})
   const [allPlayers, setAllPlayers] = useState<Record<string, Player>>({})
+  const [interpolatedPlayers, setInterpolatedPlayers] = useState<Record<string, InterpolatedPlayer>>({})
   const [playerVisibility, setPlayerVisibility] = useState<Record<string, boolean>>({})
   const [playerId, setPlayerId] = useState<string>("")
   const [camera, setCamera] = useState({ x: 0, y: 0 })
   const [localCharacter, setLocalCharacter] = useState<Character>(character)
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
+  const [playerChatMessages, setPlayerChatMessages] = useState<Record<string, { text: string; timestamp: number }>>({})
   const [currentMessage, setCurrentMessage] = useState("")
   const [chatInput, setChatInput] = useState("")
   const [showChatInput, setShowChatInput] = useState(false)
@@ -252,6 +276,32 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
   const [combatState, setCombatState] = useState<CombatState | null>(null)
   const [showCombatInterface, setShowCombatInterface] = useState(false)
   const [systemMessage, setSystemMessage] = useState<{ text: string; timestamp: number } | null>(null)
+  const [tavernLogo, setTavernLogo] = useState<HTMLImageElement | null>(null)
+  const [playerStats, setPlayerStats] = useState<{
+    level: number
+    experience: number
+    experienceToNext: number
+    health: number
+    maxHealth: number
+    attack: number
+    defense: number
+    speed: number
+  } | null>(character.stats ? {
+    ...character.stats,
+    experienceToNext: character.stats.level * 100
+  } : null)
+  const [isSaving, setIsSaving] = useState(false)
+  const [isLoadingProgress, setIsLoadingProgress] = useState(true)
+  const [levelUpNotification, setLevelUpNotification] = useState<{
+    levelsGained: number
+    newLevel: number
+    rewards: {
+      healthIncrease: number
+      attackIncrease: number
+      defenseIncrease: number
+      speedIncrease: number
+    }
+  } | null>(null)
 
   const CANVAS_WIDTH = 800
   const CANVAS_HEIGHT = 600
@@ -355,47 +405,191 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
 
   // Función para desafiar a un jugador
   const challengePlayer = useCallback(() => {
-    if (nearbyPlayer && multiplayerClient) {
-      multiplayerClient.challengePlayer(nearbyPlayer.id)
+    if (nearbyPlayer && websocketClient) {
+      websocketClient.challengePlayer(nearbyPlayer.id)
     }
-  }, [nearbyPlayer, multiplayerClient])
+  }, [nearbyPlayer, websocketClient])
 
   // Función para manejar desafíos de combate
   const handleCombatChallenge = useCallback((challenge: CombatChallenge) => {
     setCombatChallenge(challenge)
   }, [])
 
+  // Función para guardar progreso del jugador en Supabase
+  const savePlayerProgressToSupabase = useCallback(async () => {
+    console.log('🔄 savePlayerProgressToSupabase called')
+    console.log('📊 playerStats:', playerStats)
+    console.log('👤 localCharacter:', localCharacter)
+    
+    if (!localCharacter.name) {
+      console.log('❌ Missing character name for save')
+      return
+    }
+    
+    // Usar stats por defecto si playerStats es null
+    const statsToSave = playerStats || {
+      level: 1,
+      experience: 0,
+      health: 100,
+      maxHealth: 100,
+      attack: 10,
+      defense: 5,
+      speed: 5
+    }
+    
+    console.log('💾 Using stats for save:', statsToSave)
+    
+    setIsSaving(true)
+    try {
+      const playerData: PlayerSaveData = {
+        name: localCharacter.name,
+        avatar: localCharacter.avatar,
+        stats: statsToSave
+      }
+      
+      console.log('💾 Attempting to save player data:', playerData)
+      const success = await savePlayerProgress(playerData)
+      if (success) {
+        console.log('✅ Progress saved to Supabase successfully')
+      } else {
+        console.error('❌ Failed to save progress to Supabase')
+      }
+    } catch (error) {
+      console.error('❌ Error saving progress to Supabase:', error)
+    } finally {
+      setIsSaving(false)
+    }
+  }, [playerStats, localCharacter])
+
   // Función para manejar actualizaciones del estado de combate
   const handleCombatStateUpdate = useCallback((newCombatState: CombatState) => {
+    console.log('⚔️ Combat state update received:', newCombatState.status)
     setCombatState(newCombatState)
     setShowCombatInterface(true)
     
     // Si el combate terminó, limpiar después de un delay más corto
     if (newCombatState.status === 'finished') {
+      console.log('🏁 Combat finished, scheduling auto-close in 2 seconds')
       // Cerrar inmediatamente la ventana de desafío si está abierta
       setCombatChallenge(null)
       
+      // Cerrar automáticamente después de 2 segundos
       setTimeout(() => {
+        console.log('🚪 Auto-closing combat interface')
         setCombatState(null)
         setShowCombatInterface(false)
-      }, 3000) // Reducido a 3 segundos para que se cierre más rápido
+      }, 2000)
     }
   }, [])
 
+  // Función para cerrar manualmente la interfaz de combate
+  const handleCloseCombatInterface = useCallback(() => {
+    setCombatState(null)
+    setShowCombatInterface(false)
+  }, [])
+
+  const handleXPUpdate = useCallback((xpUpdate: any) => {
+    console.log(`📊 XP Update: +${xpUpdate.xpGained} XP, Level ${xpUpdate.newStats.level}`)
+    
+    // Update player stats
+    setPlayerStats(xpUpdate.newStats)
+    
+    // Also update the player in allPlayers so the level shows correctly
+    if (playerId) {
+      console.log(`🔧 Updating player ${playerId} stats in allPlayers:`, xpUpdate.newStats)
+      setAllPlayers(prev => ({
+        ...prev,
+        [playerId]: {
+          ...prev[playerId],
+          stats: xpUpdate.newStats
+        }
+      }))
+    } else {
+      console.log('❌ No playerId available for stats update')
+    }
+    
+    // Show level up notification if applicable
+    if (xpUpdate.leveledUp && xpUpdate.levelUpReward) {
+      setLevelUpNotification({
+        levelsGained: xpUpdate.levelsGained,
+        newLevel: xpUpdate.newStats.level,
+        rewards: xpUpdate.levelUpReward
+      })
+      
+      // Auto-hide level up notification after 5 seconds
+      setTimeout(() => {
+        setLevelUpNotification(null)
+      }, 5000)
+    }
+    
+    // Guardar progreso automáticamente cuando cambian las stats
+    setTimeout(() => {
+      console.log('💾 Auto-saving after XP update')
+      savePlayerProgressToSupabase()
+    }, 100) // Pequeño delay para asegurar que el estado se actualice
+  }, [playerId, savePlayerProgressToSupabase])
+
+  // Función para cargar progreso del jugador desde Supabase
+  const loadPlayerProgressFromSupabase = useCallback(async () => {
+    console.log('🔄 loadPlayerProgressFromSupabase called for:', localCharacter.name)
+    
+    if (!localCharacter.name) {
+      console.log('❌ No character name available for loading')
+      setIsLoadingProgress(false)
+      return false
+    }
+    
+    try {
+      const savedData = await loadPlayerProgress(localCharacter.name)
+      if (savedData) {
+        console.log('💾 Loading saved progress from Supabase:', savedData)
+        console.log('📊 Saved stats:', savedData.stats)
+        
+        // Actualizar el personaje local con los datos guardados
+        setLocalCharacter(prev => ({
+          ...prev,
+          name: savedData.name,
+          avatar: savedData.avatar
+        }))
+        
+        // Actualizar stats del jugador
+        const newStats = {
+          ...savedData.stats,
+          experienceToNext: savedData.stats.level * 100 // Calcular XP requerido para el siguiente nivel
+        }
+        
+        console.log('📊 Setting playerStats to:', newStats)
+        setPlayerStats(newStats)
+        
+        console.log('✅ Progress loaded successfully from Supabase')
+        setIsLoadingProgress(false)
+        return true
+      } else {
+        console.log('ℹ️ No saved progress found in Supabase')
+        setIsLoadingProgress(false)
+        return false
+      }
+    } catch (error) {
+      console.error('❌ Error loading progress from Supabase:', error)
+      setIsLoadingProgress(false)
+      return false
+    }
+  }, [localCharacter.name])
+
   // Función para responder a un desafío
   const respondToChallenge = useCallback((accepted: boolean) => {
-    if (combatChallenge && multiplayerClient) {
-      multiplayerClient.respondToChallenge(combatChallenge.id, accepted)
+    if (combatChallenge && websocketClient) {
+      websocketClient.respondToChallenge(combatChallenge.id, accepted)
       setCombatChallenge(null)
     }
-  }, [combatChallenge, multiplayerClient])
+  }, [combatChallenge, websocketClient])
 
   // Función para enviar una acción de combate
   const sendCombatAction = useCallback((action: CombatAction) => {
-    if (combatState && multiplayerClient) {
-      multiplayerClient.sendCombatAction(combatState.id, action)
+    if (combatState && websocketClient) {
+      websocketClient.sendCombatAction(combatState.id, action)
     }
-  }, [combatState, multiplayerClient])
+  }, [combatState, websocketClient])
 
   // Function to find a safe spawn point (sin useCallback para evitar dependencias circulares)
   const findSafeSpawnPoint = (preferredX: number, preferredY: number) => {
@@ -480,9 +674,17 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
   }, [isMusicMuted])
 
   useEffect(() => {
-    const client = new SocketMultiplayerClient(
+    // Prevent multiple connections
+    if (websocketClient) {
+      return
+    }
+    
+    const client = new NativeWebSocketClient(
       (state: GameState) => {
-        console.log('📥 Estado del juego recibido:', state)
+        // Only log occasionally to avoid spam
+        if (Math.random() < 0.1) { // 10% of the time
+          console.log('📥 Estado del juego recibido:', state)
+        }
         
         // Actualizar todos los jugadores directamente
         setAllPlayers(state.players)
@@ -509,27 +711,24 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
         // Player left
         console.log(`👋 Player ${playerId} left the game`)
         
-      },
-      (playerId: string, x: number, y: number) => {
-        // Player moved - actualizar posición inmediatamente
-        console.log(`🔄 Player ${playerId} moved to (${x}, ${y})`)
+        // Actualizar estado local
+        setAllPlayers(prev => {
+          const updated = { ...prev }
+          delete updated[playerId]
+          return updated
+        })
         
-        // Solo actualizar allPlayers - otherPlayers se actualizará automáticamente via useEffect
-        setAllPlayers(prev => ({
-          ...prev,
-          [playerId]: { 
-            ...prev[playerId], 
-            x, 
-            y,
-            lastSeen: Date.now()
-          }
-        }))
+        setOtherPlayers(prev => {
+          const updated = { ...prev }
+          delete updated[playerId]
+          return updated
+        })
         
-        // Asegurar que el jugador permanezca visible
-        setPlayerVisibility(prev => ({
-          ...prev,
-          [playerId]: true
-        }))
+        setPlayerVisibility(prev => {
+          const updated = { ...prev }
+          delete updated[playerId]
+          return updated
+        })
       },
       (message: ChatMessage) => {
         // Chat message received
@@ -544,23 +743,125 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
           }, 8000)
         } else {
           setChatMessages(prev => [...prev, message].slice(-10)) // Mantener solo los últimos 10 mensajes
+          
+          // También guardar el mensaje para mostrar como globo de diálogo
+          setPlayerChatMessages(prev => ({
+            ...prev,
+            [message.playerId]: {
+              text: message.text,
+              timestamp: message.timestamp
+            }
+          }))
+          
+          // Limpiar el mensaje después de 10 segundos
+          setTimeout(() => {
+            setPlayerChatMessages(prev => {
+              const updated = { ...prev }
+              delete updated[message.playerId]
+              return updated
+            })
+          }, 10000)
         }
       },
-      handleCombatChallenge,
-      handleCombatStateUpdate
+      handleXPUpdate,
+      (playerId: string) => {
+        // Player ID received from server
+        console.log('🎯 Player ID received:', playerId)
+        setPlayerId(playerId)
+      },
+      (data: { playerId: string; x: number; y: number; direction: string }) => {
+        // Player moved - start interpolation for smooth movement
+        // Only log occasionally to avoid spam
+        if (Math.random() < 0.001) { // 0.1% of the time
+          console.log('🎮 Player moved:', data.playerId, 'to', data.x, data.y)
+        }
+        
+        setAllPlayers(prev => {
+          if (prev[data.playerId]) {
+            const currentPlayer = prev[data.playerId]
+            const now = Date.now()
+            
+            // Start interpolation
+            setInterpolatedPlayers(prevInterp => ({
+              ...prevInterp,
+              [data.playerId]: {
+                ...currentPlayer,
+                targetX: data.x,
+                targetY: data.y,
+                startX: currentPlayer.x,
+                startY: currentPlayer.y,
+                interpolationStartTime: now,
+                interpolationDuration: 100, // 100ms interpolation duration for faster response
+                direction: data.direction
+              }
+            }))
+            
+            // Update the target position in allPlayers for future interpolations
+            return {
+              ...prev,
+              [data.playerId]: {
+                ...prev[data.playerId],
+                x: data.x,
+                y: data.y,
+                direction: data.direction
+              }
+            }
+          }
+          return prev
+        })
+      },
+      (challenge: any) => {
+        // Combat challenge received
+        console.log('⚔️ Combat challenge received from:', challenge.challenger.name)
+        setCombatChallenge(challenge)
+      },
+      (combatState: any) => {
+        // Combat state update received
+        console.log('⚔️ Combat state update received:', combatState.status)
+        handleCombatStateUpdate(combatState)
+      },
+      (data: any) => {
+        // Combat challenge declined
+        console.log('⚔️ Combat challenge declined by:', data.challengedName)
+        setCombatChallenge(null)
+      }
     )
 
-    client.connect().then(() => {
-      setPlayerId(client.getPlayerId())
-      setMultiplayerClient(client)
+    client.connect().then(async () => {
+      setWebsocketClient(client)
+      
+      // Cargar progreso guardado antes de unirse al juego
+      const progressLoaded = await loadPlayerProgressFromSupabase()
+      
+      // Si no hay progreso guardado, crear stats iniciales y guardarlos
+      if (!progressLoaded) {
+        console.log('🆕 New player detected, creating initial stats')
+        const initialStats = {
+          level: 1,
+          experience: 0,
+          experienceToNext: 100,
+          health: 100,
+          maxHealth: 100,
+          attack: 10,
+          defense: 5,
+          speed: 5
+        }
+        setPlayerStats(initialStats)
+        
+        // Guardar stats iniciales después de un breve delay
+        setTimeout(() => {
+          console.log('💾 Saving initial stats for new player')
+          savePlayerProgressToSupabase()
+        }, 1000)
+      }
       
       // Unirse al juego después de un breve delay para asegurar que la conexión esté estable
       setTimeout(() => {
         client.joinGame({
           name: character.name,
           avatar: character.avatar,
-          x: character.x || 100,
-          y: character.y || 150,
+          x: localCharacter.x || 100,
+          y: localCharacter.y || 150,
           color: avatarColors[character.avatar] || "#3b82f6",
         })
       }, 500)
@@ -569,18 +870,62 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
     })
 
     return () => {
+      // Guardar progreso antes de desconectar
+      if (playerStats) {
+        console.log('💾 Saving progress before disconnect')
+        savePlayerProgressToSupabase()
+      }
+      
       client.disconnect()
       if (movementTimeoutRef.current) {
         clearTimeout(movementTimeoutRef.current)
       }
     }
-  }, [character.name, character.avatar, isMoving])
+  }, []) // Empty dependency array to run only once
+
+  // Update interpolated player positions every frame
+  useEffect(() => {
+    const updateInterpolatedPositions = () => {
+      const now = Date.now()
+      
+      setInterpolatedPlayers(prev => {
+        const updated = { ...prev }
+        
+        Object.keys(updated).forEach(playerId => {
+          const player = updated[playerId]
+          const elapsed = now - player.interpolationStartTime
+          const progress = Math.min(elapsed / player.interpolationDuration, 1)
+          
+          if (progress >= 1) {
+            // Interpolation complete, remove from interpolated players
+            delete updated[playerId]
+          } else {
+            // Interpolate position using easing function
+            const easeProgress = 1 - Math.pow(1 - progress, 3) // Cubic ease-out
+            const currentX = player.startX + (player.targetX - player.startX) * easeProgress
+            const currentY = player.startY + (player.targetY - player.startY) * easeProgress
+            
+            updated[playerId] = {
+              ...player,
+              x: currentX,
+              y: currentY
+            }
+          }
+        })
+        
+        return updated
+      })
+    }
+    
+    const interval = setInterval(updateInterpolatedPositions, 16) // ~60 FPS
+    return () => clearInterval(interval)
+  }, [])
 
   // Monitor connection status and sync positions periodically
   useEffect(() => {
-    if (multiplayerClient) {
+    if (websocketClient) {
       const checkConnection = () => {
-        const isConnected = multiplayerClient.isConnectedToServer()
+        const isConnected = websocketClient.isConnectedToServer()
         const now = Date.now()
         
         if (connectionStatusRef.current.connected !== isConnected) {
@@ -594,26 +939,40 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
         }
       }
       
-      // Backup sync position every 10 seconds (only if not moving)
+      // Sync position every 1 second (more frequent for better synchronization)
       const syncPosition = () => {
-        if (multiplayerClient && multiplayerClient.isConnectedToServer() && !isMoving) {
+        if (websocketClient && websocketClient.isConnectedToServer()) {
           try {
-            multiplayerClient.updatePlayerPosition(localCharacter.x, localCharacter.y, playerDirection)
+            websocketClient.updatePlayerPosition(localCharacter.x, localCharacter.y, playerDirection)
+            // Only log occasionally to avoid spam
+            if (Math.random() < 0.1) { // 10% of the time
+              console.log(`🔄 Syncing position: (${localCharacter.x}, ${localCharacter.y})`)
+            }
           } catch (error) {
             console.warn('⚠️ Error sincronizando posición:', error)
           }
         }
       }
       
+      // Guardar progreso periódicamente cada 30 segundos
+      const saveProgress = () => {
+        if (websocketClient && websocketClient.isConnectedToServer() && playerStats) {
+          console.log('💾 Periodic save triggered')
+          savePlayerProgressToSupabase()
+        }
+      }
+      
       const connectionInterval = setInterval(checkConnection, 5000) // Check every 5 seconds
-      const positionInterval = setInterval(syncPosition, 10000) // Backup sync every 10 seconds (only when not moving)
+      const positionInterval = setInterval(syncPosition, 1000) // Sync position every 1 second
+      const saveInterval = setInterval(saveProgress, 30000) // Save progress every 30 seconds
       
       return () => {
         clearInterval(connectionInterval)
         clearInterval(positionInterval)
+        clearInterval(saveInterval)
       }
     }
-  }, [multiplayerClient, localCharacter.x, localCharacter.y]) // Solo cuando cambia el character inicial o el estado de movimiento
+  }, [websocketClient, localCharacter.x, localCharacter.y, playerDirection]) // Include playerDirection in dependencies
 
   // Sincronizar otherPlayers cuando cambie allPlayers (robusto)
   useEffect(() => {
@@ -637,6 +996,23 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
     })
     
     setSpriteImages(images)
+  }, [])
+
+  // Cargar logo de la taberna
+  useEffect(() => {
+    const loadTavernLogo = async () => {
+      const img = new Image()
+      img.src = '/cartel.svg'
+      img.onload = () => {
+        setTavernLogo(img)
+        console.log('🏪 Tavern logo loaded successfully')
+      }
+      img.onerror = () => {
+        console.log('❌ Failed to load tavern logo')
+      }
+    }
+    
+    loadTavernLogo()
   }, [])
 
   // Animación global con configuraciones específicas
@@ -908,7 +1284,24 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
         ctx.fillRect(candleX + 3, candleY - 6 + flameFlicker, 2, 4)
       }
     })
-  }, [])
+
+    // Dibujar logo de la taberna
+    if (tavernLogo) {
+      const logoX = 785 - cameraX // Posición X del logo
+      const logoY = 0 - cameraY // Posición Y del logo
+      const logoWidth = 120
+      const logoHeight = 80
+      
+      // Solo dibujar si está visible en pantalla
+      if (logoX + logoWidth > -50 && logoX < CANVAS_WIDTH + 50 && logoY + logoHeight > -50 && logoY < CANVAS_HEIGHT + 50) {
+        ctx.drawImage(tavernLogo, logoX, logoY, logoWidth, logoHeight)
+        
+        // Agregar un pequeño efecto de sombra
+        ctx.fillStyle = "rgba(0, 0, 0, 0.0)"
+        ctx.fillRect(logoX + 2, logoY + 2, logoWidth, logoHeight)
+      }
+    }
+  }, [tavernLogo])
 
   const drawPlayer = useCallback(
     (
@@ -923,6 +1316,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
       chatMessage?: { text: string; timestamp: number },
       avatar?: string,
       direction: 'down' | 'up' | 'left' | 'right' = 'down',
+      player?: any, // Objeto completo del jugador para acceder a las stats
     ) => {
       ctx.imageSmoothingEnabled = false
 
@@ -933,7 +1327,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
         // Dibujar globo de chat si existe un mensaje
         if (chatMessage && chatMessage.text) {
           const messageAge = Date.now() - chatMessage.timestamp
-          const maxAge = 5000 // 5 segundos
+          const maxAge = 10000 // 10 segundos
           
           if (messageAge < maxAge) {
             // Calcular opacidad basada en la edad del mensaje
@@ -1050,7 +1444,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
           ctx.fillRect(Math.floor(screenX + 4), Math.floor(screenY - 8), 4, 4)
         }
 
-        // Nombre del jugador (solo esto, sin elementos antiguos) con pixel-perfect rendering
+        // Nombre del jugador y nivel (solo esto, sin elementos antiguos) con pixel-perfect rendering
         const nameX = Math.floor(screenX - 30)
         const nameY = Math.floor(screenY - spriteConfig.renderSize / 2 - 20)
         const nameTextX = Math.floor(screenX)
@@ -1061,7 +1455,10 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
         ctx.fillStyle = "#ffffff"
         ctx.font = "12px monospace"
         ctx.textAlign = "center"
-        ctx.fillText(name, nameTextX, nameTextY)
+        
+        // Mostrar nivel si el jugador tiene stats
+        const displayName = player?.stats ? `${name} (Lv.${player.stats.level})` : name
+        ctx.fillText(displayName, nameTextX, nameTextY)
         ctx.textAlign = "left"
       }
     },
@@ -1124,46 +1521,43 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
         clearTimeout(movementTimeoutRef.current)
       }
       
-      // Configurar timeout para resetear isMoving después de 250ms de inactividad
+      // Configurar timeout para resetear isMoving después de 500ms de inactividad
       movementTimeoutRef.current = setTimeout(() => {
         setIsMoving(false)
-        // Send final position when movement stops (only if we haven't sent recently)
-        const now = Date.now()
-        if (multiplayerClient && multiplayerClient.isConnectedToServer() && now - lastPositionUpdateRef.current > 100) {
-          try {
-            // Use queued position if available, otherwise use current position
-            const finalPosition = positionUpdateQueueRef.current || { x: localCharacter.x, y: localCharacter.y, direction: playerDirection }
-            multiplayerClient.updatePlayerPosition(finalPosition.x, finalPosition.y, finalPosition.direction)
-            lastPositionUpdateRef.current = now
-            positionUpdateQueueRef.current = null // Clear the queue
-          } catch (error) {
-            console.warn('⚠️ Error enviando posición final:', error)
-          }
-        }
-      }, 250)
+        // DISABLED: All position updates cause disconnections
+        // Position synchronization will be handled by heartbeat only
+      }, 500)
       
       // Actualizar posición local inmediatamente para respuesta fluida
       const updatedCharacter = { ...localCharacter, x: newX, y: newY }
       setLocalCharacter(updatedCharacter)
       onCharacterUpdate(updatedCharacter)
       
-      // Send position updates with smart throttling to prevent disconnect loops
-      const now = Date.now()
-      if (multiplayerClient && multiplayerClient.isConnectedToServer() && now - lastPositionUpdateRef.current > 150) {
-        try {
-          // Only send if we're actually moving and connected
-          if (isMoving) {
-            // Queue the latest position to avoid spam
-            positionUpdateQueueRef.current = { x: newX, y: newY, direction: playerDirection }
-            multiplayerClient.updatePlayerPosition(newX, newY, playerDirection)
-            lastPositionUpdateRef.current = now
+      // También actualizar allPlayers para que el jugador local se vea en su propia pantalla
+      if (playerId) {
+        setAllPlayers(prev => ({
+          ...prev,
+          [playerId]: {
+            ...prev[playerId],
+            x: newX,
+            y: newY,
+            direction: playerDirection,
+            lastSeen: Date.now()
           }
-        } catch (error) {
-          console.warn('⚠️ Error enviando posición al servidor:', error)
+        }))
+        // Only log occasionally to avoid spam
+        if (Math.random() < 0.01) { // 1% of the time
+          console.log(`🔄 Updated allPlayers for local player: (${newX}, ${newY})`)
         }
-      } else if (isMoving) {
-        // Queue the position even if we can't send it yet
-        positionUpdateQueueRef.current = { x: newX, y: newY, direction: playerDirection }
+      }
+      
+      // Enviar actualización de posición inmediatamente para reducir delay
+      if (websocketClient && websocketClient.isConnectedToServer()) {
+        websocketClient.updatePlayerPosition(newX, newY, playerDirection)
+        // Only log occasionally to avoid spam
+        if (Math.random() < 0.05) { // 5% of the time
+          console.log(`🎮 Position update sent: (${newX}, ${newY})`)
+        }
       }
       
       // Update camera to follow player
@@ -1181,7 +1575,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
     }
     
     return false // No hubo cambios
-  }, [localCharacter, keys, onCharacterUpdate, multiplayerClient, checkCollision, checkNearbyNPCs, checkNearbyPlayers])
+  }, [localCharacter, keys, onCharacterUpdate, websocketClient, checkCollision, checkNearbyNPCs, checkNearbyPlayers])
 
   const render = useCallback(() => {
     const canvas = canvasRef.current
@@ -1195,51 +1589,106 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
 
     generateTerrain(ctx, camera.x, camera.y)
 
-    // Dibujar jugador local desde localCharacter
-    const localPlayer = allPlayers[playerId]
-    const playerColor = localPlayer?.color || "#3b82f6" // Color por defecto
+    // DEBUG: Log de estado completo (solo ocasionalmente)
+    if (Math.random() < 0.001) { // 0.1% de las veces para reducir spam
+      console.log('🔍 DEBUG RENDER:')
+      console.log('  - playerId:', playerId)
+      console.log('  - allPlayers keys:', Object.keys(allPlayers))
+      console.log('  - localCharacter:', { x: localCharacter.x, y: localCharacter.y, name: localCharacter.name })
+      console.log('  - camera:', { x: camera.x, y: camera.y })
+    }
     
+    // Dibujar jugador local desde localCharacter (para asegurar posición correcta)
+    // Intentar encontrar el jugador local por nombre si playerId no está disponible
+    let localPlayer = null
+    if (playerId && allPlayers[playerId]) {
+      localPlayer = allPlayers[playerId]
+    } else {
+      // FALLBACK: Buscar por nombre
+      localPlayer = Object.values(allPlayers).find(p => p.name === localCharacter.name)
+      if (localPlayer) {
+        console.log(`🔍 Found local player by name: ${localPlayer.name} (ID: ${localPlayer.id})`)
+        setPlayerId(localPlayer.id) // Actualizar playerId
+      }
+    }
     
-    drawPlayer(
-      ctx, 
-      localCharacter.x, 
-      localCharacter.y, 
-      playerColor, 
-      localCharacter.name, 
-      true, // Es el jugador actual
-      camera.x, 
-      camera.y,
-      localPlayer?.currentMessage, // Usar el mensaje del jugador local
-      localCharacter.avatar,
-      playerDirection
-    )
+    if (localPlayer) {
+      // Only log occasionally to avoid spam
+      if (Math.random() < 0.01) { // 1% of the time
+        console.log(`🎨 Drawing LOCAL player ${localCharacter.name} at (${localCharacter.x}, ${localCharacter.y}) - allPlayers: (${localPlayer.x}, ${localPlayer.y})`)
+      }
+      
+      drawPlayer(
+        ctx, 
+        localCharacter.x, // Usar localCharacter para posición
+        localCharacter.y, // Usar localCharacter para posición
+        localPlayer.color || '#3b82f6', 
+        localCharacter.name, 
+        true, // Es el jugador local
+        camera.x, 
+        camera.y,
+        playerChatMessages[playerId], // Mensaje de chat del jugador local
+        localCharacter.avatar,
+        playerDirection,
+        localPlayer // Pasar el objeto completo del jugador para acceder a las stats
+      )
+    } else {
+      // Only log occasionally to avoid spam
+      if (Math.random() < 0.01) { // 1% of the time
+        console.log('❌ No se puede dibujar jugador local, usando fallback:')
+        console.log('  - playerId:', playerId)
+        console.log('  - allPlayers keys:', Object.keys(allPlayers))
+        console.log('  - localCharacter name:', localCharacter.name)
+      }
+      
+      // FALLBACK: Dibujar jugador local sin depender de allPlayers
+      drawPlayer(
+        ctx, 
+        localCharacter.x, 
+        localCharacter.y, 
+        '#3b82f6', // Color por defecto
+        localCharacter.name, 
+        true, // Es el jugador local
+        camera.x, 
+        camera.y,
+        undefined, // No hay mensaje para el jugador local
+        localCharacter.avatar,
+        playerDirection,
+        undefined // Sin stats por ahora
+      )
+    }
 
-    // Dibujar otros jugadores desde allPlayers (excluyendo el jugador actual)
+    // Dibujar otros jugadores (usando posiciones interpoladas si están disponibles)
     Object.values(allPlayers).forEach((player) => {
-      // Solo dibujar si no es el jugador actual y está marcado como visible
+      // Solo dibujar si no es el jugador local y está marcado como visible
       if (player.id !== playerId && playerVisibility[player.id] !== false) {
+        // Usar posición interpolada si está disponible, sino usar la posición normal
+        const interpolatedPlayer = interpolatedPlayers[player.id]
+        const renderPlayer = interpolatedPlayer || player
+        
         // Solo loggear ocasionalmente para evitar spam
-        if (Math.random() < 0.001) { // 0.1% de las veces
-          console.log(`🎨 Drawing player ${player.name} at (${player.x}, ${player.y})`)
+        if (Math.random() < 0.0001) { // 0.01% of the time
+          console.log(`🎨 Drawing player ${player.name} at (${renderPlayer.x}, ${renderPlayer.y}) ${interpolatedPlayer ? '(interpolated)' : '(normal)'}`)
         }
         drawPlayer(
           ctx, 
-          player.x, 
-          player.y, 
-          player.color, 
+          renderPlayer.x, 
+          renderPlayer.y, 
+          player.color || '#3b82f6', 
           player.name, 
-          false, // No es el jugador actual
+          false, // No es el jugador local
           camera.x, 
           camera.y,
-          player.currentMessage,
+          playerChatMessages[player.id], // Mensaje de chat del jugador
           player.avatar,
-          (player.direction as 'down' | 'up' | 'left' | 'right') || 'down' // Usar la dirección del jugador o 'down' por defecto
+          (renderPlayer.direction as 'down' | 'up' | 'left' | 'right') || 'down',
+          player // Pasar el objeto completo del jugador para acceder a las stats
         )
 
         // Dibujar indicador de desafío si está cerca
         if (nearbyPlayer && nearbyPlayer.id === player.id) {
-          const screenX = player.x - camera.x
-          const screenY = player.y - camera.y
+          const screenX = renderPlayer.x - camera.x
+          const screenY = renderPlayer.y - camera.y
           ctx.fillStyle = "#ff6b6b"
           ctx.font = "14px monospace"
           ctx.fillText("Press E to challenge", screenX - 60, screenY - 20)
@@ -1268,7 +1717,8 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
           camera.y,
           undefined,
           npc.avatar,
-          'down' // NPCs siempre miran hacia abajo
+          'down', // NPCs siempre miran hacia abajo
+          undefined // NPCs no tienen stats
         )
         
         // Dibujar indicador de interacción si está cerca
@@ -1291,7 +1741,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
     ctx.fillText(`Location: Drunken Monkey Tavern
 
 `, 20, 90)
-  }, [localCharacter, camera, allPlayers, playerId, playerVisibility, nearbyPlayer])
+  }, [localCharacter, camera, allPlayers, interpolatedPlayers, playerId, playerVisibility, nearbyPlayer, playerChatMessages])
 
   const gameLoop = useCallback(() => {
     const hasChanges = updateGame()
@@ -1307,7 +1757,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
       setLastRenderTime(now)
     }
     animationRef.current = requestAnimationFrame(gameLoop)
-  }, [updateGame, render, animationFrames, otherPlayers, lastRenderTime])
+  }, [updateGame, render, animationFrames, allPlayers, lastRenderTime])
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -1317,8 +1767,8 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
           setShowChatInput(false)
           setCurrentMessage("")
         } else if (e.code === "Enter") {
-          if (currentMessage.trim() && multiplayerClient) {
-            multiplayerClient.sendChatMessage(currentMessage.trim())
+          if (currentMessage.trim() && websocketClient) {
+            websocketClient.sendChatMessage(currentMessage.trim())
             setCurrentMessage("")
             setShowChatInput(false)
           }
@@ -1366,7 +1816,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
       window.removeEventListener("keydown", handleKeyDown)
       window.removeEventListener("keyup", handleKeyUp)
     }
-  }, [showChatInput, currentMessage, multiplayerClient, interactWithNPC, nearbyPlayer, challengePlayer, nearbyNPC])
+  }, [showChatInput, currentMessage, websocketClient, interactWithNPC, nearbyPlayer, challengePlayer, nearbyNPC])
 
   useEffect(() => {
     animationRef.current = requestAnimationFrame(gameLoop)
@@ -1411,13 +1861,13 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
                   <Input
                     value={currentMessage}
                     onChange={(e) => setCurrentMessage(e.target.value)}
-                    placeholder="Escribe tu mensaje... (Enter para enviar, Esc para cancelar)"
+                    placeholder="Type your message... (Enter to send, Esc to cancel)"
                     className="bg-white text-black font-mono text-sm"
                     maxLength={100}
                     autoFocus
                   />
                   <div className="text-xs text-white mt-1 opacity-70">
-                    {currentMessage.length}/100 caracteres
+                    {currentMessage.length}/100 characters
                   </div>
                 </div>
               </div>
@@ -1430,13 +1880,25 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
               <p>{"Use WASD or Arrow Keys to move"}</p>
               <p>{"Press Enter or T to chat"}</p>
               <p>{"Press E to interact with NPCs or challenge players"}</p>
-              <p className="text-xs mt-1 text-muted-foreground">{"Messages appear above players for 5 seconds"}</p>
+              <p className="text-xs mt-1 text-muted-foreground">{"Messages appear above players for 10s seconds"}</p>
             </div>
 
             <div className="flex flex-col sm:flex-row gap-2">
+              <Button 
+                onClick={savePlayerProgressToSupabase} 
+                className="pixel-button bg-blue-600 hover:bg-blue-700"
+                disabled={isSaving}
+              >
+                {isSaving ? "Saving..." : "Save Progress"}
+              </Button>
               <Button onClick={onBackToCreation} className="pixel-button">
                 {"Create New Hero"}
               </Button>
+              {onBackToSelection && (
+                <Button onClick={onBackToSelection} className="pixel-button bg-green-600 hover:bg-green-700">
+                  {"Change Character"}
+                </Button>
+              )}
             </div>
           </div>
         </CardContent>
@@ -1503,7 +1965,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
           <div className="bg-yellow-600 border-4 border-yellow-400 rounded-lg p-4 shadow-lg">
             <div className="text-center">
               <div className="text-yellow-100 font-bold text-lg pixel-text mb-2">
-                🏆 ANUNCIO DEL SISTEMA
+                🏆 SYSTEM ANNOUNCEMENT
               </div>
               <div className="text-white text-sm pixel-text">
                 {systemMessage.text}
@@ -1511,6 +1973,96 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
             </div>
           </div>
         </div>
+      )}
+
+      {/* Player Stats Panel */}
+      {playerStats && (
+        <div className="fixed top-4 left-4 z-40">
+          <div className="bg-black/90 backdrop-blur-sm text-white p-4 rounded-lg border-2 border-gray-600 shadow-xl">
+            <div className="text-center mb-3">
+              <div className="text-lg font-bold text-yellow-400 pixel-text">Level {playerStats.level}</div>
+              <div className="text-xs text-gray-300 pixel-text">Adventurer</div>
+            </div>
+            
+            {/* XP Bar */}
+            <div className="mb-3">
+              <div className="flex justify-between text-xs mb-1 pixel-text">
+                <span>XP</span>
+                <span>{playerStats.experience}/{playerStats.level * 100}</span>
+              </div>
+              <div className="w-full bg-gray-700 rounded-full h-2">
+                <div 
+                  className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full transition-all duration-500"
+                  style={{ 
+                    width: `${Math.min((playerStats.experience / (playerStats.level * 100)) * 100, 100)}%` 
+                  }}
+                ></div>
+              </div>
+            </div>
+
+            {/* Stats */}
+            <div className="space-y-1 text-xs pixel-text">
+              <div className="flex justify-between">
+                <span className="text-red-400">❤️ HP</span>
+                <span>{playerStats.health}/{playerStats.maxHealth}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-orange-400">⚔️ ATK</span>
+                <span>{playerStats.attack}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-blue-400">🛡️ DEF</span>
+                <span>{playerStats.defense}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-green-400">💨 SPD</span>
+                <span>{playerStats.speed}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Level Up Notification */}
+      {levelUpNotification && (
+        <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50">
+          <div className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white p-6 rounded-lg shadow-2xl border-4 border-yellow-300 animate-bounce">
+            <div className="text-center">
+              <div className="text-3xl font-bold mb-2 pixel-text">🎉 LEVEL UP! 🎉</div>
+              <div className="text-xl mb-4 pixel-text">Level {levelUpNotification.newLevel}</div>
+              <div className="text-sm space-y-1 pixel-text">
+                <div className="text-green-300">+{levelUpNotification.rewards.healthIncrease} HP</div>
+                <div className="text-orange-300">+{levelUpNotification.rewards.attackIncrease} ATK</div>
+                <div className="text-blue-300">+{levelUpNotification.rewards.defenseIncrease} DEF</div>
+                <div className="text-purple-300">+{levelUpNotification.rewards.speedIncrease} SPD</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Combat Challenge */}
+      {combatChallenge && (
+        <CombatChallengeComponent
+          challenge={combatChallenge}
+          onAccept={() => respondToChallenge(true)}
+          onDecline={() => respondToChallenge(false)}
+          onExpire={() => setCombatChallenge(null)}
+        />
+      )}
+
+      {/* Combat Interface */}
+      {showCombatInterface && combatState && (
+        <CombatInterface
+          combatState={combatState}
+          currentPlayerId={playerId}
+          onAction={(action) => {
+            if (websocketClient) {
+              websocketClient.sendCombatAction(combatState.id, action)
+            }
+          }}
+          onClose={handleCloseCombatInterface}
+        />
       )}
 
     </div>

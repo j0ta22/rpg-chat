@@ -1,0 +1,19 @@
+{
+  "playerId": "ozefnw497",
+  "name": "La guada",
+  "avatar": "character_19",
+  "color": "#ec4899",
+  "x": 392,
+  "y": 254,
+  "direction": "down",
+  "stats": {
+    "level": 1,
+    "experience": 0,
+    "health": 100,
+    "maxHealth": 100,
+    "attack": 10,
+    "defense": 5,
+    "speed": 3
+  },
+  "lastSaved": 1759100960614
+}

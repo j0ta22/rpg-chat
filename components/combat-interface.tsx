@@ -100,6 +100,7 @@ export default function CombatInterface({
   }
 
   if (combatState.status === 'finished') {
+    console.log('🏁 CombatInterface: Combat finished, showing victory screen')
     const isWinner = combatState.winner === currentPlayerId
     return (
       <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
@@ -126,7 +127,10 @@ export default function CombatInterface({
                 </p>
               </div>
             </div>
-            <Button onClick={onClose} className="w-full" size="lg">
+            <Button onClick={() => {
+              console.log('🚪 CombatInterface: Continuar button clicked')
+              onClose()
+            }} className="w-full" size="lg">
               Continuar
             </Button>
           </CardContent>

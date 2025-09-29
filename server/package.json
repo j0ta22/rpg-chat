@@ -10,15 +10,21 @@
     "postinstall": "echo 'Dependencies installed successfully'"
   },
   "dependencies": {
+    "cors": "^2.8.5",
     "express": "^4.18.2",
     "socket.io": "^4.7.4",
-    "cors": "^2.8.5",
-    "uuid": "^9.0.1"
+    "uuid": "^9.0.1",
+    "ws": "^8.18.3"
   },
   "devDependencies": {
     "nodemon": "^3.0.2"
   },
-  "keywords": ["rpg", "multiplayer", "socket.io", "express"],
+  "keywords": [
+    "rpg",
+    "multiplayer",
+    "socket.io",
+    "express"
+  ],
   "author": "RPG Chat Team",
   "license": "MIT",
   "engines": {

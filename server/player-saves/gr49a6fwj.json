@@ -1,0 +1,19 @@
+{
+  "playerId": "gr49a6fwj",
+  "name": "jota",
+  "avatar": "character_32",
+  "color": "#8b5cf6",
+  "x": 244,
+  "y": 282,
+  "direction": "left",
+  "stats": {
+    "level": 1,
+    "experience": 50,
+    "health": 100,
+    "maxHealth": 100,
+    "attack": 10,
+    "defense": 5,
+    "speed": 3
+  },
+  "lastSaved": 1759099782692
+}

@@ -1,0 +1,19 @@
+{
+  "playerId": "1rig320gc",
+  "name": "La guada",
+  "avatar": "character_19",
+  "color": "#ec4899",
+  "x": 392,
+  "y": 254,
+  "direction": "down",
+  "stats": {
+    "level": 1,
+    "experience": 20,
+    "health": 100,
+    "maxHealth": 100,
+    "attack": 10,
+    "defense": 5,
+    "speed": 3
+  },
+  "lastSaved": 1759100927281
+}
