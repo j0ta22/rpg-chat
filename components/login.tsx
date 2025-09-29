@@ -10,7 +10,7 @@ import { Eye, EyeOff, User, Lock, Wine, Crown } from "lucide-react"
 import Image from "next/image"
 
 interface LoginProps {
-  onLogin: (username: string) => void
+  onLogin: (username: string, password: string) => void
   onRegister: (username: string, password: string) => void
   isLoading: boolean
   error: string | null
@@ -28,7 +28,7 @@ export default function Login({ onLogin, onRegister, isLoading, error }: LoginPr
     e.preventDefault()
     
     if (isLogin) {
-      onLogin(username)
+      onLogin(username, password)
     } else {
       if (password !== confirmPassword) {
         return

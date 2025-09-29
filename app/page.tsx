@@ -101,12 +101,12 @@ export default function RPGGame() {
     setShowPlayerSelection(false)
   }
 
-  const handleLogin = async (username: string) => {
+  const handleLogin = async (username: string, password: string) => {
     setIsAuthLoading(true)
     setAuthError(null)
     
     try {
-      const result = await loginUser(username, '') // Por ahora sin contraseña
+      const result = await loginUser(username, password)
       if (result.success && result.user) {
         setUser(result.user)
         setShowLogin(false)

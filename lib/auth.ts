@@ -77,28 +77,31 @@ export async function loginUser(username: string, password: string): Promise<Aut
   try {
     console.log('🔐 Logging in user:', username)
     
-    const { data: user, error } = await supabase
+    // Primero buscar el usuario por username
+    const { data: users, error: searchError } = await supabase
       .from('users')
       .select('id, username, password_hash, created_at')
       .eq('username', username)
-      .eq('password_hash', password) // En producción, deberías verificar el hash
-      .single()
     
-    if (error) {
-      if (error.code === 'PGRST116') {
-        return {
-          success: false,
-          error: 'Invalid tavern alias or password'
-        }
-      }
-      console.error('❌ Error logging in:', error)
+    if (searchError) {
+      console.error('❌ Error searching user:', searchError)
       return {
         success: false,
         error: 'Error entering tavern'
       }
     }
     
-    if (!user) {
+    if (!users || users.length === 0) {
+      return {
+        success: false,
+        error: 'Invalid tavern alias or password'
+      }
+    }
+    
+    const user = users[0]
+    
+    // Verificar la contraseña (en producción, deberías verificar el hash)
+    if (user.password_hash !== password) {
       return {
         success: false,
         error: 'Invalid tavern alias or password'
