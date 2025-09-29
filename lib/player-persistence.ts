@@ -41,7 +41,7 @@ export async function savePlayerProgress(playerData: PlayerSaveData): Promise<bo
         last_saved: new Date().toISOString(),
         updated_at: new Date().toISOString()
       }, {
-        onConflict: 'name'
+        onConflict: 'name,user_id'
       })
     
     if (error) {
@@ -52,10 +52,22 @@ export async function savePlayerProgress(playerData: PlayerSaveData): Promise<bo
         hint: error.hint,
         code: error.code
       })
+      console.error('❌ Player data that failed:', {
+        name: playerData.name,
+        avatar: playerData.avatar,
+        user_id: userId,
+        stats: playerData.stats
+      })
       return false
     }
     
     console.log('✅ Player saved successfully:', data)
+    console.log('✅ Saved player data:', {
+      name: playerData.name,
+      avatar: playerData.avatar,
+      user_id: userId,
+      stats: playerData.stats
+    })
     return true
   } catch (error) {
     console.error('❌ Error saving player progress:', error)
