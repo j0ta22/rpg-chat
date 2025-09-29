@@ -61,7 +61,15 @@ export class NativeWebSocketClient {
         console.log('🔌 Connecting to WebSocket server...');
         
         // Use environment variable for WebSocket URL, fallback to localhost for development
-        const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:3001';
+        let wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:3001';
+        
+        // Ensure the URL uses wss:// for production and ws:// for development
+        if (wsUrl.startsWith('https://')) {
+          wsUrl = wsUrl.replace('https://', 'wss://');
+        } else if (wsUrl.startsWith('http://')) {
+          wsUrl = wsUrl.replace('http://', 'ws://');
+        }
+        
         console.log('🔌 WebSocket URL:', wsUrl);
         
         this.ws = new WebSocket(wsUrl);
