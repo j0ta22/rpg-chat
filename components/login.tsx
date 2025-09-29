@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import React, { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -23,14 +23,40 @@ export default function Login({ onLogin, onRegister, isLoading, error }: LoginPr
   const [confirmPassword, setConfirmPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [passwordError, setPasswordError] = useState("")
+  const [isAnimating, setIsAnimating] = useState(false)
+
+  // Validación en tiempo real
+  const validatePassword = () => {
+    if (!isLogin && password && confirmPassword) {
+      if (password !== confirmPassword) {
+        setPasswordError("⚠️ Passwords do not match!")
+      } else if (password.length < 3) {
+        setPasswordError("⚠️ Password must be at least 3 characters!")
+      } else {
+        setPasswordError("")
+      }
+    }
+  }
+
+  // Validar cuando cambian las contraseñas
+  React.useEffect(() => {
+    validatePassword()
+  }, [password, confirmPassword, isLogin])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    setPasswordError("") // Limpiar errores anteriores
     
     if (isLogin) {
       onLogin(username, password)
     } else {
       if (password !== confirmPassword) {
+        setPasswordError("⚠️ Passwords do not match!")
+        return
+      }
+      if (password.length < 3) {
+        setPasswordError("⚠️ Password must be at least 3 characters!")
         return
       }
       onRegister(username, password)
@@ -38,10 +64,15 @@ export default function Login({ onLogin, onRegister, isLoading, error }: LoginPr
   }
 
   const toggleMode = () => {
-    setIsLogin(!isLogin)
-    setUsername("")
-    setPassword("")
-    setConfirmPassword("")
+    setIsAnimating(true)
+    setTimeout(() => {
+      setIsLogin(!isLogin)
+      setUsername("")
+      setPassword("")
+      setConfirmPassword("")
+      setPasswordError("")
+      setIsAnimating(false)
+    }, 150)
   }
 
   return (
@@ -53,10 +84,10 @@ export default function Login({ onLogin, onRegister, isLoading, error }: LoginPr
         }} />
       </div>
 
-      {/* Main Login Card */}
-      <Card className="w-full max-w-lg bg-gradient-to-br from-amber-900/95 to-amber-800/95 border-4 border-amber-600 shadow-2xl relative overflow-hidden">
-        {/* Decorative Border */}
-        <div className="absolute inset-0 border-2 border-amber-400/30 rounded-lg"></div>
+          {/* Main Login Card */}
+          <Card className={`w-full max-w-lg bg-gradient-to-br from-amber-900/95 to-amber-800/95 border-4 border-amber-600 shadow-2xl relative overflow-hidden transition-all duration-300 ${isAnimating ? 'opacity-50 scale-95' : 'opacity-100 scale-100'}`}>
+            {/* Decorative Border */}
+            <div className="absolute inset-0 border-2 border-amber-400/30 rounded-lg"></div>
         
         {/* Header with Retro Styling */}
         <CardHeader className="text-center relative pb-6">
@@ -116,7 +147,11 @@ export default function Login({ onLogin, onRegister, isLoading, error }: LoginPr
                   placeholder="What do they call you in the tavern?"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  className="pl-12 pr-4 py-4 bg-amber-800/80 border-2 border-amber-600 text-amber-100 placeholder-amber-300 font-mono text-lg rounded-none focus:border-amber-400 focus:ring-2 focus:ring-amber-400/50"
+                  className={`pl-12 pr-4 py-4 bg-amber-800/80 border-2 text-amber-100 placeholder-amber-300 font-mono text-lg rounded-none focus:ring-2 focus:ring-amber-400/50 transition-all duration-200 ${
+                    username.length > 0 
+                      ? 'border-amber-400' 
+                      : 'border-amber-600'
+                  }`}
                   required
                 />
               </div>
@@ -129,15 +164,19 @@ export default function Login({ onLogin, onRegister, isLoading, error }: LoginPr
               </Label>
               <div className="relative">
                 <Lock className="absolute left-4 top-4 h-5 w-5 text-amber-300" />
-                <Input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  placeholder="The secret word to enter..."
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="pl-12 pr-12 py-4 bg-amber-800/80 border-2 border-amber-600 text-amber-100 placeholder-amber-300 font-mono text-lg rounded-none focus:border-amber-400 focus:ring-2 focus:ring-amber-400/50"
-                  required
-                />
+                    <Input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      placeholder="The secret word to enter..."
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className={`pl-12 pr-12 py-4 bg-amber-800/80 border-2 text-amber-100 placeholder-amber-300 font-mono text-lg rounded-none focus:ring-2 focus:ring-amber-400/50 transition-all duration-200 ${
+                        password.length > 0 
+                          ? 'border-amber-400' 
+                          : 'border-amber-600'
+                      }`}
+                      required
+                    />
                 <Button
                   type="button"
                   variant="ghost"
@@ -162,15 +201,21 @@ export default function Login({ onLogin, onRegister, isLoading, error }: LoginPr
                 </Label>
                 <div className="relative">
                   <Lock className="absolute left-4 top-4 h-5 w-5 text-amber-300" />
-                  <Input
-                    id="confirmPassword"
-                    type={showConfirmPassword ? "text" : "password"}
-                    placeholder="Repeat the secret word..."
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="pl-12 pr-12 py-4 bg-amber-800/80 border-2 border-amber-600 text-amber-100 placeholder-amber-300 font-mono text-lg rounded-none focus:border-amber-400 focus:ring-2 focus:ring-amber-400/50"
-                    required
-                  />
+                      <Input
+                        id="confirmPassword"
+                        type={showConfirmPassword ? "text" : "password"}
+                        placeholder="Repeat the secret word..."
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        className={`pl-12 pr-12 py-4 bg-amber-800/80 border-2 text-amber-100 placeholder-amber-300 font-mono text-lg rounded-none focus:ring-2 focus:ring-amber-400/50 transition-all duration-200 ${
+                          confirmPassword.length > 0 
+                            ? passwordError 
+                              ? 'border-red-400' 
+                              : 'border-green-400'
+                            : 'border-amber-600'
+                        }`}
+                        required
+                      />
                   <Button
                     type="button"
                     variant="ghost"
@@ -185,9 +230,9 @@ export default function Login({ onLogin, onRegister, isLoading, error }: LoginPr
                     )}
                   </Button>
                 </div>
-                {password && confirmPassword && password !== confirmPassword && (
-                  <p className="text-red-400 text-sm font-mono">⚠️ Passwords do not match!</p>
-                )}
+                    {passwordError && (
+                      <p className="text-red-400 text-sm font-mono">{passwordError}</p>
+                    )}
               </div>
             )}
 
@@ -203,8 +248,12 @@ export default function Login({ onLogin, onRegister, isLoading, error }: LoginPr
             {/* Submit Button */}
             <Button
               type="submit"
-              className="w-full bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-amber-100 font-mono font-bold text-xl py-4 border-2 border-amber-500 rounded-none shadow-lg transform hover:scale-105 transition-all duration-200"
-              disabled={isLoading || (!isLogin && password !== confirmPassword)}
+              className={`w-full font-mono font-bold text-xl py-4 border-2 rounded-none shadow-lg transform transition-all duration-200 ${
+                isLoading || (!isLogin && (password !== confirmPassword || password.length < 3))
+                  ? 'bg-amber-800 text-amber-400 border-amber-700 cursor-not-allowed'
+                  : 'bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-amber-100 border-amber-500 hover:scale-105'
+              }`}
+              disabled={isLoading || (!isLogin && (password !== confirmPassword || password.length < 3))}
             >
               {isLoading ? (
                 <div className="flex items-center space-x-3">
@@ -217,18 +266,42 @@ export default function Login({ onLogin, onRegister, isLoading, error }: LoginPr
             </Button>
           </form>
 
-          {/* Toggle Mode */}
-          <div className="mt-8 text-center">
-            <p className="text-amber-200 font-mono text-lg mb-2">
-              {isLogin ? "New to the tavern?" : "Already a regular?"}
-            </p>
-            <Button
-              variant="link"
-              onClick={toggleMode}
-              className="text-amber-300 hover:text-amber-100 p-0 h-auto font-mono text-lg underline decoration-amber-400 hover:decoration-amber-200"
-            >
-              {isLogin ? "Join the tavern" : "Back to entrance"}
-            </Button>
+          {/* Toggle Mode - More Intuitive Design */}
+          <div className="mt-8">
+            {/* Toggle Switch */}
+            <div className="flex items-center justify-center mb-4">
+              <div className="bg-amber-800/50 p-1 rounded-full border-2 border-amber-600">
+                <div className="flex">
+                  <button
+                    onClick={() => !isLogin && toggleMode()}
+                    className={`px-6 py-2 rounded-full font-mono text-sm font-bold transition-all duration-200 ${
+                      isLogin 
+                        ? 'bg-amber-600 text-amber-100 shadow-lg' 
+                        : 'text-amber-300 hover:text-amber-100'
+                    }`}
+                  >
+                    ENTER
+                  </button>
+                  <button
+                    onClick={() => isLogin && toggleMode()}
+                    className={`px-6 py-2 rounded-full font-mono text-sm font-bold transition-all duration-200 ${
+                      !isLogin 
+                        ? 'bg-amber-600 text-amber-100 shadow-lg' 
+                        : 'text-amber-300 hover:text-amber-100'
+                    }`}
+                  >
+                    JOIN
+                  </button>
+                </div>
+              </div>
+            </div>
+            
+            {/* Help Text */}
+            <div className="text-center">
+              <p className="text-amber-200 font-mono text-sm">
+                {isLogin ? "Already have a tavern alias?" : "New to the tavern?"}
+              </p>
+            </div>
           </div>
         </CardContent>
       </Card>
