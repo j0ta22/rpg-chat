@@ -6,7 +6,7 @@ import GameWorld from "@/components/game-world"
 import PlayerSelection from "@/components/player-selection"
 import Login from "@/components/login"
 import { loadPlayerProgress, listSavedPlayers } from "@/lib/player-persistence"
-import { registerUser, loginUser, getCurrentUser, logoutUser, type User } from "@/lib/auth"
+import { registerUser, loginUser, getCurrentUser, setCurrentUser, logoutUser, type User } from "@/lib/auth"
 
 export interface Character {
   name: string
@@ -113,6 +113,8 @@ export default function RPGGame() {
       const result = await loginUser(username, password)
       if (result.success && result.user) {
         setUser(result.user)
+        setCurrentUser(result.user) // Guardar en localStorage
+        console.log('💾 User saved to localStorage:', result.user)
         setShowLogin(false)
         
         // Cargar personajes del usuario
@@ -140,6 +142,8 @@ export default function RPGGame() {
       const result = await registerUser(username, password)
       if (result.success && result.user) {
         setUser(result.user)
+        setCurrentUser(result.user) // Guardar en localStorage
+        console.log('💾 User saved to localStorage:', result.user)
         setShowLogin(false)
         setShowPlayerSelection(false) // Ir directo a crear personaje
       } else {
