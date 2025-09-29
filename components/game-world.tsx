@@ -51,6 +51,12 @@ interface GameWorldProps {
   onCharacterUpdate: (character: Character) => void
   onBackToCreation: () => void
   onBackToSelection?: () => void
+  onLogout?: () => void
+  user?: {
+    id: string
+    username: string
+    created_at: string
+  } | null
 }
 
 interface CollisionObject {
@@ -237,7 +243,7 @@ const avatarColors: Record<string, string> = {
     }
   ]
 
-export default function GameWorld({ character, onCharacterUpdate, onBackToCreation, onBackToSelection }: GameWorldProps) {
+export default function GameWorld({ character, onCharacterUpdate, onBackToCreation, onBackToSelection, onLogout, user }: GameWorldProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [keys, setKeys] = useState<Set<string>>(new Set())
   const animationRef = useRef<number>()
@@ -1912,7 +1918,18 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
             <CardTitle className="text-2xl font-bold pixel-text">Drunken Monkey Tavern
 
 </CardTitle>
-            <div className="flex-1 flex justify-end">
+            <div className="flex-1 flex justify-end gap-2">
+              {onLogout && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={onLogout}
+                  className="p-2 h-8 text-red-400 hover:text-red-300 hover:bg-red-900/20"
+                  title={`Logout ${user?.username || 'user'}`}
+                >
+                  🚪
+                </Button>
+              )}
               <Button
                 variant="ghost"
                 size="sm"
@@ -1973,6 +1990,15 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
               {onBackToSelection && (
                 <Button onClick={onBackToSelection} className="pixel-button bg-green-600 hover:bg-green-700">
                   {"Change Character"}
+                </Button>
+              )}
+              {onLogout && (
+                <Button 
+                  onClick={onLogout} 
+                  className="pixel-button bg-red-600 hover:bg-red-700"
+                  title={`Logout ${user?.username || 'user'}`}
+                >
+                  {"🚪 Logout"}
                 </Button>
               )}
             </div>
