@@ -1285,6 +1285,77 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
       }
     })
 
+    // Dibujar puerta cerrada en la parte inferior (para futura expansión)
+    const doorX = 1344 - cameraX
+    const doorY = 1500 - cameraY
+    const doorWidth = 156 // 1344 + 156 = 1500
+    
+    // Solo dibujar si está visible en pantalla
+    if (doorX + doorWidth > -50 && doorX < CANVAS_WIDTH + 50 && doorY > -50 && doorY < CANVAS_HEIGHT + 50) {
+      // Marco de la puerta (madera oscura)
+      const doorFrameGradient = ctx.createLinearGradient(doorX, doorY, doorX, doorY + 200)
+      doorFrameGradient.addColorStop(0, "#4a2c17")
+      doorFrameGradient.addColorStop(0.5, "#3d1f0a")
+      doorFrameGradient.addColorStop(1, "#2d1508")
+      ctx.fillStyle = doorFrameGradient
+      ctx.fillRect(doorX, doorY, doorWidth, 200)
+      
+      // Puerta principal (madera más clara)
+      const doorGradient = ctx.createLinearGradient(doorX + 8, doorY + 8, doorX + 8, doorY + 192)
+      doorGradient.addColorStop(0, "#8b4513")
+      doorGradient.addColorStop(0.3, "#654321")
+      doorGradient.addColorStop(0.7, "#5a3a1a")
+      doorGradient.addColorStop(1, "#4a2c17")
+      ctx.fillStyle = doorGradient
+      ctx.fillRect(doorX + 8, doorY + 8, doorWidth - 16, 184)
+      
+      // Paneles de la puerta
+      ctx.fillStyle = "#3d1f0a"
+      // Panel superior
+      ctx.fillRect(doorX + 16, doorY + 16, doorWidth - 32, 40)
+      // Panel medio
+      ctx.fillRect(doorX + 16, doorY + 80, doorWidth - 32, 40)
+      // Panel inferior
+      ctx.fillStyle = "#2d1508"
+      ctx.fillRect(doorX + 16, doorY + 144, doorWidth - 32, 40)
+      
+      // Refuerzos horizontales
+      ctx.fillStyle = "#2d1508"
+      ctx.fillRect(doorX + 8, doorY + 60, doorWidth - 16, 4)
+      ctx.fillRect(doorX + 8, doorY + 120, doorWidth - 16, 4)
+      ctx.fillRect(doorX + 8, doorY + 180, doorWidth - 16, 4)
+      
+      // Refuerzos verticales
+      ctx.fillRect(doorX + 40, doorY + 8, 4, 184)
+      ctx.fillRect(doorX + 80, doorY + 8, 4, 184)
+      ctx.fillRect(doorX + 120, doorY + 8, 4, 184)
+      
+      // Cerradura (círculo dorado)
+      ctx.fillStyle = "#daa520"
+      ctx.beginPath()
+      ctx.arc(doorX + doorWidth / 2, doorY + 100, 12, 0, Math.PI * 2)
+      ctx.fill()
+      
+      // Agujero de la cerradura
+      ctx.fillStyle = "#1a1a1a"
+      ctx.beginPath()
+      ctx.arc(doorX + doorWidth / 2, doorY + 100, 6, 0, Math.PI * 2)
+      ctx.fill()
+      
+      // Bisagras (círculos pequeños)
+      ctx.fillStyle = "#8b7355"
+      ctx.beginPath()
+      ctx.arc(doorX + 20, doorY + 50, 6, 0, Math.PI * 2)
+      ctx.fill()
+      ctx.beginPath()
+      ctx.arc(doorX + 20, doorY + 150, 6, 0, Math.PI * 2)
+      ctx.fill()
+      
+      // Sombra de la puerta
+      ctx.fillStyle = "rgba(0, 0, 0, 0.3)"
+      ctx.fillRect(doorX + 2, doorY + 2, doorWidth, 200)
+    }
+
     // Dibujar logo de la taberna
     if (tavernLogo) {
       const logoX = 785 - cameraX // Posición X del logo
