@@ -1,4 +1,5 @@
 import { supabase, PlayerData } from './supabase'
+import { getCurrentUser } from './auth'
 
 export interface PlayerStats {
   level: number
@@ -22,8 +23,12 @@ export async function savePlayerProgress(playerData: PlayerSaveData): Promise<bo
     console.log('💾 Saving player progress to Supabase:', playerData)
     console.log('📊 Stats being saved:', playerData.stats)
     
-    const sessionId = getSessionId()
-    console.log('🆔 Session ID:', sessionId)
+    const userId = getCurrentUserId()
+    if (!userId) {
+      console.log('❌ No user logged in, cannot save player progress')
+      return false
+    }
+    console.log('👤 User ID:', userId)
     
     // Intentar insertar directamente (upsert)
     const { data, error } = await supabase
@@ -32,7 +37,7 @@ export async function savePlayerProgress(playerData: PlayerSaveData): Promise<bo
         name: playerData.name,
         avatar: playerData.avatar,
         stats: playerData.stats,
-        session_id: sessionId,
+        user_id: userId,
         last_saved: new Date().toISOString(),
         updated_at: new Date().toISOString()
       }, {
@@ -61,19 +66,23 @@ export async function savePlayerProgress(playerData: PlayerSaveData): Promise<bo
 // Función para cargar el progreso del jugador
 export async function loadPlayerProgress(playerName: string): Promise<PlayerSaveData | null> {
   try {
-    const sessionId = getSessionId()
-    console.log('💾 Loading player progress from Supabase for:', playerName, 'session:', sessionId)
+    const userId = getCurrentUserId()
+    if (!userId) {
+      console.log('❌ No user logged in, cannot load player progress')
+      return null
+    }
+    console.log('💾 Loading player progress from Supabase for:', playerName, 'user:', userId)
     
     const { data: player, error } = await supabase
       .from('players')
       .select('*')
       .eq('name', playerName)
-      .eq('session_id', sessionId)
+      .eq('user_id', userId)
       .single()
     
     if (error) {
       if (error.code === 'PGRST116') {
-        console.log('ℹ️ No saved progress found for player:', playerName, 'in this session')
+        console.log('ℹ️ No saved progress found for player:', playerName, 'for this user')
         return null
       }
       console.error('❌ Error loading player progress:', error)
@@ -81,7 +90,7 @@ export async function loadPlayerProgress(playerName: string): Promise<PlayerSave
     }
     
     if (!player) {
-      console.log('ℹ️ No player data found for this session')
+      console.log('ℹ️ No player data found for this user')
       return null
     }
     
@@ -99,29 +108,31 @@ export async function loadPlayerProgress(playerName: string): Promise<PlayerSave
   }
 }
 
-// Función para obtener o crear un ID de sesión único
-function getSessionId(): string {
-  let sessionId = localStorage.getItem('rpg-game-session-id')
-  if (!sessionId) {
-    sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9)
-    localStorage.setItem('rpg-game-session-id', sessionId)
-    console.log('🆔 New session created:', sessionId)
-  } else {
-    console.log('🆔 Existing session:', sessionId)
+// Función para obtener el ID del usuario actual
+function getCurrentUserId(): string | null {
+  const user = getCurrentUser()
+  if (!user) {
+    console.log('❌ No user logged in')
+    return null
   }
-  return sessionId
+  console.log('👤 Current user:', user.username)
+  return user.id
 }
 
 // Función para listar personajes guardados del usuario actual
 export async function listSavedPlayers(): Promise<PlayerSaveData[]> {
   try {
-    const sessionId = getSessionId()
-    console.log('💾 Listing saved players from Supabase for session:', sessionId)
+    const userId = getCurrentUserId()
+    if (!userId) {
+      console.log('❌ No user logged in, cannot list players')
+      return []
+    }
+    console.log('💾 Listing saved players from Supabase for user:', userId)
     
     const { data: players, error } = await supabase
       .from('players')
       .select('*')
-      .eq('session_id', sessionId)
+      .eq('user_id', userId)
       .order('last_saved', { ascending: false })
     
     if (error) {
@@ -130,7 +141,7 @@ export async function listSavedPlayers(): Promise<PlayerSaveData[]> {
     }
     
     if (!players || players.length === 0) {
-      console.log('ℹ️ No saved players found for this session')
+      console.log('ℹ️ No saved players found for this user')
       return []
     }
     

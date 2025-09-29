@@ -4,7 +4,9 @@ import { useState, useEffect } from "react"
 import CharacterCreation from "@/components/character-creation"
 import GameWorld from "@/components/game-world"
 import PlayerSelection from "@/components/player-selection"
+import Login from "@/components/login"
 import { loadPlayerProgress, listSavedPlayers } from "@/lib/player-persistence"
+import { registerUser, loginUser, getCurrentUser, logoutUser, type User } from "@/lib/auth"
 
 export interface Character {
   name: string
@@ -28,29 +30,37 @@ export default function RPGGame() {
   const [isLoading, setIsLoading] = useState(true)
   const [savedPlayers, setSavedPlayers] = useState<any[]>([])
   const [showPlayerSelection, setShowPlayerSelection] = useState(false)
+  const [user, setUser] = useState<User | null>(null)
+  const [showLogin, setShowLogin] = useState(false)
+  const [authError, setAuthError] = useState<string | null>(null)
+  const [isAuthLoading, setIsAuthLoading] = useState(false)
 
-  // Cargar progreso guardado al iniciar
+  // Verificar si hay un usuario logueado al iniciar
   useEffect(() => {
-    const loadSavedProgress = async () => {
+    const checkAuth = async () => {
       try {
-        // Listar todos los personajes guardados
-        const players = await listSavedPlayers()
-        setSavedPlayers(players)
-        
-        if (players.length > 0) {
-          // Mostrar pantalla de selección de personajes
-          setShowPlayerSelection(true)
+        const currentUser = getCurrentUser()
+        if (currentUser) {
+          setUser(currentUser)
+          // Cargar personajes del usuario
+          const players = await listSavedPlayers()
+          setSavedPlayers(players)
+          
+          if (players.length > 0) {
+            setShowPlayerSelection(true)
+          }
         } else {
-          console.log('ℹ️ No saved progress found')
+          setShowLogin(true)
         }
       } catch (error) {
-        console.error('❌ Error loading saved progress:', error)
+        console.error('❌ Error checking auth:', error)
+        setShowLogin(true)
       } finally {
         setIsLoading(false)
       }
     }
 
-    loadSavedProgress()
+    checkAuth()
   }, [])
 
   const handleCharacterCreated = (newCharacter: Omit<Character, "x" | "y">) => {
@@ -91,14 +101,78 @@ export default function RPGGame() {
     setShowPlayerSelection(false)
   }
 
+  const handleLogin = async (username: string) => {
+    setIsAuthLoading(true)
+    setAuthError(null)
+    
+    try {
+      const result = await loginUser(username, '') // Por ahora sin contraseña
+      if (result.success && result.user) {
+        setUser(result.user)
+        setShowLogin(false)
+        
+        // Cargar personajes del usuario
+        const players = await listSavedPlayers()
+        setSavedPlayers(players)
+        
+        if (players.length > 0) {
+          setShowPlayerSelection(true)
+        }
+      } else {
+        setAuthError(result.error || 'Error iniciando sesión')
+      }
+    } catch (error) {
+      setAuthError('Error interno del servidor')
+    } finally {
+      setIsAuthLoading(false)
+    }
+  }
+
+  const handleRegister = async (username: string, password: string) => {
+    setIsAuthLoading(true)
+    setAuthError(null)
+    
+    try {
+      const result = await registerUser(username, password)
+      if (result.success && result.user) {
+        setUser(result.user)
+        setShowLogin(false)
+        setShowPlayerSelection(false) // Ir directo a crear personaje
+      } else {
+        setAuthError(result.error || 'Error registrando usuario')
+      }
+    } catch (error) {
+      setAuthError('Error interno del servidor')
+    } finally {
+      setIsAuthLoading(false)
+    }
+  }
+
+  const handleLogout = () => {
+    logoutUser()
+    setUser(null)
+    setCharacter(null)
+    setGameStarted(false)
+    setShowPlayerSelection(false)
+    setSavedPlayers([])
+    setShowLogin(true)
+  }
+
 
   return (
     <div className="min-h-screen game-container flex items-center justify-center p-4">
       {isLoading ? (
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p className="text-white">Cargando progreso guardado...</p>
+          <p className="text-white">Cargando...</p>
         </div>
+      ) : showLogin ? (
+        <Login 
+          onLogin={handleLogin}
+          onRegister={handleRegister}
+          isLoading={isAuthLoading}
+          error={authError}
+        />
       ) : showPlayerSelection ? (
         <PlayerSelection 
           players={savedPlayers} 
@@ -113,6 +187,8 @@ export default function RPGGame() {
           onCharacterUpdate={setCharacter} 
           onBackToCreation={handleBackToCreation}
           onBackToSelection={handleBackToSelection}
+          onLogout={handleLogout}
+          user={user}
         />
       )}
     </div>
