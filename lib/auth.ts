@@ -27,7 +27,7 @@ export async function registerUser(username: string, password: string): Promise<
     if (existingUser) {
       return {
         success: false,
-        error: 'El usuario ya existe'
+        error: 'Tavern alias already taken'
       }
     }
     
@@ -35,7 +35,7 @@ export async function registerUser(username: string, password: string): Promise<
       console.error('❌ Error checking existing user:', checkError)
       return {
         success: false,
-        error: 'Error verificando usuario existente'
+        error: 'Error checking tavern records'
       }
     }
     
@@ -54,7 +54,7 @@ export async function registerUser(username: string, password: string): Promise<
       console.error('❌ Error creating user:', createError)
       return {
         success: false,
-        error: 'Error creando usuario'
+        error: 'Error registering at tavern'
       }
     }
     
@@ -67,7 +67,7 @@ export async function registerUser(username: string, password: string): Promise<
     console.error('❌ Error registering user:', error)
     return {
       success: false,
-      error: 'Error interno del servidor'
+      error: 'Internal server error'
     }
   }
 }
@@ -88,20 +88,20 @@ export async function loginUser(username: string, password: string): Promise<Aut
       if (error.code === 'PGRST116') {
         return {
           success: false,
-          error: 'Usuario o contraseña incorrectos'
+          error: 'Invalid tavern alias or password'
         }
       }
       console.error('❌ Error logging in:', error)
       return {
         success: false,
-        error: 'Error iniciando sesión'
+        error: 'Error entering tavern'
       }
     }
     
     if (!user) {
       return {
         success: false,
-        error: 'Usuario o contraseña incorrectos'
+        error: 'Invalid tavern alias or password'
       }
     }
     
@@ -118,7 +118,7 @@ export async function loginUser(username: string, password: string): Promise<Aut
     console.error('❌ Error logging in:', error)
     return {
       success: false,
-      error: 'Error interno del servidor'
+      error: 'Internal server error'
     }
   }
 }

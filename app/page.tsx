@@ -119,10 +119,10 @@ export default function RPGGame() {
           setShowPlayerSelection(true)
         }
       } else {
-        setAuthError(result.error || 'Error iniciando sesión')
+        setAuthError(result.error || 'Error entering tavern')
       }
     } catch (error) {
-      setAuthError('Error interno del servidor')
+      setAuthError('Internal server error')
     } finally {
       setIsAuthLoading(false)
     }
@@ -139,10 +139,10 @@ export default function RPGGame() {
         setShowLogin(false)
         setShowPlayerSelection(false) // Ir directo a crear personaje
       } else {
-        setAuthError(result.error || 'Error registrando usuario')
+        setAuthError(result.error || 'Error registering at tavern')
       }
     } catch (error) {
-      setAuthError('Error interno del servidor')
+      setAuthError('Internal server error')
     } finally {
       setIsAuthLoading(false)
     }
