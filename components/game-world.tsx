@@ -851,6 +851,11 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
         // Guardar stats iniciales después de un breve delay
         setTimeout(() => {
           console.log('💾 Saving initial stats for new player')
+          console.log('💾 Character data:', {
+            name: character.name,
+            avatar: character.avatar,
+            stats: playerStats
+          })
           savePlayerProgressToSupabase()
         }, 1000)
       }

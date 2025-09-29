@@ -64,12 +64,16 @@ export default function RPGGame() {
   }, [])
 
   const handleCharacterCreated = (newCharacter: Omit<Character, "x" | "y">) => {
-    setCharacter({
+    const characterWithPosition = {
       ...newCharacter,
       x: 100, // Safe starting position - left side of tavern
       y: 150,
-    })
+    }
+    setCharacter(characterWithPosition)
     setGameStarted(true)
+    
+    // Guardar el personaje inmediatamente después de crearlo
+    console.log('💾 Character created, will be saved when game starts')
   }
 
   const handleBackToCreation = () => {
