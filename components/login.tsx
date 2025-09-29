@@ -273,21 +273,31 @@ export default function Login({ onLogin, onRegister, isLoading, error }: LoginPr
               <div className="bg-amber-800/50 p-1 rounded-full border-2 border-amber-600">
                 <div className="flex">
                   <button
-                    onClick={() => !isLogin && toggleMode()}
+                    type="button"
+                    onClick={() => {
+                      if (!isLogin) {
+                        toggleMode()
+                      }
+                    }}
                     className={`px-6 py-2 rounded-full font-mono text-sm font-bold transition-all duration-200 ${
                       isLogin 
-                        ? 'bg-amber-600 text-amber-100 shadow-lg' 
-                        : 'text-amber-300 hover:text-amber-100'
+                        ? 'bg-amber-600 text-amber-100 shadow-lg cursor-default' 
+                        : 'text-amber-300 hover:text-amber-100 cursor-pointer'
                     }`}
                   >
                     ENTER
                   </button>
                   <button
-                    onClick={() => isLogin && toggleMode()}
+                    type="button"
+                    onClick={() => {
+                      if (isLogin) {
+                        toggleMode()
+                      }
+                    }}
                     className={`px-6 py-2 rounded-full font-mono text-sm font-bold transition-all duration-200 ${
                       !isLogin 
-                        ? 'bg-amber-600 text-amber-100 shadow-lg' 
-                        : 'text-amber-300 hover:text-amber-100'
+                        ? 'bg-amber-600 text-amber-100 shadow-lg cursor-default' 
+                        : 'text-amber-300 hover:text-amber-100 cursor-pointer'
                     }`}
                   >
                     JOIN
