@@ -15,6 +15,7 @@ Crea un archivo `.env.local` en la raíz del proyecto con:
 ```env
 NEXT_PUBLIC_SUPABASE_URL=tu_url_de_supabase
 NEXT_PUBLIC_SUPABASE_ANON_KEY=tu_clave_anonima_de_supabase
+NEXT_PUBLIC_WS_URL=wss://tu-app-render.onrender.com
 ```
 
 ## 3. Configurar la base de datos
