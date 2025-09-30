@@ -146,6 +146,7 @@ const migrateAvatar = (oldAvatar: string): AvatarKey => {
     'character_30': '/sprite_split/character_30/character_30_frame32x32.png',
     'character_31': '/sprite_split/character_31/character_31_frame32x32.png',
     'character_32': '/sprite_split/character_32/character_32_frame32x32.png',
+    'character_33': '/sprite_split/character_33/character_33_frame32x32.png',
   }
 
   // Configuración para sprites multidireccionales de 32x32
@@ -219,6 +220,7 @@ const avatarColors: Record<string, string> = {
   'character_30': "#f59e0b",
   'character_31': "#ef4444",
   'character_32': "#8b5cf6",
+  'character_33': "#f59e0b",
 }
 
 // Configuración de NPCs
@@ -239,6 +241,15 @@ const avatarColors: Record<string, string> = {
       y: 698,
       avatar: "character_27",
       message: "Greetings, traveler. I sense great power within you. The ancient secrets of this land await those who are worthy...",
+      interactionRadius: 80
+    },
+    {
+      id: "npc_3",
+      name: "Ambassador of Apestore",
+      x: 84,
+      y: 258,
+      avatar: "character_33",
+      message: "Greetings, noble adventurer! I am the Ambassador of Apestore, representing the great trading company from the distant lands. We deal in the finest goods and exotic treasures. Perhaps you would be interested in our wares?",
       interactionRadius: 80
     }
   ]
@@ -759,7 +770,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
       (state: GameState) => {
         // Only log occasionally to avoid spam
         if (Math.random() < 0.1) { // 10% of the time
-          console.log('📥 Estado del juego recibido:', state)
+        console.log('📥 Estado del juego recibido:', state)
         }
         
         // Actualizar todos los jugadores directamente
@@ -822,7 +833,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
           
           // También guardar el mensaje para mostrar como globo de diálogo
           setPlayerChatMessages(prev => ({
-            ...prev,
+          ...prev,
             [message.playerId]: {
               text: message.text,
               timestamp: message.timestamp
@@ -1854,20 +1865,20 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
       }
       
       // FALLBACK: Dibujar jugador local sin depender de allPlayers
-      drawPlayer(
-        ctx, 
-        localCharacter.x, 
-        localCharacter.y, 
+    drawPlayer(
+      ctx, 
+      localCharacter.x, 
+      localCharacter.y, 
         '#3b82f6', // Color por defecto
-        localCharacter.name, 
+      localCharacter.name, 
         true, // Es el jugador local
-        camera.x, 
-        camera.y,
+      camera.x, 
+      camera.y,
         undefined, // No hay mensaje para el jugador local
-        localCharacter.avatar,
+      localCharacter.avatar,
         playerDirection,
         undefined // Sin stats por ahora
-      )
+    )
     }
 
     // Dibujar otros jugadores (usando posiciones interpoladas si están disponibles)
@@ -1943,16 +1954,6 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
       }
     })
 
-    ctx.fillStyle = "rgba(0, 0, 0, 0.7)"
-    ctx.fillRect(10, 10, 280, 100)
-    ctx.fillStyle = "#ffffff"
-    ctx.font = "16px monospace"
-    ctx.fillText(`Hero: ${localCharacter.name}`, 20, 30)
-    ctx.fillText(`Position: ${Math.floor(localCharacter.x)}, ${Math.floor(localCharacter.y)}`, 20, 50)
-    ctx.fillText(`Players Online: ${Object.keys(allPlayers).length}`, 20, 70)
-    ctx.fillText(`Location: Drunken Monkey Tavern
-
-`, 20, 90)
   }, [localCharacter, camera, allPlayers, interpolatedPlayers, playerId, playerVisibility, nearbyPlayer, playerChatMessages])
 
   const gameLoop = useCallback(() => {
@@ -2001,7 +2002,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
         if (nearbyPlayer) {
           challengePlayer()
         } else if (nearbyNPC) {
-          interactWithNPC()
+        interactWithNPC()
         } else if (nearbyDoor) {
           interactWithDoor()
         }
@@ -2043,25 +2044,13 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
 
   return (
     <div className="flex flex-col lg:flex-row items-start justify-center space-y-6 lg:space-y-0 lg:space-x-6 p-4">
+      {/* Panel del juego principal */}
       <Card className="character-card">
         <CardHeader className="text-center pb-4">
           <div className="flex items-center justify-between">
             <div className="flex-1"></div>
-            <CardTitle className="text-2xl font-bold pixel-text">Drunken Monkey Tavern
-
-</CardTitle>
+            <CardTitle className="text-2xl font-bold pixel-text">Drunken Monkey Tavern</CardTitle>
             <div className="flex-1 flex justify-end gap-2">
-              {onLogout && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={onLogout}
-                  className="p-2 h-8 text-red-400 hover:text-red-300 hover:bg-red-900/20"
-                  title={`Logout ${user?.username || 'user'}`}
-                >
-                  🚪
-                </Button>
-              )}
               <Button
                 variant="ghost"
                 size="sm"
@@ -2077,7 +2066,6 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
         <CardContent className="space-y-4">
           <div className="relative">
           <canvas ref={canvasRef} width={CANVAS_WIDTH} height={CANVAS_HEIGHT} className="game-canvas pixel-art" />
-            
 
             {/* Input de chat superpuesto */}
             {showChatInput && (
@@ -2099,41 +2087,116 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
             )}
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-4 justify-between items-center">
-            <div className="text-sm pixel-text text-center sm:text-left">
+          <div className="text-sm pixel-text text-center">
               <p className="font-bold mb-1">{"Controls:"}</p>
               <p>{"Use WASD or Arrow Keys to move"}</p>
               <p>{"Press Enter or T to chat"}</p>
-              <p>{"Press E to interact with NPCs or challenge players"}</p>
-              <p className="text-xs mt-1 text-muted-foreground">{"Messages appear above players for 10s seconds"}</p>
+            <p>{"Press E to interact with NPCs or challenge players"}</p>
+            <p className="text-xs mt-1 text-muted-foreground">{"Messages appear above players for 10s seconds"}</p>
             </div>
+        </CardContent>
+      </Card>
 
-            <div className="flex flex-col sm:flex-row gap-2">
-              <Button 
-                onClick={savePlayerProgressToSupabase} 
-                className="pixel-button bg-blue-600 hover:bg-blue-700"
-                disabled={isSaving}
-              >
-                {isSaving ? "Saving..." : "Save Progress"}
-              </Button>
-              <Button onClick={onBackToCreation} className="pixel-button">
-                {"Create New Hero"}
-              </Button>
-              {onBackToSelection && (
-                <Button onClick={onBackToSelection} className="pixel-button bg-green-600 hover:bg-green-700">
-                  {"Change Character"}
-                </Button>
-              )}
-              {onLogout && (
-                <Button 
-                  onClick={onLogout} 
-                  className="pixel-button bg-red-600 hover:bg-red-700"
-                  title={`Logout ${user?.username || 'user'}`}
-                >
-                  {"🚪 Logout"}
-                </Button>
-              )}
+      {/* Panel lateral con información del jugador y botones */}
+      <Card className="w-full lg:w-80 h-fit border-4 border-primary" style={{borderRadius: '0'}}>
+        <CardContent className="space-y-4" style={{borderRadius: '0'}}>
+          {/* Información del jugador */}
+          <div className="p-4" style={{
+            background: '#d4af37',
+            border: '4px solid #8b4513',
+            borderRadius: '0',
+            boxShadow: 'inset 2px 2px 0px #654321, inset -2px -2px 0px #654321'
+          }}>
+            <h3 className="text-lg font-bold pixel-text text-center mb-3 text-accent border-b-2 border-accent pb-2">PLAYER INFO</h3>
+            <div className="text-sm pixel-text space-y-3">
+              <div className="bg-secondary/30 border border-muted p-2 text-destructive font-bold" style={{borderRadius: '0'}}>
+                Hero: {localCharacter.name}
             </div>
+              <div className="bg-primary/30 border border-muted p-2 text-destructive font-bold" style={{borderRadius: '0'}}>
+                Position: {Math.round(localCharacter.x)}, {Math.round(localCharacter.y)}
+              </div>
+              <div className="bg-accent/30 border border-accent p-2 text-accent-foreground font-bold" style={{borderRadius: '0'}}>
+                Players Online: {Object.keys(allPlayers).length}
+              </div>
+              <div className="bg-muted/30 border border-muted p-2 text-destructive font-bold" style={{borderRadius: '0'}}>
+                Location: Drunken Monkey Tavern
+              </div>
+            </div>
+          </div>
+
+          {/* Stats del jugador */}
+          {playerStats && (
+            <div className="p-4" style={{
+              background: '#d4af37',
+              border: '4px solid #8b4513',
+              borderRadius: '0',
+              boxShadow: 'inset 2px 2px 0px #654321, inset -2px -2px 0px #654321'
+            }}>
+              <h3 className="text-lg font-bold pixel-text text-center mb-3 text-accent border-b-2 border-accent pb-2">STATS</h3>
+              <div className="grid grid-cols-2 gap-3 text-sm pixel-text">
+                <div className="bg-destructive/30 border border-muted p-2 text-destructive font-bold" style={{borderRadius: '0'}}>
+                  HP: {playerStats.health}/{playerStats.maxHealth}
+                </div>
+                <div className="bg-primary/30 border border-muted p-2 text-destructive font-bold" style={{borderRadius: '0'}}>
+                  Level: {playerStats.level}
+                </div>
+                <div className="bg-accent/30 border border-accent p-2 text-accent-foreground font-bold col-span-2" style={{borderRadius: '0'}}>
+                  <div className="flex justify-between items-center mb-1">
+                    <span>XP: {playerStats.experience}</span>
+                    <span className="text-xs">Next: {playerStats.experienceToNext}</span>
+                  </div>
+                  <div className="w-full bg-muted/50 border border-muted h-3" style={{borderRadius: '0'}}>
+                    <div 
+                      className="bg-accent h-full transition-all duration-300" 
+                      style={{
+                        width: `${Math.min((playerStats.experience / playerStats.experienceToNext) * 100, 100)}%`,
+                        borderRadius: '0'
+                      }}
+                    />
+                  </div>
+                </div>
+                <div className="bg-muted/30 border border-muted p-2 text-destructive font-bold" style={{borderRadius: '0'}}>
+                  Attack: {playerStats.attack}
+                </div>
+                <div className="bg-muted/30 border border-muted p-2 text-destructive font-bold" style={{borderRadius: '0'}}>
+                  Defense: {playerStats.defense}
+                </div>
+                <div className="bg-muted/30 border border-muted p-2 text-destructive font-bold" style={{borderRadius: '0'}}>
+                  Speed: {playerStats.speed}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Botones de acción */}
+          <div className="space-y-2">
+            <Button 
+              onClick={savePlayerProgressToSupabase} 
+              className="w-full pixel-button bg-blue-600 hover:bg-blue-700"
+              disabled={isSaving}
+            >
+              {isSaving ? "Saving..." : "Save Progress"}
+            </Button>
+            
+            <Button onClick={onBackToCreation} className="w-full pixel-button">
+              Create New Hero
+            </Button>
+            
+            {onBackToSelection && (
+              <Button onClick={onBackToSelection} className="w-full pixel-button bg-green-600 hover:bg-green-700">
+                Change Character
+              </Button>
+            )}
+            
+            {onLogout && (
+              <Button 
+                onClick={onLogout} 
+                className="w-full pixel-button bg-red-600 hover:bg-red-700"
+                title={`Logout ${user?.username || 'user'}`}
+              >
+                🚪 Logout
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -2209,53 +2272,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
         </div>
       )}
 
-      {/* Player Stats Panel */}
-      {playerStats && (
-        <div className="fixed top-4 left-4 z-40">
-          <div className="bg-black/90 backdrop-blur-sm text-white p-4 rounded-lg border-2 border-gray-600 shadow-xl">
-            <div className="text-center mb-3">
-              <div className="text-lg font-bold text-yellow-400 pixel-text">Level {playerStats.level}</div>
-              <div className="text-xs text-gray-300 pixel-text">Adventurer</div>
-            </div>
-            
-            {/* XP Bar */}
-            <div className="mb-3">
-              <div className="flex justify-between text-xs mb-1 pixel-text">
-                <span>XP</span>
-                <span>{playerStats.experience}/{playerStats.level * 100}</span>
-              </div>
-              <div className="w-full bg-gray-700 rounded-full h-2">
-                <div 
-                  className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full transition-all duration-500"
-                  style={{ 
-                    width: `${Math.min((playerStats.experience / (playerStats.level * 100)) * 100, 100)}%` 
-                  }}
-                ></div>
-              </div>
-            </div>
 
-            {/* Stats */}
-            <div className="space-y-1 text-xs pixel-text">
-              <div className="flex justify-between">
-                <span className="text-red-400">❤️ HP</span>
-                <span>{playerStats.health}/{playerStats.maxHealth}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-orange-400">⚔️ ATK</span>
-                <span>{playerStats.attack}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-blue-400">🛡️ DEF</span>
-                <span>{playerStats.defense}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-green-400">💨 SPD</span>
-                <span>{playerStats.speed}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Level Up Notification */}
       {levelUpNotification && (
