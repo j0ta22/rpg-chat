@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { CombatChallenge, COMBAT_CONSTANTS } from "@/lib/combat-system"
+import { CombatChallenge } from "@/lib/combat-system"
 
 interface CombatChallengeProps {
   challenge: CombatChallenge
@@ -19,7 +19,7 @@ export default function CombatChallengeComponent({
   onDecline, 
   onExpire 
 }: CombatChallengeProps) {
-  const [timeLeft, setTimeLeft] = useState(COMBAT_CONSTANTS.CHALLENGE_TIMEOUT / 1000)
+  const [timeLeft, setTimeLeft] = useState(30) // 30 seconds challenge timeout
 
   // Timer para el desafío
   useEffect(() => {
@@ -89,7 +89,7 @@ export default function CombatChallengeComponent({
               {challenge.challengerName} te desafía a un combate!
             </p>
             <p className="text-sm text-muted-foreground mb-4">
-              Ambos comenzaréis con {COMBAT_CONSTANTS.MAX_HEALTH} puntos de vida.
+              Ambos comenzaréis con 100 puntos de vida.
               El combate será por turnos: atacar, bloquear o esquivar.
             </p>
           </div>

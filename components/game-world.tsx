@@ -6,10 +6,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { SocketMultiplayerClient, type CombatChallenge, type CombatState, type CombatAction } from "@/lib/socket-multiplayer"
 import { NativeWebSocketClient, type Player, type GameState, type ChatMessage } from "@/lib/native-websocket"
-import { CombatUtils, COMBAT_CONSTANTS } from "@/lib/combat-system"
 import { savePlayerProgress, loadPlayerProgress, type PlayerSaveData, type PlayerStats } from "@/lib/player-persistence"
+import { calculatePlayerStats } from "@/lib/combat-system"
+import { supabase } from "@/lib/supabase"
 import CombatInterface from "./combat-interface"
 import CombatChallengeComponent from "./combat-challenge"
+import RankingPanel from "./ranking-panel"
+import AdvancedInventoryPanel from "./advanced-inventory-panel"
+import ShopPanel from "./shop-panel"
 
 interface Character {
   name: string
@@ -147,6 +151,8 @@ const migrateAvatar = (oldAvatar: string): AvatarKey => {
     'character_31': '/sprite_split/character_31/character_31_frame32x32.png',
     'character_32': '/sprite_split/character_32/character_32_frame32x32.png',
     'character_33': '/sprite_split/character_33/character_33_frame32x32.png',
+    'blacksmith': '/blacksmith/BLACKSMITH.png',
+    'monkeyking': '/sprite_split/character_2/character_2_frame32x32.png',
   }
 
   // Configuración para sprites multidireccionales de 32x32
@@ -183,7 +189,26 @@ const migrateAvatar = (oldAvatar: string): AvatarKey => {
 
   // Función para obtener la configuración correcta según el avatar
   const getSpriteConfig = (avatarKey: string) => {
-    // Todos los nuevos avatares usan la misma configuración
+    // El blacksmith tiene un spritesheet de 672x92 con 7 frames en línea
+    if (avatarKey === 'blacksmith') {
+      return {
+        frameWidth: 96,  // 672 / 7 = 96
+        frameHeight: 92,
+        totalWidth: 672,
+        totalHeight: 92,
+        directions: { down: 0, up: 0, left: 0, right: 0 }, // Todos los frames en la misma fila
+        frameCount: 7,
+        renderSize: 108,  // Aumentado un 50% (72 * 1.5 = 108)
+        animationSpeed: 200,  // Velocidad de animación más rápida (200ms vs 500ms por defecto)
+        rotation: 0  // Sin rotación
+      }
+    }
+    
+    // El MonkeyKing usa character_2 con configuración estándar
+    if (avatarKey === 'monkeyking') {
+      return SPRITE_CONFIGS.default
+    }
+    // Todos los demás avatares usan la configuración por defecto
     return SPRITE_CONFIGS.default
   }
 
@@ -221,6 +246,8 @@ const avatarColors: Record<string, string> = {
   'character_31': "#ef4444",
   'character_32': "#8b5cf6",
   'character_33': "#f59e0b",
+  'blacksmith': "#8b4513",
+  'monkeyking': "#ff6b35",
 }
 
 // Configuración de NPCs
@@ -248,8 +275,17 @@ const avatarColors: Record<string, string> = {
       name: "Ambassador of Apestore",
       x: 84,
       y: 258,
-      avatar: "character_33",
+      avatar: "monkeyking",
       message: "Greetings, noble adventurer! I am the Ambassador of Apestore, representing the great trading company from the distant lands. We deal in the finest goods and exotic treasures. Perhaps you would be interested in our wares?",
+      interactionRadius: 80
+    },
+    {
+      id: "npc_4",
+      name: "Blacksmith",
+      x: 76,
+      y: 1130,
+      avatar: "blacksmith",
+      message: "Welcome to my shop! I sell equipment up to level 7. Press E to browse my wares.",
       interactionRadius: 80
     }
   ]
@@ -288,13 +324,68 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
   const [playerDirection, setPlayerDirection] = useState<'down' | 'up' | 'left' | 'right'>('down')
   const [isMusicMuted, setIsMusicMuted] = useState(false)
   const audioRef = useRef<HTMLAudioElement | null>(null)
-  
+
   // Estados del sistema de combate
   const [nearbyPlayer, setNearbyPlayer] = useState<Player | null>(null)
   const [combatChallenge, setCombatChallenge] = useState<CombatChallenge | null>(null)
   const [combatState, setCombatState] = useState<CombatState | null>(null)
   const [showCombatInterface, setShowCombatInterface] = useState(false)
+  const [nearbyShop, setNearbyShop] = useState<boolean>(false)
+  
+  // Panel states
+  const [showInventoryPanel, setShowInventoryPanel] = useState(false)
+  const [showShopPanel, setShowShopPanel] = useState(false)
+  const [userGold, setUserGold] = useState(100)
+  const [userLevel, setUserLevel] = useState(1)
+
+  // Load user data on mount
+  useEffect(() => {
+    if (user?.id) {
+      loadUserData()
+    }
+  }, [user?.id])
+
+  const loadUserData = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('gold, total_wins, total_losses')
+        .eq('id', user?.id)
+        .single()
+
+      if (error) {
+        console.error('Error loading user data:', error)
+        return
+      }
+
+      if (data) {
+        setUserGold(data.gold || 100)
+        // Calculate level based on combat experience
+        const totalCombats = (data.total_wins || 0) + (data.total_losses || 0)
+        const level = Math.floor(totalCombats / 5) + 1
+        setUserLevel(level)
+      }
+    } catch (error) {
+      console.error('Error loading user data:', error)
+    }
+  }
+
+  const showSystemMessage = (message: string) => {
+    setSystemMessage({ text: message, timestamp: Date.now() })
+    setTimeout(() => {
+      setSystemMessage(null)
+    }, 5000)
+  }
+
+  const showRewardMessage = (message: string) => {
+    setRewardMessage({ text: message, timestamp: Date.now() })
+    setTimeout(() => {
+      setRewardMessage(null)
+    }, 8000)
+  }
+
   const [systemMessage, setSystemMessage] = useState<{ text: string; timestamp: number } | null>(null)
+  const [rewardMessage, setRewardMessage] = useState<{ text: string; timestamp: number } | null>(null)
   const [tavernLogo, setTavernLogo] = useState<HTMLImageElement | null>(null)
   const [playerStats, setPlayerStats] = useState<{
     level: number
@@ -322,8 +413,30 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
     }
   } | null>(null)
 
-  const CANVAS_WIDTH = 800
-  const CANVAS_HEIGHT = 600
+  // Canvas responsive - más pequeño en móviles
+  const [canvasSize, setCanvasSize] = useState({ width: 600, height: 600 })
+  
+  useEffect(() => {
+    const updateCanvasSize = () => {
+      const isMobile = window.innerWidth < 768
+      const isTablet = window.innerWidth >= 768 && window.innerWidth < 1024
+      
+      if (isMobile) {
+        setCanvasSize({ width: 350, height: 350 })
+      } else if (isTablet) {
+        setCanvasSize({ width: 500, height: 500 })
+      } else {
+        setCanvasSize({ width: 600, height: 600 })
+      }
+    }
+    
+    updateCanvasSize()
+    window.addEventListener('resize', updateCanvasSize)
+    return () => window.removeEventListener('resize', updateCanvasSize)
+  }, [])
+  
+  const CANVAS_WIDTH = canvasSize.width
+  const CANVAS_HEIGHT = canvasSize.height
   const MAP_WIDTH = 1600
   const MAP_HEIGHT = 1200
   const PLAYER_SIZE = 32
@@ -352,8 +465,6 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
     // Fireplace (top-right corner)
     { x: MAP_WIDTH - 200, y: 100, width: 128, height: 96, type: "fireplace" },
 
-    // Kitchen area (bottom-left)
-    { x: 100, y: MAP_HEIGHT - 200, width: 200, height: 128, type: "kitchen" },
 
     // Barrels and storage
     { x: 1200, y: 300, width: 48, height: 48, type: "barrel" },
@@ -409,7 +520,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
       const distance = Math.sqrt(
         Math.pow(playerX - player.x, 2) + Math.pow(playerY - player.y, 2)
       )
-      return distance <= COMBAT_CONSTANTS.CHALLENGE_RANGE
+      return distance <= 50 // Challenge range
     })
     
     setNearbyPlayer(nearby || null)
@@ -464,12 +575,29 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
     setNearbyDoor(isNearDoor)
   }, [nearbyDoor])
 
-  // Verificar proximidad inicial a la puerta
+  // Verificar proximidad al shop
+  const checkNearbyShop = useCallback((playerX: number, playerY: number) => {
+    const shopX = 76  // Nueva posición del blacksmith
+    const shopY = 1130  // Nueva posición del blacksmith
+    const interactionRange = 80
+
+    const isNearShop = (
+      playerX >= shopX - interactionRange &&
+      playerX <= shopX + interactionRange &&
+      playerY >= shopY - interactionRange &&
+      playerY <= shopY + interactionRange
+    )
+
+    setNearbyShop(isNearShop)
+  }, [])
+
+  // Verificar proximidad inicial a la puerta y shop
   useEffect(() => {
     if (localCharacter.x && localCharacter.y) {
       checkNearbyDoor(localCharacter.x, localCharacter.y)
+      checkNearbyShop(localCharacter.x, localCharacter.y)
     }
-  }, [localCharacter.x, localCharacter.y, checkNearbyDoor])
+  }, [localCharacter.x, localCharacter.y, checkNearbyDoor, checkNearbyShop])
 
   // Monitorear cambios en nearbyDoor
   useEffect(() => {
@@ -729,7 +857,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
 
   // Configurar audio de fondo
   useEffect(() => {
-    const audio = new Audio('/tavern.mp3')
+    const audio = new Audio('/tavern.wav')
     audio.loop = true
     audio.volume = 0.05 // Volumen moderado
     audioRef.current = audio
@@ -1109,14 +1237,20 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
 
   // Animación global con configuraciones específicas
   useEffect(() => {
+    const intervals: NodeJS.Timeout[] = []
+    
+    Object.keys(avatarSprites).forEach(key => {
+      const config = getSpriteConfig(key)
+      
+      // Usar configuración estándar para todos los avatares incluyendo MonkeyKing
+      
+      const animationSpeed = (config as any).animationSpeed || 500 // Usar velocidad específica o 500ms por defecto
+      
     const interval = setInterval(() => {
       setAnimationFrames(prev => {
         const newFrames = { ...prev }
         let hasChanges = false
         
-        Object.keys(avatarSprites).forEach(key => {
-          const config = getSpriteConfig(key)
-          // Calcular frames reales basados en la imagen cargada
           const spriteImage = spriteImages[key]
           if (spriteImage && spriteImage.complete && spriteImage.naturalWidth > 0) {
             const realFrameCount = Math.floor(spriteImage.naturalWidth / config.frameWidth)
@@ -1133,15 +1267,19 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
               hasChanges = true
             }
           }
-        })
         
-        // Solo retornar nuevo estado si hay cambios
         return hasChanges ? newFrames : prev
       })
-    }, 500) // Animación más lenta para reducir parpadeos
+      }, animationSpeed)
+      
+      intervals.push(interval)
+    })
     
-    return () => clearInterval(interval)
+    return () => {
+      intervals.forEach(interval => clearInterval(interval))
+    }
   }, [spriteImages])
+
 
   const generateTerrain = useCallback((ctx: CanvasRenderingContext2D, cameraX: number, cameraY: number) => {
     ctx.imageSmoothingEnabled = false
@@ -1298,16 +1436,6 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
             ctx.fillRect(objX + 24, objY + obj.height - fireHeight + 8, obj.width - 48, fireHeight - 24)
             break
 
-          case "kitchen":
-            ctx.fillStyle = "#a0522d"
-            ctx.fillRect(objX, objY, obj.width, obj.height)
-            ctx.fillStyle = "#f5f5dc"
-            ctx.fillRect(objX, objY, obj.width, 16)
-            ctx.fillStyle = "#e6e6fa"
-            for (let i = 0; i < obj.width; i += 24) {
-              ctx.fillRect(objX + i, objY, 2, 16)
-            }
-            break
 
           case "barrel":
             const barrelGradient = ctx.createRadialGradient(
@@ -1505,6 +1633,29 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
       } else {
         console.log('🎨 Not drawing door text - isNearDoorNow is false')
       }
+    }
+
+    // Dibujar texto de interacción con el shop
+    if (nearbyShop) {
+      const shopX = 196
+      const shopY = 982
+      
+      const screenX = shopX - cameraX
+      const screenY = shopY - cameraY
+      
+      // Fondo negro con borde blanco
+      ctx.fillStyle = 'black'
+      ctx.fillRect(screenX - 2, screenY - 20, 200, 20)
+      ctx.strokeStyle = 'white'
+      ctx.lineWidth = 1
+      ctx.strokeRect(screenX - 2, screenY - 20, 200, 20)
+      
+      // Texto blanco
+      ctx.fillStyle = 'white'
+      ctx.font = '12px monospace'
+      ctx.textAlign = 'center'
+      ctx.fillText('Press E to shop', screenX + 100, screenY - 5)
+      ctx.textAlign = 'left'
     }
 
     // Dibujar logo de la taberna
@@ -1792,13 +1943,15 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
       // Check for nearby NPCs, players, and door
       checkNearbyNPCs(newX, newY)
       checkNearbyPlayers(newX, newY)
-      checkNearbyDoor(newX, newY)
+        checkNearbyDoor(newX, newY)
+        checkNearbyShop(newX, newY)
       
       return true // Indica que hubo cambios
     }
     
     return false // No hubo cambios
-  }, [localCharacter, keys, onCharacterUpdate, websocketClient, checkCollision, checkNearbyNPCs, checkNearbyPlayers, checkNearbyDoor])
+  }, [localCharacter, keys, onCharacterUpdate, websocketClient, checkCollision, checkNearbyNPCs, checkNearbyPlayers, checkNearbyDoor, checkNearbyShop])
+
 
   const render = useCallback(() => {
     const canvas = canvasRef.current
@@ -1928,6 +2081,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
       if (screenX > -100 && screenX < CANVAS_WIDTH + 100 && 
           screenY > -100 && screenY < CANVAS_HEIGHT + 100) {
         
+        
         // Dibujar NPC usando la misma función que los jugadores
         drawPlayer(
           ctx,
@@ -1996,11 +2150,13 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
         return
       }
       
-      // Interactuar con NPC, puerta o desafiar jugador con E
+      // Interactuar con NPC, puerta, shop o desafiar jugador con E
       if (e.code === "KeyE") {
         e.preventDefault()
         if (nearbyPlayer) {
           challengePlayer()
+        } else if (nearbyShop) {
+          setShowShopPanel(true)
         } else if (nearbyNPC) {
         interactWithNPC()
         } else if (nearbyDoor) {
@@ -2043,9 +2199,14 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
   }, [gameLoop])
 
   return (
-    <div className="flex flex-col lg:flex-row items-start justify-center space-y-6 lg:space-y-0 lg:space-x-6 p-4">
-      {/* Panel del juego principal */}
-      <Card className="character-card">
+    <div className="flex flex-col lg:flex-row items-center lg:items-start justify-center space-y-4 lg:space-y-0 p-4 min-h-screen">
+      {/* Panel de rankings - Izquierda en desktop, arriba en mobile */}
+      <div className="w-full lg:w-80 order-1 lg:order-1 lg:mr-8">
+        <RankingPanel />
+      </div>
+      
+      {/* Panel del juego principal - Centrado */}
+      <Card className="character-card w-full lg:w-auto order-2 lg:order-2" style={{width: '100%', maxWidth: '620px', height: 'fit-content'}}>
         <CardHeader className="text-center pb-4">
           <div className="flex items-center justify-between">
             <div className="flex-1"></div>
@@ -2065,7 +2226,13 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="relative">
-          <canvas ref={canvasRef} width={CANVAS_WIDTH} height={CANVAS_HEIGHT} className="game-canvas pixel-art" />
+          <canvas 
+            ref={canvasRef} 
+            width={CANVAS_WIDTH} 
+            height={CANVAS_HEIGHT} 
+            className="game-canvas pixel-art w-full h-auto max-w-full" 
+            style={{maxWidth: '100%', height: 'auto'}}
+          />
 
             {/* Input de chat superpuesto */}
             {showChatInput && (
@@ -2098,7 +2265,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
       </Card>
 
       {/* Panel lateral con información del jugador y botones */}
-      <Card className="w-full lg:w-80 h-fit border-4 border-primary" style={{borderRadius: '0'}}>
+      <Card className="w-full lg:w-80 h-fit border-4 border-primary order-3 lg:order-3 lg:ml-8" style={{borderRadius: '0'}}>
         <CardContent className="space-y-4" style={{borderRadius: '0'}}>
           {/* Información del jugador */}
           <div className="p-4" style={{
@@ -2169,13 +2336,21 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
           )}
 
           {/* Botones de acción */}
-          <div className="space-y-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-2">
             <Button 
               onClick={savePlayerProgressToSupabase} 
               className="w-full pixel-button bg-blue-600 hover:bg-blue-700"
               disabled={isSaving}
             >
               {isSaving ? "Saving..." : "Save Progress"}
+            </Button>
+            
+            
+            <Button 
+              onClick={() => setShowInventoryPanel(true)} 
+              className="w-full pixel-button bg-green-600 hover:bg-green-700"
+            >
+              Inventory
             </Button>
             
             <Button onClick={onBackToCreation} className="w-full pixel-button">
@@ -2194,7 +2369,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
                 className="w-full pixel-button bg-red-600 hover:bg-red-700"
                 title={`Logout ${user?.username || 'user'}`}
               >
-                🚪 Logout
+                Logout
               </Button>
             )}
           </div>
@@ -2272,6 +2447,22 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
         </div>
       )}
 
+      {/* Mensaje de recompensas */}
+      {rewardMessage && (
+        <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-50 max-w-2xl mx-4">
+          <div className="bg-gradient-to-r from-green-600 to-green-500 border-4 border-green-400 rounded-lg p-4 shadow-lg">
+            <div className="text-center">
+              <div className="text-green-100 font-bold text-lg pixel-text mb-2">
+                🎁 COMBAT REWARDS!
+              </div>
+              <div className="text-white text-sm pixel-text">
+                {rewardMessage.text}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
 
 
       {/* Level Up Notification */}
@@ -2340,6 +2531,28 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
         </div>
       )}
 
+
+      {/* Advanced Inventory Panel */}
+      <AdvancedInventoryPanel 
+        isVisible={showInventoryPanel}
+        onClose={() => setShowInventoryPanel(false)}
+        userId={user?.id || ''}
+        userGold={userGold}
+        userLevel={userLevel}
+        onGoldUpdate={setUserGold}
+      />
+
+      {/* Shop Panel */}
+      <ShopPanel 
+        isVisible={showShopPanel}
+        onClose={() => setShowShopPanel(false)}
+        userId={user?.id || ''}
+        userGold={userGold}
+        userLevel={userLevel}
+        onGoldUpdate={setUserGold}
+      />
+
     </div>
   )
 }
+

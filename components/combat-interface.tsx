@@ -10,7 +10,6 @@ import {
   CombatAction, 
   CombatPlayer, 
   CombatUtils,
-  COMBAT_CONSTANTS 
 } from "@/lib/combat-system"
 
 interface CombatInterfaceProps {
@@ -26,7 +25,7 @@ export default function CombatInterface({
   onAction, 
   onClose 
 }: CombatInterfaceProps) {
-  const [timeLeft, setTimeLeft] = useState(COMBAT_CONSTANTS.TURN_TIMEOUT / 1000)
+  const [timeLeft, setTimeLeft] = useState(30) // 30 seconds turn timeout
   const [lastAction, setLastAction] = useState<CombatAction | null>(null)
 
   const isCurrentPlayerTurn = combatState.currentTurn === currentPlayerId
@@ -40,7 +39,7 @@ export default function CombatInterface({
   // Timer para el turno
   useEffect(() => {
     if (combatState.status !== 'active' || !isCurrentPlayerTurn) {
-      setTimeLeft(COMBAT_CONSTANTS.TURN_TIMEOUT / 1000)
+      setTimeLeft(30) // Reset to 30 seconds
       return
     }
 
@@ -49,7 +48,7 @@ export default function CombatInterface({
         if (prev <= 1) {
           // Timeout - ataque automático
           onAction({ type: 'attack' })
-          return COMBAT_CONSTANTS.TURN_TIMEOUT / 1000
+          return 30 // 30 seconds
         }
         return prev - 1
       })
