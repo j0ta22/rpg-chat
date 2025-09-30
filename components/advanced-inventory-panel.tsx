@@ -146,7 +146,15 @@ export default function AdvancedInventoryPanel({
   }
 
   const canEquipItem = (item: Item) => {
-    return userLevel >= item.levelRequired
+    const canEquip = userLevel >= item.levelRequired
+    console.log('🔍 canEquipItem check:', {
+      itemName: item.name,
+      userLevel,
+      requiredLevel: item.levelRequired,
+      canEquip,
+      equipmentSlot: item.equipmentSlot
+    })
+    return canEquip
   }
 
   if (!isVisible) return null

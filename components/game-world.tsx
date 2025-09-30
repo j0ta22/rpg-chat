@@ -363,6 +363,12 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
         // Calculate level based on combat experience
         const totalCombats = (data.total_wins || 0) + (data.total_losses || 0)
         const level = Math.floor(totalCombats / 5) + 1
+        console.log('👤 User level calculation:', {
+          totalWins: data.total_wins,
+          totalLosses: data.total_losses,
+          totalCombats,
+          calculatedLevel: level
+        })
         setUserLevel(level)
       }
     } catch (error) {
