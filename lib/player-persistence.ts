@@ -146,6 +146,13 @@ export async function listSavedPlayers(): Promise<PlayerSaveData[]> {
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
     
+    console.log('🔍 Saved players query details:', {
+      userId,
+      table: 'saved_players',
+      query: `eq('user_id', '${userId}')`,
+      result: { players, error }
+    })
+    
     if (error) {
       console.error('❌ Error listing players:', error)
       console.error('❌ Error details:', error.message, error.code)
