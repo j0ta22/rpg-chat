@@ -78,10 +78,13 @@ export async function loginUser(username: string, password: string): Promise<Aut
     console.log('🔐 Logging in user:', username)
     
     // Primero buscar el usuario por username
+    console.log('🔍 Searching for username:', username)
     const { data: users, error: searchError } = await supabase
       .from('users')
       .select('id, username, password_hash, created_at')
       .eq('username', username)
+    
+    console.log('🔍 Supabase query result:', { users, searchError })
     
     if (searchError) {
       console.error('❌ Error searching user:', searchError)
