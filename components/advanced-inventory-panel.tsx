@@ -155,9 +155,9 @@ export default function AdvancedInventoryPanel({
     }
   }
 
-  const canEquipItem = (item: Item) => {
+  const canEquipItemLocal = (item: Item) => {
     const canEquip = userLevel >= item.levelRequired
-    console.log('🔍 canEquipItem check:', {
+    console.log('🔍 canEquipItemLocal check:', {
       itemName: item.name,
       userLevel,
       requiredLevel: item.levelRequired,
@@ -283,9 +283,9 @@ export default function AdvancedInventoryPanel({
                               <Button
                                 size="sm"
                                 onClick={() => handleEquipItem(inventoryItem.item)}
-                                disabled={!canEquipItem(inventoryItem.item)}
+                                disabled={!canEquipItemLocal(inventoryItem.item)}
                                 className={`text-xs font-mono ${
-                                  canEquipItem(inventoryItem.item)
+                                  canEquipItemLocal(inventoryItem.item)
                                     ? 'bg-green-600 hover:bg-green-700 text-white'
                                     : 'bg-gray-600 text-gray-400 cursor-not-allowed'
                                 }`}

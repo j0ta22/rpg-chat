@@ -559,6 +559,7 @@ export async function canEquipItem(userId: string, itemId: string): Promise<{ ca
     return { canEquip: true }
   } catch (error) {
     console.error('Error checking if item can be equipped:', error)
+    console.error('Error details:', error.message, error.stack)
     return { canEquip: false, reason: 'Unknown error' }
   }
 }
@@ -570,6 +571,7 @@ export async function equipItem(userId: string, itemId: string): Promise<boolean
     
     // Verificar si el item puede ser equipado
     const canEquip = await canEquipItem(userId, itemId)
+    console.log('🔍 canEquip result:', canEquip)
     if (!canEquip.canEquip) {
       console.error('❌ Cannot equip item:', canEquip.reason)
       return false
