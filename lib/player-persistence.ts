@@ -32,7 +32,7 @@ export async function savePlayerProgress(playerData: PlayerSaveData): Promise<bo
     
     // Intentar insertar directamente (upsert)
     const { data, error } = await supabase
-      .from('saved_players')
+      .from('players')
       .upsert({
         name: playerData.name,
         avatar: playerData.avatar,
@@ -85,7 +85,7 @@ export async function loadPlayerProgress(playerName: string): Promise<PlayerSave
     console.log('💾 Loading player progress from Supabase for:', playerName, 'user:', userId)
     
     const { data: player, error } = await supabase
-      .from('saved_players')
+      .from('players')
       .select('*')
       .eq('name', playerName)
       .eq('user_id', userId)
@@ -141,14 +141,14 @@ export async function listSavedPlayers(): Promise<PlayerSaveData[]> {
     console.log('💾 Listing saved players from Supabase for user:', userId)
     
     const { data: players, error } = await supabase
-      .from('saved_players')
+      .from('players')
       .select('*')
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
     
     console.log('🔍 Saved players query details:', {
       userId,
-      table: 'saved_players',
+      table: 'players',
       query: `eq('user_id', '${userId}')`,
       result: { players, error }
     })
