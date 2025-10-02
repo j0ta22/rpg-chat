@@ -793,6 +793,8 @@ async function getRandomItem(): Promise<Item | null> {
 // Función modificada para comprar items (soporte para precio 0 para recompensas)
 export async function buyItemWithPrice(userId: string, itemId: string, customPrice?: number): Promise<boolean> {
   try {
+    console.log('🛒 Starting buyItemWithPrice:', { userId, itemId, customPrice })
+    
     // Obtener el item
     const { data: item, error: itemError } = await supabase
       .from('items')
@@ -801,9 +803,11 @@ export async function buyItemWithPrice(userId: string, itemId: string, customPri
       .single()
 
     if (itemError || !item) {
-      console.error('Error fetching item:', itemError)
+      console.error('❌ Error fetching item:', itemError)
       return false
     }
+    
+    console.log('✅ Item found:', { id: item.id, name: item.name, price: item.price })
 
     const price = customPrice !== undefined ? customPrice : item.price
 
@@ -848,13 +852,20 @@ export async function buyItemWithPrice(userId: string, itemId: string, customPri
 
     if (existingItem) {
       // Si ya tiene el item, aumentar la cantidad
-      await supabase
+      console.log('📦 Item already exists, updating quantity:', existingItem.quantity + 1)
+      const { error: updateError } = await supabase
         .from('player_inventory')
         .update({ quantity: existingItem.quantity + 1 })
         .eq('id', existingItem.id)
+      
+      if (updateError) {
+        console.error('❌ Error updating item quantity:', updateError)
+        return false
+      }
     } else {
       // Si no tiene el item, agregarlo
-      await supabase
+      console.log('📦 Adding new item to inventory:', { player_id: userId, item_id: itemId })
+      const { data: insertData, error: insertError } = await supabase
         .from('player_inventory')
         .insert({
           player_id: userId,
@@ -862,6 +873,14 @@ export async function buyItemWithPrice(userId: string, itemId: string, customPri
           quantity: 1,
           equipped: false
         })
+        .select()
+      
+      if (insertError) {
+        console.error('❌ Error inserting item to inventory:', insertError)
+        return false
+      }
+      
+      console.log('✅ Item inserted successfully:', insertData)
     }
 
     console.log('✅ Item purchased successfully')
