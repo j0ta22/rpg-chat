@@ -302,7 +302,9 @@ export async function getPlayerInventory(userId: string): Promise<PlayerInventor
           rarity,
           stat_bonuses,
           price,
-          icon_url
+          icon_url,
+          level_required,
+          equipment_slot
         )
       `)
       .eq('player_id', userId)
@@ -326,7 +328,9 @@ export async function getPlayerInventory(userId: string): Promise<PlayerInventor
         rarity: inv.items.rarity,
         statBonuses: inv.items.stat_bonuses || {},
         price: inv.items.price,
-        iconUrl: inv.items.icon_url
+        iconUrl: inv.items.icon_url,
+        levelRequired: inv.items.level_required || 1,
+        equipmentSlot: inv.items.equipment_slot || 'consumable'
       },
       quantity: inv.quantity,
       equipped: inv.equipped,
@@ -486,11 +490,82 @@ export async function getUserEquipment(userId: string): Promise<UserEquipment> {
   }
 }
 
+// Función para verificar si un item puede ser equipado
+export async function canEquipItem(userId: string, itemId: string): Promise<{ canEquip: boolean; reason?: string }> {
+  try {
+    console.log('🔍 Checking if item can be equipped:', { userId, itemId })
+    
+    // Obtener el item para verificar el slot y nivel requerido
+    const { data: item, error: itemError } = await supabase
+      .from('items')
+      .select('equipment_slot, level_required, name')
+      .eq('id', itemId)
+      .single()
+
+    if (itemError || !item) {
+      console.error('❌ Error fetching item:', itemError)
+      return { canEquip: false, reason: 'Item not found' }
+    }
+
+    console.log('📦 Item found:', { name: item.name, equipment_slot: item.equipment_slot, level_required: item.level_required })
+
+    if (item.equipment_slot === 'consumable') {
+      return { canEquip: false, reason: 'Cannot equip consumable items' }
+    }
+
+    // Obtener el nivel del jugador desde la tabla players
+    const { data: player, error: playerError } = await supabase
+      .from('players')
+      .select('stats')
+      .eq('user_id', userId)
+      .single()
+
+    if (playerError || !player) {
+      console.error('❌ Error fetching player level:', playerError)
+      return { canEquip: false, reason: 'Player not found' }
+    }
+
+    // Obtener el nivel del personaje desde los stats
+    const userLevel = player.stats?.level || 1
+
+    console.log('👤 Player level check:', { userLevel, requiredLevel: item.level_required })
+
+    if (userLevel < item.level_required) {
+      return { canEquip: false, reason: `Requires level ${item.level_required}, you are level ${userLevel}` }
+    }
+
+    // Verificar que el jugador tiene el item en su inventario
+    const { data: inventoryItem, error: inventoryError } = await supabase
+      .from('player_inventory')
+      .select('id')
+      .eq('player_id', userId)
+      .eq('item_id', itemId)
+      .single()
+
+    if (inventoryError || !inventoryItem) {
+      return { canEquip: false, reason: 'Item not found in inventory' }
+    }
+
+    console.log('✅ Item can be equipped')
+    return { canEquip: true }
+  } catch (error) {
+    console.error('Error checking if item can be equipped:', error)
+    return { canEquip: false, reason: 'Unknown error' }
+  }
+}
+
 // Función para equipar un item
 export async function equipItem(userId: string, itemId: string): Promise<boolean> {
   try {
     console.log('🔧 Attempting to equip item:', { userId, itemId })
     
+    // Verificar si el item puede ser equipado
+    const canEquip = await canEquipItem(userId, itemId)
+    if (!canEquip.canEquip) {
+      console.error('❌ Cannot equip item:', canEquip.reason)
+      return false
+    }
+
     // Obtener el item para verificar el slot
     const { data: item, error: itemError } = await supabase
       .from('items')
@@ -504,49 +579,6 @@ export async function equipItem(userId: string, itemId: string): Promise<boolean
     }
 
     console.log('📦 Item found:', { name: item.name, equipment_slot: item.equipment_slot, level_required: item.level_required })
-
-    if (item.equipment_slot === 'consumable') {
-      console.error('❌ Cannot equip consumable items')
-      return false
-    }
-
-    // Obtener el nivel del jugador
-    const { data: user, error: userError } = await supabase
-      .from('users')
-      .select('total_wins, total_losses')
-      .eq('id', userId)
-      .single()
-
-    if (userError || !user) {
-      console.error('❌ Error fetching user level:', userError)
-      return false
-    }
-
-    // Calcular nivel basado en combates (simplificado)
-    const totalCombats = (user.total_wins || 0) + (user.total_losses || 0)
-    const userLevel = Math.floor(totalCombats / 5) + 1 // 1 nivel cada 5 combates
-
-    console.log('👤 User level check:', { totalCombats, userLevel, requiredLevel: item.level_required })
-
-    if (userLevel < item.level_required) {
-      console.error(`❌ Item requires level ${item.level_required}, user is level ${userLevel}`)
-      return false
-    }
-
-    // Verificar que el jugador tiene el item en su inventario
-    const { data: inventoryItem, error: inventoryError } = await supabase
-      .from('player_inventory')
-      .select('id')
-      .eq('player_id', userId)
-      .eq('item_id', itemId)
-      .single()
-
-    if (inventoryError || !inventoryItem) {
-      console.error('❌ Item not found in inventory:', inventoryError)
-      return false
-    }
-
-    console.log('✅ Item found in inventory')
 
     // Crear o actualizar el equipamiento
     const slotField = `${item.equipment_slot}_item_id`

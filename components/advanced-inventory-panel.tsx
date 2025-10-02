@@ -28,6 +28,7 @@ import {
   unequipItem,
   sellItem,
   getInventorySize,
+  canEquipItem,
   PlayerInventoryItem,
   Item,
   UserEquipment
@@ -89,9 +90,18 @@ export default function AdvancedInventoryPanel({
   }
 
   const handleEquipItem = async (item: Item) => {
+    // Verificar si el item puede ser equipado antes de intentar equiparlo
+    const canEquip = await canEquipItem(userId, item.id)
+    if (!canEquip.canEquip) {
+      alert(`Cannot equip item: ${canEquip.reason}`)
+      return
+    }
+
     const success = await equipItem(userId, item.id)
     if (success) {
       loadData() // Reload data
+    } else {
+      alert('Failed to equip item')
     }
   }
 
