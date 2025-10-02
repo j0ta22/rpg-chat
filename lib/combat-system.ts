@@ -403,6 +403,7 @@ export async function toggleItemEquip(userId: string, inventoryItemId: string): 
 // Función para obtener el equipamiento del jugador
 export async function getUserEquipment(userId: string): Promise<UserEquipment> {
   try {
+    // First, get the equipment record
     const { data: equipment, error } = await supabase
       .from('user_equipment')
       .select(`
@@ -412,28 +413,7 @@ export async function getUserEquipment(userId: string): Promise<UserEquipment> {
         boots_item_id,
         gloves_item_id,
         weapon_item_id,
-        accessory_item_id,
-        items_helmet:helmet_item_id (
-          id, name, description, item_type, rarity, stat_bonuses, price, icon_url, level_required, equipment_slot
-        ),
-        items_chest:chest_item_id (
-          id, name, description, item_type, rarity, stat_bonuses, price, icon_url, level_required, equipment_slot
-        ),
-        items_legs:legs_item_id (
-          id, name, description, item_type, rarity, stat_bonuses, price, icon_url, level_required, equipment_slot
-        ),
-        items_boots:boots_item_id (
-          id, name, description, item_type, rarity, stat_bonuses, price, icon_url, level_required, equipment_slot
-        ),
-        items_gloves:gloves_item_id (
-          id, name, description, item_type, rarity, stat_bonuses, price, icon_url, level_required, equipment_slot
-        ),
-        items_weapon:weapon_item_id (
-          id, name, description, item_type, rarity, stat_bonuses, price, icon_url, level_required, equipment_slot
-        ),
-        items_accessory:accessory_item_id (
-          id, name, description, item_type, rarity, stat_bonuses, price, icon_url, level_required, equipment_slot
-        )
+        accessory_item_id
       `)
       .eq('user_id', userId)
       .single()
@@ -451,30 +431,55 @@ export async function getUserEquipment(userId: string): Promise<UserEquipment> {
       }
     }
 
-    const mapItem = (item: any): Item | null => {
-      if (!item) return null
+    if (!equipment) {
       return {
-        id: item.id,
-        name: item.name,
-        description: item.description,
-        itemType: item.item_type,
-        rarity: item.rarity,
-        statBonuses: item.stat_bonuses || {},
-        price: item.price,
-        iconUrl: item.icon_url,
-        levelRequired: item.level_required || 1,
-        equipmentSlot: item.equipment_slot || 'consumable'
+        helmet: null,
+        chest: null,
+        legs: null,
+        boots: null,
+        gloves: null,
+        weapon: null,
+        accessory: null
       }
     }
 
+    // Get item details for each equipped item
+    const itemIds = [
+      equipment.helmet_item_id,
+      equipment.chest_item_id,
+      equipment.legs_item_id,
+      equipment.boots_item_id,
+      equipment.gloves_item_id,
+      equipment.weapon_item_id,
+      equipment.accessory_item_id
+    ].filter(Boolean)
+
+    let items = []
+    if (itemIds.length > 0) {
+      const { data: itemsData, error: itemsError } = await supabase
+        .from('items')
+        .select('id, name, description, item_type, rarity, stat_bonuses, price, icon_url, level_required, equipment_slot')
+        .in('id', itemIds)
+
+      if (itemsError) {
+        console.error('Error fetching item details:', itemsError)
+        items = []
+      } else {
+        items = itemsData || []
+      }
+    }
+
+    // Map items to their slots
+    const itemMap = new Map(items.map(item => [item.id, item]))
+
     return {
-      helmet: mapItem(equipment?.items_helmet),
-      chest: mapItem(equipment?.items_chest),
-      legs: mapItem(equipment?.items_legs),
-      boots: mapItem(equipment?.items_boots),
-      gloves: mapItem(equipment?.items_gloves),
-      weapon: mapItem(equipment?.items_weapon),
-      accessory: mapItem(equipment?.items_accessory)
+      helmet: equipment.helmet_item_id ? itemMap.get(equipment.helmet_item_id) || null : null,
+      chest: equipment.chest_item_id ? itemMap.get(equipment.chest_item_id) || null : null,
+      legs: equipment.legs_item_id ? itemMap.get(equipment.legs_item_id) || null : null,
+      boots: equipment.boots_item_id ? itemMap.get(equipment.boots_item_id) || null : null,
+      gloves: equipment.gloves_item_id ? itemMap.get(equipment.gloves_item_id) || null : null,
+      weapon: equipment.weapon_item_id ? itemMap.get(equipment.weapon_item_id) || null : null,
+      accessory: equipment.accessory_item_id ? itemMap.get(equipment.accessory_item_id) || null : null
     }
   } catch (error) {
     console.error('Error getting user equipment:', error)
@@ -514,16 +519,20 @@ export async function canEquipItem(userId: string, itemId: string): Promise<{ ca
     }
 
     // Obtener el nivel del jugador desde la tabla players
-    const { data: player, error: playerError } = await supabase
+    // Primero obtener el jugador activo del usuario
+    const { data: players, error: playersError } = await supabase
       .from('players')
-      .select('stats')
+      .select('id, stats')
       .eq('user_id', userId)
-      .single()
-
-    if (playerError || !player) {
-      console.error('❌ Error fetching player level:', playerError)
+      .order('created_at', { ascending: false })
+      .limit(1)
+    
+    if (playersError || !players || players.length === 0) {
+      console.error('❌ Error fetching player:', playersError)
       return { canEquip: false, reason: 'Player not found' }
     }
+    
+    const player = players[0]
 
     // Obtener el nivel del personaje desde los stats
     const userLevel = player.stats?.level || 1
