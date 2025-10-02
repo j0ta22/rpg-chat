@@ -91,7 +91,10 @@ export async function loginUser(username: string, password: string): Promise<Aut
       }
     }
     
+    console.log('🔍 Users found:', users?.length || 0)
+    
     if (!users || users.length === 0) {
+      console.log('❌ No users found with username:', username)
       return {
         success: false,
         error: 'Invalid tavern alias or password'
@@ -99,9 +102,12 @@ export async function loginUser(username: string, password: string): Promise<Aut
     }
     
     const user = users[0]
+    console.log('👤 User found:', { id: user.id, username: user.username })
+    console.log('🔐 Password check - stored:', user.password_hash, 'provided:', password)
     
     // Verificar la contraseña (en producción, deberías verificar el hash)
     if (user.password_hash !== password) {
+      console.log('❌ Password mismatch')
       return {
         success: false,
         error: 'Invalid tavern alias or password'

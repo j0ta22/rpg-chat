@@ -148,8 +148,11 @@ export async function listSavedPlayers(): Promise<PlayerSaveData[]> {
     
     if (error) {
       console.error('❌ Error listing players:', error)
+      console.error('❌ Error details:', error.message, error.code)
       return []
     }
+    
+    console.log('📋 Players query result:', players?.length || 0, 'players found')
     
     if (!players || players.length === 0) {
       console.log('ℹ️ No saved players found for this user')
