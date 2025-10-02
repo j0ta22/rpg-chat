@@ -285,6 +285,8 @@ export async function getItemCatalog(): Promise<Item[]> {
 // Función para obtener el inventario del jugador
 export async function getPlayerInventory(userId: string): Promise<PlayerInventoryItem[]> {
   try {
+    console.log('📦 Loading player inventory for user:', userId)
+    
     const { data: inventory, error } = await supabase
       .from('player_inventory')
       .select(`
@@ -307,12 +309,14 @@ export async function getPlayerInventory(userId: string): Promise<PlayerInventor
       .order('equipped', { ascending: false })
       .order('acquired_date', { ascending: false })
 
+    console.log('📦 Inventory query result:', { inventory, error })
+
     if (error) {
-      console.error('Error fetching inventory:', error)
+      console.error('❌ Error fetching inventory:', error)
       return []
     }
 
-    return inventory?.map(inv => ({
+    const mappedInventory = inventory?.map(inv => ({
       id: inv.id,
       item: {
         id: inv.items.id,
@@ -328,6 +332,9 @@ export async function getPlayerInventory(userId: string): Promise<PlayerInventor
       equipped: inv.equipped,
       acquiredDate: inv.acquired_date
     })) || []
+    
+    console.log('📦 Mapped inventory result:', mappedInventory.length, 'items')
+    return mappedInventory
   } catch (error) {
     console.error('Error getting player inventory:', error)
     return []
