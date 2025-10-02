@@ -145,7 +145,15 @@ export default function RPGGame() {
         setCurrentUser(result.user) // Guardar en localStorage
         console.log('💾 User saved to localStorage:', result.user)
         setShowLogin(false)
-        setShowPlayerSelection(false) // Ir directo a crear personaje
+        
+        // Cargar personajes del usuario después del registro
+        const players = await listSavedPlayers()
+        setSavedPlayers(players)
+        
+        if (players.length > 0) {
+          setShowPlayerSelection(true)
+        }
+        // Si no hay personajes, irá directo a crear personaje
       } else {
         setAuthError(result.error || 'Error registering at tavern')
       }
