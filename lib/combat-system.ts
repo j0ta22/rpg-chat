@@ -565,7 +565,7 @@ export async function canEquipItem(userId: string, itemId: string): Promise<{ ca
 }
 
 // Función para equipar un item
-export async function equipItem(userId: string, itemId: string): Promise<boolean> {
+export async function equipItem(userId: string, itemId: string): Promise<{ success: boolean; reason?: string }> {
   try {
     console.log('🔧 Attempting to equip item:', { userId, itemId })
     
@@ -574,7 +574,7 @@ export async function equipItem(userId: string, itemId: string): Promise<boolean
     console.log('🔍 canEquip result:', canEquip)
     if (!canEquip.canEquip) {
       console.error('❌ Cannot equip item:', canEquip.reason)
-      return false
+      return { success: false, reason: canEquip.reason }
     }
 
     // Obtener el item para verificar el slot
@@ -586,7 +586,7 @@ export async function equipItem(userId: string, itemId: string): Promise<boolean
 
     if (itemError || !item) {
       console.error('❌ Error fetching item:', itemError)
-      return false
+      return { success: false, reason: 'Item not found' }
     }
 
     console.log('📦 Item found:', { name: item.name, equipment_slot: item.equipment_slot, level_required: item.level_required })
@@ -606,14 +606,14 @@ export async function equipItem(userId: string, itemId: string): Promise<boolean
 
     if (equipError) {
       console.error('❌ Error equipping item:', equipError)
-      return false
+      return { success: false, reason: 'Failed to equip item' }
     }
 
     console.log('✅ Item equipped successfully to slot:', item.equipment_slot)
-    return true
+    return { success: true }
   } catch (error) {
     console.error('Error equipping item:', error)
-    return false
+    return { success: false, reason: 'Unknown error occurred' }
   }
 }
 
