@@ -109,27 +109,97 @@ export default function ShopPanel({
     }
   }
 
-  const getEquipmentSlotIcon = (slot: string) => {
+  const getItemIcon = (item: Item) => {
     const iconStyle = "h-6 w-6 object-contain"
     
-    switch (slot) {
-      case 'helmet': 
-        return <img src="/Items Pack/items/crown.png" alt="Helmet" className={iconStyle} />
-      case 'chest': 
-        return <img src="/Items Pack/armor/common/cloth_robe.png" alt="Chest" className={iconStyle} />
-      case 'legs': 
-        return <img src="/Items Pack/armor/common/cloth_pants.png" alt="Legs" className={iconStyle} />
-      case 'boots': 
-        return <img src="/Items Pack/armor/common/cloth_shoes.png" alt="Boots" className={iconStyle} />
-      case 'gloves': 
-        return <img src="/Items Pack/armor/common/cloth_gloves.png" alt="Gloves" className={iconStyle} />
-      case 'weapon': 
-        return <img src="/Items Pack/weapons/common/short_sword.png" alt="Weapon" className={iconStyle} />
-      case 'accessory': 
-        return <img src="/Items Pack/items/Necklace_of_the_Eternal_Wind.png" alt="Accessory" className={iconStyle} />
-      default: 
-        return <Package className="h-4 w-4" />
+    // Si el item tiene iconUrl, usarlo directamente
+    if (item.iconUrl) {
+      return <img src={item.iconUrl} alt={item.name} className={iconStyle} />
     }
+    
+    // Si no tiene iconUrl, mapear según tipo y rareza
+    const getAssetPath = (itemType: string, rarity: string, equipmentSlot: string) => {
+      const rarityPath = rarity.toLowerCase()
+      
+      switch (itemType) {
+        case 'weapon':
+          switch (equipmentSlot) {
+            case 'weapon':
+              switch (rarityPath) {
+                case 'common': return '/Items Pack/weapons/common/short_sword.png'
+                case 'uncommon': return '/Items Pack/weapons/uncommon/iron_blade.png'
+                case 'rare': return '/Items Pack/weapons/rare/broadsword.png'
+                case 'epic': return '/Items Pack/weapons/epic/dragon_slayer_sword.png'
+                case 'legendary': return '/Items Pack/weapons/legendary/excalibur.png'
+                default: return '/Items Pack/weapons/common/short_sword.png'
+              }
+            default: return '/Items Pack/weapons/common/short_sword.png'
+          }
+        case 'armor':
+          switch (equipmentSlot) {
+            case 'helmet':
+              switch (rarityPath) {
+                case 'common': return '/Items Pack/armor/common/cloth_hood.png'
+                case 'uncommon': return '/Items Pack/armor/uncommon/chainmail_coif.png'
+                case 'rare': return '/Items Pack/armor/rare/platemail_helmet.png'
+                case 'epic': return '/Items Pack/armor/epic/dragon_scale_helmet.png'
+                case 'legendary': return '/Items Pack/armor/legendary/crown_of_kings.png'
+                default: return '/Items Pack/armor/common/cloth_hood.png'
+              }
+            case 'chest':
+              switch (rarityPath) {
+                case 'common': return '/Items Pack/armor/common/cloth_robe.png'
+                case 'uncommon': return '/Items Pack/armor/uncommon/chainmail_jacket.png'
+                case 'rare': return '/Items Pack/armor/rare/platemail.png'
+                case 'epic': return '/Items Pack/armor/epic/dragon_scale_armor.png'
+                case 'legendary': return '/Items Pack/armor/legendary/armor_of_ancients.png'
+                default: return '/Items Pack/armor/common/cloth_robe.png'
+              }
+            case 'legs':
+              switch (rarityPath) {
+                case 'common': return '/Items Pack/armor/common/cloth_pants.png'
+                case 'uncommon': return '/Items Pack/armor/uncommon/chainmail_pants.png'
+                case 'rare': return '/Items Pack/armor/rare/platemail_pants.png'
+                case 'epic': return '/Items Pack/armor/epic/dragon_scale_leggings.png'
+                case 'legendary': return '/Items Pack/armor/legendary/leggings_of_power.png'
+                default: return '/Items Pack/armor/common/cloth_pants.png'
+              }
+            case 'boots':
+              switch (rarityPath) {
+                case 'common': return '/Items Pack/armor/common/cloth_shoes.png'
+                case 'uncommon': return '/Items Pack/armor/uncommon/chainmail_boots.png'
+                case 'rare': return '/Items Pack/armor/rare/Scale_boots.png'
+                case 'epic': return '/Items Pack/armor/epic/dragon_scale_boots.png'
+                case 'legendary': return '/Items Pack/armor/legendary/boots_of_swiftness.png'
+                default: return '/Items Pack/armor/common/cloth_shoes.png'
+              }
+            case 'gloves':
+              switch (rarityPath) {
+                case 'common': return '/Items Pack/armor/common/cloth_gloves.png'
+                case 'uncommon': return '/Items Pack/armor/uncommon/chainmail_gloves.png'
+                case 'rare': return '/Items Pack/armor/rare/Scale_gloves.png'
+                case 'epic': return '/Items Pack/armor/epic/dragon_scale_gloves.png'
+                case 'legendary': return '/Items Pack/armor/legendary/gauntlets_of_might.png'
+                default: return '/Items Pack/armor/common/cloth_gloves.png'
+              }
+            default: return '/Items Pack/armor/common/cloth_robe.png'
+          }
+        case 'accessory':
+          switch (rarityPath) {
+            case 'common': return '/Items Pack/items/power_ring.png'
+            case 'uncommon': return '/Items Pack/items/power_ring.png'
+            case 'rare': return '/Items Pack/items/Necklace_of_the_Eternal_Wind.png'
+            case 'epic': return '/Items Pack/items/Necklace_of_the_Eternal_Wind.png'
+            case 'legendary': return '/Items Pack/items/Necklace_of_the_Eternal_Wind.png'
+            default: return '/Items Pack/items/power_ring.png'
+          }
+        default:
+          return '/Items Pack/items/power_ring.png'
+      }
+    }
+    
+    const assetPath = getAssetPath(item.itemType, item.rarity, item.equipmentSlot)
+    return <img src={assetPath} alt={item.name} className={iconStyle} />
   }
 
   const getStatIcon = (stat: string) => {
@@ -227,7 +297,7 @@ export default function ShopPanel({
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-2">
-                          {getEquipmentSlotIcon(item.equipmentSlot)}
+                          {getItemIcon(item)}
                           <div>
                             <h3 className="font-bold pixel-text text-sm text-destructive">
                               {item.name}
@@ -313,7 +383,7 @@ export default function ShopPanel({
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-2">
-                          {getEquipmentSlotIcon(inventoryItem.item.equipmentSlot)}
+                          {getItemIcon(inventoryItem.item)}
                           <div>
                             <h3 className="font-bold pixel-text text-sm text-destructive">
                               {inventoryItem.item.name}

@@ -180,6 +180,99 @@ export default function AdvancedInventoryPanel({
     }
   }
 
+  const getItemIcon = (item: Item) => {
+    const iconStyle = "h-6 w-6 object-contain"
+    
+    // Si el item tiene iconUrl, usarlo directamente
+    if (item.iconUrl) {
+      return <img src={item.iconUrl} alt={item.name} className={iconStyle} />
+    }
+    
+    // Si no tiene iconUrl, mapear según tipo y rareza
+    const getAssetPath = (itemType: string, rarity: string, equipmentSlot: string) => {
+      const rarityPath = rarity.toLowerCase()
+      
+      switch (itemType) {
+        case 'weapon':
+          switch (equipmentSlot) {
+            case 'weapon':
+              switch (rarityPath) {
+                case 'common': return '/Items Pack/weapons/common/short_sword.png'
+                case 'uncommon': return '/Items Pack/weapons/uncommon/iron_blade.png'
+                case 'rare': return '/Items Pack/weapons/rare/broadsword.png'
+                case 'epic': return '/Items Pack/weapons/epic/dragon_slayer_sword.png'
+                case 'legendary': return '/Items Pack/weapons/legendary/excalibur.png'
+                default: return '/Items Pack/weapons/common/short_sword.png'
+              }
+            default: return '/Items Pack/weapons/common/short_sword.png'
+          }
+        case 'armor':
+          switch (equipmentSlot) {
+            case 'helmet':
+              switch (rarityPath) {
+                case 'common': return '/Items Pack/armor/common/cloth_hood.png'
+                case 'uncommon': return '/Items Pack/armor/uncommon/chainmail_coif.png'
+                case 'rare': return '/Items Pack/armor/rare/platemail_helmet.png'
+                case 'epic': return '/Items Pack/armor/epic/dragon_scale_helmet.png'
+                case 'legendary': return '/Items Pack/armor/legendary/crown_of_kings.png'
+                default: return '/Items Pack/armor/common/cloth_hood.png'
+              }
+            case 'chest':
+              switch (rarityPath) {
+                case 'common': return '/Items Pack/armor/common/cloth_robe.png'
+                case 'uncommon': return '/Items Pack/armor/uncommon/chainmail_jacket.png'
+                case 'rare': return '/Items Pack/armor/rare/platemail.png'
+                case 'epic': return '/Items Pack/armor/epic/dragon_scale_armor.png'
+                case 'legendary': return '/Items Pack/armor/legendary/armor_of_ancients.png'
+                default: return '/Items Pack/armor/common/cloth_robe.png'
+              }
+            case 'legs':
+              switch (rarityPath) {
+                case 'common': return '/Items Pack/armor/common/cloth_pants.png'
+                case 'uncommon': return '/Items Pack/armor/uncommon/chainmail_pants.png'
+                case 'rare': return '/Items Pack/armor/rare/platemail_pants.png'
+                case 'epic': return '/Items Pack/armor/epic/dragon_scale_leggings.png'
+                case 'legendary': return '/Items Pack/armor/legendary/leggings_of_power.png'
+                default: return '/Items Pack/armor/common/cloth_pants.png'
+              }
+            case 'boots':
+              switch (rarityPath) {
+                case 'common': return '/Items Pack/armor/common/cloth_shoes.png'
+                case 'uncommon': return '/Items Pack/armor/uncommon/chainmail_boots.png'
+                case 'rare': return '/Items Pack/armor/rare/Scale_boots.png'
+                case 'epic': return '/Items Pack/armor/epic/dragon_scale_boots.png'
+                case 'legendary': return '/Items Pack/armor/legendary/boots_of_swiftness.png'
+                default: return '/Items Pack/armor/common/cloth_shoes.png'
+              }
+            case 'gloves':
+              switch (rarityPath) {
+                case 'common': return '/Items Pack/armor/common/cloth_gloves.png'
+                case 'uncommon': return '/Items Pack/armor/uncommon/chainmail_gloves.png'
+                case 'rare': return '/Items Pack/armor/rare/Scale_gloves.png'
+                case 'epic': return '/Items Pack/armor/epic/dragon_scale_gloves.png'
+                case 'legendary': return '/Items Pack/armor/legendary/gauntlets_of_might.png'
+                default: return '/Items Pack/armor/common/cloth_gloves.png'
+              }
+            default: return '/Items Pack/armor/common/cloth_robe.png'
+          }
+        case 'accessory':
+          switch (rarityPath) {
+            case 'common': return '/Items Pack/items/power_ring.png'
+            case 'uncommon': return '/Items Pack/items/power_ring.png'
+            case 'rare': return '/Items Pack/items/Necklace_of_the_Eternal_Wind.png'
+            case 'epic': return '/Items Pack/items/Necklace_of_the_Eternal_Wind.png'
+            case 'legendary': return '/Items Pack/items/Necklace_of_the_Eternal_Wind.png'
+            default: return '/Items Pack/items/power_ring.png'
+          }
+        default:
+          return '/Items Pack/items/power_ring.png'
+      }
+    }
+    
+    const assetPath = getAssetPath(item.itemType, item.rarity, item.equipmentSlot)
+    return <img src={assetPath} alt={item.name} className={iconStyle} />
+  }
+
   const getStatIcon = (stat: string) => {
     switch (stat) {
       case 'attack': return <Sword className="h-3 w-3" />
@@ -286,7 +379,7 @@ export default function AdvancedInventoryPanel({
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-2">
-                          {getEquipmentSlotIcon(inventoryItem.item.equipmentSlot)}
+                          {getItemIcon(inventoryItem.item)}
                           <div>
                             <h3 className="font-bold pixel-text text-sm text-destructive">
                               {inventoryItem.item.name}
@@ -364,7 +457,7 @@ export default function AdvancedInventoryPanel({
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-2">
-                        {getEquipmentSlotIcon(slot)}
+                        {item ? getItemIcon(item) : getEquipmentSlotIcon(slot)}
                         <div>
                           <h3 className="font-bold pixel-text text-sm text-destructive capitalize">
                             {slot}
