@@ -196,13 +196,73 @@ export default function AdvancedInventoryPanel({
         case 'weapon':
           switch (equipmentSlot) {
             case 'weapon':
-              switch (rarityPath) {
-                case 'common': return '/Items Pack/weapons/common/short_sword.png'
-                case 'uncommon': return '/Items Pack/weapons/uncommon/iron_blade.png'
-                case 'rare': return '/Items Pack/weapons/rare/broadsword.png'
-                case 'epic': return '/Items Pack/weapons/epic/dragon_slayer_sword.png'
-                case 'legendary': return '/Items Pack/weapons/legendary/excalibur.png'
-                default: return '/Items Pack/weapons/common/short_sword.png'
+              // Mapear según el nombre del item para mayor variedad
+              const weaponName = item.name.toLowerCase()
+              
+              if (weaponName.includes('sword') || weaponName.includes('blade')) {
+                switch (rarityPath) {
+                  case 'common': return '/Items Pack/weapons/common/rusty_sword.png'
+                  case 'uncommon': return '/Items Pack/weapons/uncommon/steel_sword.png'
+                  case 'rare': return '/Items Pack/weapons/rare/claymore.png'
+                  case 'epic': return '/Items Pack/weapons/epic/dragon_slayer_sword.png'
+                  case 'legendary': return '/Items Pack/weapons/legendary/excalibur.png'
+                  default: return '/Items Pack/weapons/common/rusty_sword.png'
+                }
+              } else if (weaponName.includes('axe') || weaponName.includes('hatchet')) {
+                switch (rarityPath) {
+                  case 'common': return '/Items Pack/weapons/common/battle_axe.png'
+                  case 'uncommon': return '/Items Pack/weapons/uncommon/berserker_axe.png'
+                  case 'rare': return '/Items Pack/weapons/rare/berserker_war_axe.png'
+                  case 'epic': return '/Items Pack/weapons/epic/brutal_war_axe.png'
+                  case 'legendary': return '/Items Pack/weapons/legendary/warlord_battle_axe.png'
+                  default: return '/Items Pack/weapons/common/battle_axe.png'
+                }
+              } else if (weaponName.includes('mace') || weaponName.includes('hammer')) {
+                switch (rarityPath) {
+                  case 'common': return '/Items Pack/weapons/common/war_hammer.png'
+                  case 'uncommon': return '/Items Pack/weapons/uncommon/maul.png'
+                  case 'rare': return '/Items Pack/weapons/rare/flanged_mace.png'
+                  case 'epic': return '/Items Pack/weapons/epic/thunder_hammer.png'
+                  case 'legendary': return '/Items Pack/weapons/legendary/molten_war_mace.png'
+                  default: return '/Items Pack/weapons/common/war_hammer.png'
+                }
+              } else if (weaponName.includes('dagger') || weaponName.includes('knife')) {
+                switch (rarityPath) {
+                  case 'common': return '/Items Pack/weapons/common/iron_dagger.png'
+                  case 'uncommon': return '/Items Pack/weapons/uncommon/iron_dagger.png'
+                  case 'rare': return '/Items Pack/weapons/rare/rapier.png'
+                  case 'epic': return '/Items Pack/weapons/epic/kris_dagger.png'
+                  case 'legendary': return '/Items Pack/weapons/legendary/dragon_slayer.png'
+                  default: return '/Items Pack/weapons/common/iron_dagger.png'
+                }
+              } else if (weaponName.includes('spear') || weaponName.includes('lance')) {
+                switch (rarityPath) {
+                  case 'common': return '/Items Pack/weapons/common/hunting_spear.png'
+                  case 'uncommon': return '/Items Pack/weapons/uncommon/iron_spear.png'
+                  case 'rare': return '/Items Pack/weapons/rare/zweihander.png'
+                  case 'epic': return '/Items Pack/weapons/epic/lava_war_axe.png'
+                  case 'legendary': return '/Items Pack/weapons/legendary/dragon_slayer.png'
+                  default: return '/Items Pack/weapons/common/hunting_spear.png'
+                }
+              } else if (weaponName.includes('staff') || weaponName.includes('wand')) {
+                switch (rarityPath) {
+                  case 'common': return '/Items Pack/weapons/common/wooden_staff.png'
+                  case 'uncommon': return '/Items Pack/weapons/common/wooden_staff.png'
+                  case 'rare': return '/Items Pack/weapons/common/wooden_staff.png'
+                  case 'epic': return '/Items Pack/weapons/common/wooden_staff.png'
+                  case 'legendary': return '/Items Pack/weapons/common/wooden_staff.png'
+                  default: return '/Items Pack/weapons/common/wooden_staff.png'
+                }
+              } else {
+                // Fallback por rareza
+                switch (rarityPath) {
+                  case 'common': return '/Items Pack/weapons/common/short_sword.png'
+                  case 'uncommon': return '/Items Pack/weapons/uncommon/longsword.png'
+                  case 'rare': return '/Items Pack/weapons/rare/broadsword.png'
+                  case 'epic': return '/Items Pack/weapons/epic/dragon_slayer_sword.png'
+                  case 'legendary': return '/Items Pack/weapons/legendary/excalibur.png'
+                  default: return '/Items Pack/weapons/common/short_sword.png'
+                }
               }
             default: return '/Items Pack/weapons/common/short_sword.png'
           }
@@ -256,13 +316,25 @@ export default function AdvancedInventoryPanel({
             default: return '/Items Pack/armor/common/leather_jacket.png'
           }
         case 'accessory':
-          switch (rarityPath) {
-            case 'common': return '/Items Pack/items/power_ring.png'
-            case 'uncommon': return '/Items Pack/items/power_ring.png'
-            case 'rare': return '/Items Pack/items/Necklace_of_the_Eternal_Wind.png'
-            case 'epic': return '/Items Pack/items/Necklace_of_the_Eternal_Wind.png'
-            case 'legendary': return '/Items Pack/items/Necklace_of_the_Eternal_Wind.png'
-            default: return '/Items Pack/items/power_ring.png'
+          // Mapear según el nombre del item para mayor variedad
+          const accessoryName = item.name.toLowerCase()
+          
+          if (accessoryName.includes('crown') || accessoryName.includes('tiara') || accessoryName.includes('diadem')) {
+            return '/Items Pack/items/crown.png'
+          } else if (accessoryName.includes('ring') || accessoryName.includes('band')) {
+            return '/Items Pack/items/power_ring.png'
+          } else if (accessoryName.includes('necklace') || accessoryName.includes('amulet') || accessoryName.includes('pendant')) {
+            return '/Items Pack/items/Necklace_of_the_Eternal_Wind.png'
+          } else {
+            // Fallback por rareza
+            switch (rarityPath) {
+              case 'common': return '/Items Pack/items/power_ring.png'
+              case 'uncommon': return '/Items Pack/items/power_ring.png'
+              case 'rare': return '/Items Pack/items/Necklace_of_the_Eternal_Wind.png'
+              case 'epic': return '/Items Pack/items/Necklace_of_the_Eternal_Wind.png'
+              case 'legendary': return '/Items Pack/items/crown.png'
+              default: return '/Items Pack/items/power_ring.png'
+            }
           }
         default:
           return '/Items Pack/items/power_ring.png'
