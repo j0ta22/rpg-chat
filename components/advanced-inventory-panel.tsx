@@ -307,7 +307,7 @@ export default function AdvancedInventoryPanel({
             case 'gloves':
               switch (rarityPath) {
                 case 'common': return '/Items Pack/armor/common/leather_gloves.png'
-                case 'uncommon': return '/Items Pack/armor/uncommon/chainmail_gloves.png'
+                case 'uncommon': return '/Items Pack/armor/uncommon/studded_gloves.png'
                 case 'rare': return '/Items Pack/armor/rare/gauntlets.png'
                 case 'epic': return '/Items Pack/armor/epic/dragon_scale_gloves.png'
                 case 'legendary': return '/Items Pack/armor/legendary/gauntlets_of_might.png'
