@@ -158,15 +158,25 @@ export default function AdvancedInventoryPanel({
   }
 
   const getEquipmentSlotIcon = (slot: string) => {
+    const iconStyle = "h-6 w-6 object-contain"
+    
     switch (slot) {
-      case 'helmet': return <Crown className="h-4 w-4" />
-      case 'chest': return <Shirt className="h-4 w-4" />
-      case 'legs': return <Shield className="h-4 w-4" />
-      case 'boots': return <Boots className="h-4 w-4" />
-      case 'gloves': return <Hand className="h-4 w-4" />
-      case 'weapon': return <Sword className="h-4 w-4" />
-      case 'accessory': return <Gem className="h-4 w-4" />
-      default: return <Package className="h-4 w-4" />
+      case 'helmet': 
+        return <img src="/Items Pack/items/crown.png" alt="Helmet" className={iconStyle} />
+      case 'chest': 
+        return <img src="/Items Pack/armor/common/armor_chest_common_1.png" alt="Chest" className={iconStyle} />
+      case 'legs': 
+        return <img src="/Items Pack/armor/common/armor_legs_common_1.png" alt="Legs" className={iconStyle} />
+      case 'boots': 
+        return <img src="/Items Pack/armor/common/armor_boots_common_1.png" alt="Boots" className={iconStyle} />
+      case 'gloves': 
+        return <img src="/Items Pack/armor/common/armor_gloves_common_1.png" alt="Gloves" className={iconStyle} />
+      case 'weapon': 
+        return <img src="/Items Pack/weapons/common/sword_common_1.png" alt="Weapon" className={iconStyle} />
+      case 'accessory': 
+        return <img src="/Items Pack/items/Necklace_of_the_Eternal_Wind.png" alt="Accessory" className={iconStyle} />
+      default: 
+        return <Package className="h-4 w-4" />
     }
   }
 
@@ -196,14 +206,19 @@ export default function AdvancedInventoryPanel({
 
   return (
     <div className="fixed top-4 left-4 w-96 z-50">
-      <Card className="bg-gradient-to-br from-amber-900/95 to-amber-800/95 border-4 border-amber-600 shadow-2xl" style={{borderRadius: '0'}}>
-        <CardHeader className="pb-4">
-          <div className="flex items-center justify-between">
+      <div className="p-4" style={{
+        background: '#d4af37',
+        border: '4px solid #8b4513',
+        borderRadius: '0',
+        boxShadow: 'inset 2px 2px 0px #654321, inset -2px -2px 0px #654321'
+      }}>
+        <div className="pb-4">
+          <div className="flex items-center justify-between mb-3">
             <div className="flex items-center space-x-2">
               <Package className="h-6 w-6 text-amber-300" />
-              <CardTitle className="text-xl font-bold text-amber-100 font-mono tracking-wider">
+              <h3 className="text-lg font-bold pixel-text text-center text-accent border-b-2 border-accent pb-2">
                 ADVANCED INVENTORY
-              </CardTitle>
+              </h3>
             </div>
             <button
               onClick={onClose}
@@ -212,7 +227,7 @@ export default function AdvancedInventoryPanel({
               ×
             </button>
           </div>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between mb-2">
             <div className="flex items-center space-x-2">
               <Coins className="h-4 w-4 text-yellow-400" />
               <span className="text-amber-200 font-mono text-sm">
@@ -223,12 +238,12 @@ export default function AdvancedInventoryPanel({
               Level: {userLevel}
             </div>
           </div>
-          <div className="text-amber-200 font-mono text-xs">
+          <div className="text-amber-200 font-mono text-xs mb-3">
             Inventory: {inventorySize.current}/{inventorySize.max}
           </div>
-        </CardHeader>
+        </div>
 
-        <CardContent className="px-4 pb-4" style={{borderRadius: '0'}}>
+        <div className="px-4 pb-4" style={{borderRadius: '0'}}>
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="grid w-full grid-cols-2 bg-amber-800" style={{borderRadius: '0'}}>
               <TabsTrigger 
@@ -409,8 +424,8 @@ export default function AdvancedInventoryPanel({
               </div>
             </TabsContent>
           </Tabs>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   )
 }
