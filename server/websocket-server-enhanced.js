@@ -36,30 +36,6 @@ const COMBAT_CONSTANTS = {
   MAX_LEVEL_BONUS: 0.5
 };
 
-// Rewards constants
-const REWARDS_CONSTANTS = {
-  BASE_GOLD: 25,
-  LEVEL_BONUS_GOLD: 5,
-  MAX_GOLD: 100,
-  BASE_XP: 50,
-  LEVEL_BONUS_XP: 10,
-  PERFORMANCE_BONUS_XP: 25,
-  SURVIVAL_BONUS_XP: 15,
-  MAX_XP: 200,
-  MAX_LEVEL_DIFFERENCE: 5,
-  PENALTY_THRESHOLD: 5,
-  ITEM_DROP_CHANCES: {
-    common: 0.40,
-    uncommon: 0.25,
-    rare: 0.15,
-    epic: 0.10,
-    legendary: 0.05
-  },
-  XP_LOSS_BASE: 20,
-  XP_LOSS_LEVEL_BONUS: 5,
-  MAX_XP_LOSS: 50
-};
-
 // Enhanced damage calculation system
 function calculateDamage(attacker, target, action) {
   console.log('⚔️ Calculating enhanced damage:', { 
@@ -272,112 +248,6 @@ function getWeaponElement(equippedWeapon) {
   return 'none';
 }
 
-// Rewards calculation functions
-function calculateCombatRewards(combatResult) {
-  console.log('🏆 Calculating combat rewards for:', combatResult.winnerId);
-  
-  const levelDifference = Math.abs(combatResult.winnerLevel - combatResult.loserLevel);
-  const noRewards = levelDifference > REWARDS_CONSTANTS.PENALTY_THRESHOLD;
-  
-  let gold = 0;
-  let experience = 0;
-  let item = undefined;
-  
-  if (!noRewards) {
-    // Calculate gold
-    gold = calculateGoldReward(combatResult.winnerLevel, combatResult.damageDealt);
-    
-    // Calculate XP
-    experience = calculateXPReward(combatResult.winnerLevel, combatResult.damageDealt, combatResult.combatDuration);
-    
-    // Calculate item drop
-    item = calculateItemDrop();
-  }
-  
-  const rewards = {
-    gold,
-    experience,
-    item,
-    penalties: {
-      levelDifference,
-      noRewards,
-      reason: noRewards ? `Diferencia de nivel muy grande (${levelDifference} > ${REWARDS_CONSTANTS.PENALTY_THRESHOLD})` : undefined
-    }
-  };
-  
-  console.log('💰 Combat rewards calculated:', rewards);
-  return rewards;
-}
-
-function calculateGoldReward(winnerLevel, damageDealt) {
-  let gold = REWARDS_CONSTANTS.BASE_GOLD;
-  gold += winnerLevel * REWARDS_CONSTANTS.LEVEL_BONUS_GOLD;
-  
-  // Bonus por daño causado (máximo 20% extra)
-  const damageBonus = Math.min(damageDealt * 0.1, gold * 0.2);
-  gold += damageBonus;
-  
-  return Math.min(Math.floor(gold), REWARDS_CONSTANTS.MAX_GOLD);
-}
-
-function calculateXPReward(winnerLevel, damageDealt, combatDuration) {
-  let xp = REWARDS_CONSTANTS.BASE_XP;
-  xp += winnerLevel * REWARDS_CONSTANTS.LEVEL_BONUS_XP;
-  
-  // Bonus por daño causado
-  const damageBonus = Math.min(damageDealt * 0.5, REWARDS_CONSTANTS.PERFORMANCE_BONUS_XP);
-  xp += damageBonus;
-  
-  // Bonus por duración del combate
-  const durationBonus = Math.min(combatDuration / 10, REWARDS_CONSTANTS.SURVIVAL_BONUS_XP);
-  xp += durationBonus;
-  
-  return Math.min(Math.floor(xp), REWARDS_CONSTANTS.MAX_XP);
-}
-
-function calculateItemDrop() {
-  // 30% chance base de drop
-  if (Math.random() > 0.3) {
-    return undefined;
-  }
-  
-  // Determinar rareza
-  const rarity = determineItemRarity();
-  
-  return {
-    rarity: rarity,
-    name: `Item ${rarity}` // Placeholder - en producción se obtendría de la DB
-  };
-}
-
-function determineItemRarity() {
-  const random = Math.random();
-  let cumulative = 0;
-  
-  for (const [rarity, chance] of Object.entries(REWARDS_CONSTANTS.ITEM_DROP_CHANCES)) {
-    cumulative += chance;
-    if (random <= cumulative) {
-      return rarity;
-    }
-  }
-  
-  return 'common';
-}
-
-function calculateXPLoss(loserLevel, winnerLevel) {
-  const levelDifference = Math.abs(winnerLevel - loserLevel);
-  
-  let xpLoss = REWARDS_CONSTANTS.XP_LOSS_BASE;
-  xpLoss += loserLevel * REWARDS_CONSTANTS.XP_LOSS_LEVEL_BONUS;
-  
-  // Bonus de pérdida si el perdedor es de nivel mucho mayor
-  if (levelDifference > REWARDS_CONSTANTS.PENALTY_THRESHOLD) {
-    xpLoss += levelDifference * 2; // +2 XP perdido por cada nivel de diferencia
-  }
-  
-  return Math.min(xpLoss, REWARDS_CONSTANTS.MAX_XP_LOSS);
-}
-
 // WebSocket server
 const wss = new WebSocket.Server({ server });
 
@@ -547,9 +417,7 @@ function handleRespondToChallenge(ws, data) {
       currentTurn: challenge.challenger.id,
       turns: [],
       status: 'active',
-      startTime: Date.now(),
-      totalDamageDealt: 0,
-      criticalHits: 0
+      startTime: Date.now()
     };
     
     // Notify both players
@@ -614,12 +482,6 @@ function handleCombatAction(ws, data) {
       target.health = Math.max(0, target.health - damageResult.damage);
       target.isAlive = target.health > 0;
       
-      // Track combat statistics
-      combatState.totalDamageDealt += damageResult.damage;
-      if (damageResult.isCritical) {
-        combatState.criticalHits++;
-      }
-      
       processedAction.damage = damageResult.damage;
       processedAction.isCritical = damageResult.isCritical;
       processedAction.isBlocked = damageResult.isBlocked;
@@ -652,47 +514,7 @@ function handleCombatAction(ws, data) {
     combatState.winner = attacker.id;
     combatState.endTime = Date.now();
     
-    // Calculate combat duration
-    const combatDuration = Math.floor((combatState.endTime - combatState.startTime) / 1000);
-    
-    // Calculate rewards
-    const combatResult = {
-      winnerId: attacker.id,
-      loserId: target.id,
-      winnerLevel: attacker.level,
-      loserLevel: target.level,
-      combatDuration: combatDuration,
-      damageDealt: combatState.totalDamageDealt,
-      criticalHits: combatState.criticalHits
-    };
-    
-    const rewards = calculateCombatRewards(combatResult);
-    const xpLoss = calculateXPLoss(target.level, attacker.level);
-    
     console.log('🏆 Combat finished! Winner:', attacker.name);
-    console.log('💰 Rewards:', rewards);
-    console.log('💀 XP Loss:', xpLoss);
-    
-    // Send rewards to both players
-    const rewardsData = {
-      type: 'combatRewards',
-      data: {
-        winner: {
-          id: attacker.id,
-          name: attacker.name,
-          rewards: rewards
-        },
-        loser: {
-          id: target.id,
-          name: target.name,
-          xpLoss: xpLoss,
-          levelDifference: Math.abs(attacker.level - target.level)
-        }
-      }
-    };
-    
-    challengerWs.send(JSON.stringify(rewardsData));
-    challengedWs.send(JSON.stringify(rewardsData));
   }
   
   // Notify both players
@@ -763,5 +585,5 @@ function generateCombatId() {
 // Start server
 const PORT = process.env.PORT || 3001;
 server.listen(PORT, () => {
-  console.log(`🚀 Enhanced WebSocket server with rewards running on port ${PORT}`);
+  console.log(`🚀 Enhanced WebSocket server running on port ${PORT}`);
 });
