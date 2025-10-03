@@ -198,49 +198,159 @@ export default function ShopPanel({
         case 'armor':
           switch (equipmentSlot) {
             case 'helmet':
-              switch (rarityPath) {
-                case 'common': return '/Items Pack/armor/common/leather_cap.png'
-                case 'uncommon': return '/Items Pack/armor/uncommon/studded_helmet.png'
-                case 'rare': return '/Items Pack/armor/rare/platemail_helmet.png'
-                case 'epic': return '/Items Pack/armor/epic/dragon_scale_helmet.png'
-                case 'legendary': return '/Items Pack/armor/legendary/crown_of_kings.png'
-                default: return '/Items Pack/armor/common/leather_cap.png'
+              // Mapear según el nombre del item para mayor precisión
+              const helmetName = item.name.toLowerCase()
+              
+              if (helmetName.includes('cloth') || helmetName.includes('hood')) {
+                return '/Items Pack/armor/common/cloth_hood.png'
+              } else if (helmetName.includes('leather') || helmetName.includes('cap')) {
+                return '/Items Pack/armor/common/leather_cap.png'
+              } else if (helmetName.includes('studded') || helmetName.includes('studded leather')) {
+                return '/Items Pack/armor/uncommon/studded_helmet.png'
+              } else if (helmetName.includes('chain') || helmetName.includes('coif')) {
+                return '/Items Pack/armor/uncommon/chainmail_coif.png'
+              } else if (helmetName.includes('plate') || helmetName.includes('platemail')) {
+                return '/Items Pack/armor/rare/platemail_helmet.png'
+              } else if (helmetName.includes('scale')) {
+                return '/Items Pack/armor/rare/Scale_helmet.png'
+              } else if (helmetName.includes('dragon')) {
+                return '/Items Pack/armor/epic/dragon_scale_helmet.png'
+              } else if (helmetName.includes('crown') || helmetName.includes('ancient')) {
+                return '/Items Pack/armor/legendary/crown_of_kings.png'
+              } else {
+                // Fallback por rareza
+                switch (rarityPath) {
+                  case 'common': return '/Items Pack/armor/common/leather_cap.png'
+                  case 'uncommon': return '/Items Pack/armor/uncommon/studded_helmet.png'
+                  case 'rare': return '/Items Pack/armor/rare/platemail_helmet.png'
+                  case 'epic': return '/Items Pack/armor/epic/dragon_scale_helmet.png'
+                  case 'legendary': return '/Items Pack/armor/legendary/crown_of_kings.png'
+                  default: return '/Items Pack/armor/common/leather_cap.png'
+                }
               }
             case 'chest':
-              switch (rarityPath) {
-                case 'common': return '/Items Pack/armor/common/leather_jacket.png'
-                case 'uncommon': return '/Items Pack/armor/uncommon/studded_jacket_alt.png'
-                case 'rare': return '/Items Pack/armor/rare/platemail.png'
-                case 'epic': return '/Items Pack/armor/epic/dragon_scale_armor.png'
-                case 'legendary': return '/Items Pack/armor/legendary/armor_of_ancients.png'
-                default: return '/Items Pack/armor/common/leather_jacket.png'
+              // Mapear según el nombre del item para mayor precisión
+              const chestName = item.name.toLowerCase()
+              
+              if (chestName.includes('cloth') || chestName.includes('robe')) {
+                return '/Items Pack/armor/common/cloth_robe.png'
+              } else if (chestName.includes('leather') || chestName.includes('jacket')) {
+                return '/Items Pack/armor/common/leather_jacket.png'
+              } else if (chestName.includes('studded') || chestName.includes('studded leather')) {
+                return '/Items Pack/armor/uncommon/studded_jacket_alt.png'
+              } else if (chestName.includes('chain') || chestName.includes('mail')) {
+                return '/Items Pack/armor/uncommon/chainmail_jacket.png'
+              } else if (chestName.includes('plate') || chestName.includes('platemail')) {
+                return '/Items Pack/armor/rare/platemail.png'
+              } else if (chestName.includes('scale')) {
+                return '/Items Pack/armor/rare/Scale_armor.png'
+              } else if (chestName.includes('dragon')) {
+                return '/Items Pack/armor/epic/dragon_scale_armor.png'
+              } else if (chestName.includes('ancient')) {
+                return '/Items Pack/armor/legendary/armor_of_ancients.png'
+              } else {
+                // Fallback por rareza
+                switch (rarityPath) {
+                  case 'common': return '/Items Pack/armor/common/leather_jacket.png'
+                  case 'uncommon': return '/Items Pack/armor/uncommon/studded_jacket_alt.png'
+                  case 'rare': return '/Items Pack/armor/rare/platemail.png'
+                  case 'epic': return '/Items Pack/armor/epic/dragon_scale_armor.png'
+                  case 'legendary': return '/Items Pack/armor/legendary/armor_of_ancients.png'
+                  default: return '/Items Pack/armor/common/leather_jacket.png'
+                }
               }
             case 'legs':
-              switch (rarityPath) {
-                case 'common': return '/Items Pack/armor/common/leather_pants.png'
-                case 'uncommon': return '/Items Pack/armor/uncommon/studded_pants.png'
-                case 'rare': return '/Items Pack/armor/rare/platemail_pants.png'
-                case 'epic': return '/Items Pack/armor/epic/dragon_scale_leggings.png'
-                case 'legendary': return '/Items Pack/armor/legendary/leggings_of_power.png'
-                default: return '/Items Pack/armor/common/leather_pants.png'
+              // Mapear según el nombre del item para mayor precisión
+              const legsName = item.name.toLowerCase()
+              
+              if (legsName.includes('cloth') || legsName.includes('pants')) {
+                return '/Items Pack/armor/common/cloth_pants.png'
+              } else if (legsName.includes('leather')) {
+                return '/Items Pack/armor/common/leather_pants.png'
+              } else if (legsName.includes('studded')) {
+                return '/Items Pack/armor/uncommon/studded_pants.png'
+              } else if (legsName.includes('chain')) {
+                return '/Items Pack/armor/uncommon/chainmail_pants.png'
+              } else if (legsName.includes('plate') || legsName.includes('platemail')) {
+                return '/Items Pack/armor/rare/platemail_pants.png'
+              } else if (legsName.includes('scale')) {
+                return '/Items Pack/armor/rare/Scale_pants.png'
+              } else if (legsName.includes('dragon')) {
+                return '/Items Pack/armor/epic/dragon_scale_leggings.png'
+              } else if (legsName.includes('power')) {
+                return '/Items Pack/armor/legendary/leggings_of_power.png'
+              } else {
+                // Fallback por rareza
+                switch (rarityPath) {
+                  case 'common': return '/Items Pack/armor/common/leather_pants.png'
+                  case 'uncommon': return '/Items Pack/armor/uncommon/studded_pants.png'
+                  case 'rare': return '/Items Pack/armor/rare/platemail_pants.png'
+                  case 'epic': return '/Items Pack/armor/epic/dragon_scale_leggings.png'
+                  case 'legendary': return '/Items Pack/armor/legendary/leggings_of_power.png'
+                  default: return '/Items Pack/armor/common/leather_pants.png'
+                }
               }
             case 'boots':
-              switch (rarityPath) {
-                case 'common': return '/Items Pack/armor/common/leather_boots.png'
-                case 'uncommon': return '/Items Pack/armor/uncommon/studded_boots.png'
-                case 'rare': return '/Items Pack/armor/rare/greaves.png'
-                case 'epic': return '/Items Pack/armor/epic/dragon_scale_boots.png'
-                case 'legendary': return '/Items Pack/armor/legendary/boots_of_swiftness.png'
-                default: return '/Items Pack/armor/common/leather_boots.png'
+              // Mapear según el nombre del item para mayor precisión
+              const bootsName = item.name.toLowerCase()
+              
+              if (bootsName.includes('cloth') || bootsName.includes('shoes')) {
+                return '/Items Pack/armor/common/cloth_shoes.png'
+              } else if (bootsName.includes('leather')) {
+                return '/Items Pack/armor/common/leather_boots.png'
+              } else if (bootsName.includes('studded')) {
+                return '/Items Pack/armor/uncommon/studded_boots.png'
+              } else if (bootsName.includes('chain')) {
+                return '/Items Pack/armor/uncommon/chainmail_boots.png'
+              } else if (bootsName.includes('plate') || bootsName.includes('greaves')) {
+                return '/Items Pack/armor/rare/greaves.png'
+              } else if (bootsName.includes('scale')) {
+                return '/Items Pack/armor/rare/Scale_boots.png'
+              } else if (bootsName.includes('dragon')) {
+                return '/Items Pack/armor/epic/dragon_scale_boots.png'
+              } else if (bootsName.includes('swiftness')) {
+                return '/Items Pack/armor/legendary/boots_of_swiftness.png'
+              } else {
+                // Fallback por rareza
+                switch (rarityPath) {
+                  case 'common': return '/Items Pack/armor/common/leather_boots.png'
+                  case 'uncommon': return '/Items Pack/armor/uncommon/studded_boots.png'
+                  case 'rare': return '/Items Pack/armor/rare/greaves.png'
+                  case 'epic': return '/Items Pack/armor/epic/dragon_scale_boots.png'
+                  case 'legendary': return '/Items Pack/armor/legendary/boots_of_swiftness.png'
+                  default: return '/Items Pack/armor/common/leather_boots.png'
+                }
               }
             case 'gloves':
-              switch (rarityPath) {
-                case 'common': return '/Items Pack/armor/common/leather_gloves.png'
-                case 'uncommon': return '/Items Pack/armor/uncommon/studded_gloves.png'
-                case 'rare': return '/Items Pack/armor/rare/gauntlets.png'
-                case 'epic': return '/Items Pack/armor/epic/dragon_scale_gloves.png'
-                case 'legendary': return '/Items Pack/armor/legendary/gauntlets_of_might.png'
-                default: return '/Items Pack/armor/common/leather_gloves.png'
+              // Mapear según el nombre del item para mayor precisión
+              const glovesName = item.name.toLowerCase()
+              
+              if (glovesName.includes('cloth')) {
+                return '/Items Pack/armor/common/cloth_gloves.png'
+              } else if (glovesName.includes('leather')) {
+                return '/Items Pack/armor/common/leather_gloves.png'
+              } else if (glovesName.includes('studded')) {
+                return '/Items Pack/armor/uncommon/studded_gloves.png'
+              } else if (glovesName.includes('chain') || glovesName.includes('gauntlets')) {
+                return '/Items Pack/armor/uncommon/chainmail_gloves.png'
+              } else if (glovesName.includes('plate') || glovesName.includes('gauntlets')) {
+                return '/Items Pack/armor/rare/gauntlets.png'
+              } else if (glovesName.includes('scale')) {
+                return '/Items Pack/armor/rare/Scale_gloves.png'
+              } else if (glovesName.includes('dragon')) {
+                return '/Items Pack/armor/epic/dragon_scale_gloves.png'
+              } else if (glovesName.includes('might')) {
+                return '/Items Pack/armor/legendary/gauntlets_of_might.png'
+              } else {
+                // Fallback por rareza
+                switch (rarityPath) {
+                  case 'common': return '/Items Pack/armor/common/leather_gloves.png'
+                  case 'uncommon': return '/Items Pack/armor/uncommon/studded_gloves.png'
+                  case 'rare': return '/Items Pack/armor/rare/gauntlets.png'
+                  case 'epic': return '/Items Pack/armor/epic/dragon_scale_gloves.png'
+                  case 'legendary': return '/Items Pack/armor/legendary/gauntlets_of_might.png'
+                  default: return '/Items Pack/armor/common/leather_gloves.png'
+                }
               }
             default: return '/Items Pack/armor/common/leather_jacket.png'
           }
