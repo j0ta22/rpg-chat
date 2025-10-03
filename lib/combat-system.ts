@@ -65,6 +65,8 @@ export interface PlayerInventoryItem {
 // Función para calcular stats del jugador con items equipados
 export async function calculatePlayerStats(userId: string, baseStats: any) {
   try {
+    console.log('🔧 Calculating player stats with equipment bonuses:', { userId, baseStats })
+    
     const { data: equippedItems, error } = await supabase
       .from('player_inventory')
       .select(`
@@ -82,19 +84,28 @@ export async function calculatePlayerStats(userId: string, baseStats: any) {
     }
 
     let finalStats = { ...baseStats }
+    console.log('📊 Base stats:', finalStats)
     
-    if (equippedItems) {
-      equippedItems.forEach(({ items }) => {
+    if (equippedItems && equippedItems.length > 0) {
+      console.log('⚔️ Found equipped items:', equippedItems.length)
+      
+      equippedItems.forEach(({ items }, index) => {
         if (items?.stat_bonuses) {
+          console.log(`📦 Item ${index + 1} bonuses:`, items.stat_bonuses)
           Object.entries(items.stat_bonuses).forEach(([stat, bonus]) => {
             if (typeof bonus === 'number') {
-              finalStats[stat] = (finalStats[stat] || 0) + bonus
+              const oldValue = finalStats[stat] || 0
+              finalStats[stat] = oldValue + bonus
+              console.log(`  +${bonus} ${stat}: ${oldValue} → ${finalStats[stat]}`)
             }
           })
         }
       })
+    } else {
+      console.log('📦 No equipped items found')
     }
 
+    console.log('📊 Final stats with equipment:', finalStats)
     return finalStats
   } catch (error) {
     console.error('Error calculating player stats:', error)

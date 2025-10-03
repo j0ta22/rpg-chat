@@ -773,14 +773,17 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
           avatar: savedData.avatar
         }))
         
-        // Actualizar stats del jugador
-        const newStats = {
+        // Actualizar stats del jugador con bonuses de equipamiento
+        const baseStats = {
           ...savedData.stats,
           experienceToNext: savedData.stats.level * 100 // Calcular XP requerido para el siguiente nivel
         }
         
-        console.log('📊 Setting playerStats to:', newStats)
-        setPlayerStats(newStats)
+        // Calcular stats finales incluyendo bonuses de equipamiento
+        const finalStats = await calculatePlayerStats(user?.id || '', baseStats)
+        
+        console.log('📊 Setting playerStats to:', finalStats)
+        setPlayerStats(finalStats)
         
         console.log('✅ Progress loaded successfully from Supabase')
         setIsLoadingProgress(false)
@@ -2546,6 +2549,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
         userGold={userGold}
         userLevel={userLevel}
         onGoldUpdate={setUserGold}
+        onStatsUpdate={setPlayerStats}
       />
 
       {/* Shop Panel */}

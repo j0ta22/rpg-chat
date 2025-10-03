@@ -29,10 +29,12 @@ import {
   sellItem,
   getInventorySize,
   canEquipItem,
+  calculatePlayerStats,
   PlayerInventoryItem,
   Item,
   UserEquipment
 } from "@/lib/combat-system"
+import { supabase } from "@/lib/supabase"
 
 interface AdvancedInventoryPanelProps {
   isVisible: boolean
@@ -41,6 +43,7 @@ interface AdvancedInventoryPanelProps {
   userGold: number
   userLevel: number
   onGoldUpdate: (newGold: number) => void
+  onStatsUpdate?: (newStats: any) => void
 }
 
 export default function AdvancedInventoryPanel({ 
@@ -49,7 +52,8 @@ export default function AdvancedInventoryPanel({
   userId, 
   userGold, 
   userLevel,
-  onGoldUpdate 
+  onGoldUpdate,
+  onStatsUpdate
 }: AdvancedInventoryPanelProps) {
   const [inventory, setInventory] = useState<PlayerInventoryItem[]>([])
   const [equipment, setEquipment] = useState<UserEquipment>({
@@ -89,10 +93,37 @@ export default function AdvancedInventoryPanel({
     }
   }
 
+  const recalculateStats = async () => {
+    if (!onStatsUpdate) return
+    
+    try {
+      // Obtener los stats base del jugador desde la base de datos
+      const { data: player, error } = await supabase
+        .from('players')
+        .select('stats')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single()
+
+      if (error || !player) {
+        console.error('Error fetching player stats:', error)
+        return
+      }
+
+      // Calcular stats con bonuses de equipamiento
+      const finalStats = await calculatePlayerStats(userId, player.stats)
+      onStatsUpdate(finalStats)
+    } catch (error) {
+      console.error('Error recalculating stats:', error)
+    }
+  }
+
   const handleEquipItem = async (item: Item) => {
     const result = await equipItem(userId, item.id)
     if (result.success) {
       loadData() // Reload data
+      recalculateStats() // Recalculate stats with equipment bonuses
     } else {
       alert(`Cannot equip item: ${result.reason}`)
     }
@@ -102,6 +133,7 @@ export default function AdvancedInventoryPanel({
     const success = await unequipItem(userId, slot)
     if (success) {
       loadData() // Reload data
+      recalculateStats() // Recalculate stats without equipment bonuses
     }
   }
 
