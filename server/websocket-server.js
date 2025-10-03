@@ -9,6 +9,16 @@ const server = http.createServer(app);
 // Enable CORS
 app.use(cors());
 
+// Health check endpoint for Render
+app.get('/health', (req, res) => {
+  res.status(200).json({ 
+    status: 'ok', 
+    timestamp: new Date().toISOString(),
+    players: Object.keys(gameState.players).length,
+    uptime: process.uptime()
+  });
+});
+
 // Game state
 const gameState = {
   players: {},
