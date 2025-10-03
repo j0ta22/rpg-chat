@@ -263,7 +263,7 @@ export default function AdvancedInventoryPanel({
                         
                         <div className="text-right">
                           <div className="space-y-1">
-                            {Object.entries(inventoryItem.item.statBonuses).map(([stat, bonus]) => (
+                            {inventoryItem.item.statBonuses && Object.entries(inventoryItem.item.statBonuses).map(([stat, bonus]) => (
                               <div key={stat} className="flex items-center space-x-1 text-destructive text-xs">
                                 {getStatIcon(stat)}
                                 <span>+{bonus}</span>
@@ -350,7 +350,7 @@ export default function AdvancedInventoryPanel({
                       <div className="text-right">
                         {item && (
                           <div className="space-y-1">
-                            {Object.entries(item.statBonuses).map(([stat, bonus]) => (
+                            {item.statBonuses && Object.entries(item.statBonuses).map(([stat, bonus]) => (
                               <div key={stat} className="flex items-center space-x-1 text-destructive text-xs">
                                 {getStatIcon(stat)}
                                 <span>+{bonus}</span>
