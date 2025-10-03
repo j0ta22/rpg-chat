@@ -211,8 +211,8 @@ export default function AdvancedInventoryPanel({
             case 'helmet':
               switch (rarityPath) {
                 case 'common': return '/Items Pack/armor/common/cloth_hood.png'
-                case 'uncommon': return '/Items Pack/armor/uncommon/chainmail_coif.png'
-                case 'rare': return '/Items Pack/armor/rare/platemail_helmet.png'
+                case 'uncommon': return '/Items Pack/armor/uncommon/studded_helmet.png'
+                case 'rare': return '/Items Pack/armor/rare/Scale_helmet.png'
                 case 'epic': return '/Items Pack/armor/epic/dragon_scale_helmet.png'
                 case 'legendary': return '/Items Pack/armor/legendary/crown_of_kings.png'
                 default: return '/Items Pack/armor/common/cloth_hood.png'
@@ -220,8 +220,8 @@ export default function AdvancedInventoryPanel({
             case 'chest':
               switch (rarityPath) {
                 case 'common': return '/Items Pack/armor/common/cloth_robe.png'
-                case 'uncommon': return '/Items Pack/armor/uncommon/chainmail_jacket.png'
-                case 'rare': return '/Items Pack/armor/rare/platemail.png'
+                case 'uncommon': return '/Items Pack/armor/uncommon/studded_jacket_alt.png'
+                case 'rare': return '/Items Pack/armor/rare/Scale_armor.png'
                 case 'epic': return '/Items Pack/armor/epic/dragon_scale_armor.png'
                 case 'legendary': return '/Items Pack/armor/legendary/armor_of_ancients.png'
                 default: return '/Items Pack/armor/common/cloth_robe.png'
@@ -229,8 +229,8 @@ export default function AdvancedInventoryPanel({
             case 'legs':
               switch (rarityPath) {
                 case 'common': return '/Items Pack/armor/common/cloth_pants.png'
-                case 'uncommon': return '/Items Pack/armor/uncommon/chainmail_pants.png'
-                case 'rare': return '/Items Pack/armor/rare/platemail_pants.png'
+                case 'uncommon': return '/Items Pack/armor/uncommon/studded_pants.png'
+                case 'rare': return '/Items Pack/armor/rare/Scale_pants.png'
                 case 'epic': return '/Items Pack/armor/epic/dragon_scale_leggings.png'
                 case 'legendary': return '/Items Pack/armor/legendary/leggings_of_power.png'
                 default: return '/Items Pack/armor/common/cloth_pants.png'
@@ -238,7 +238,7 @@ export default function AdvancedInventoryPanel({
             case 'boots':
               switch (rarityPath) {
                 case 'common': return '/Items Pack/armor/common/cloth_shoes.png'
-                case 'uncommon': return '/Items Pack/armor/uncommon/chainmail_boots.png'
+                case 'uncommon': return '/Items Pack/armor/uncommon/studded_boots.png'
                 case 'rare': return '/Items Pack/armor/rare/Scale_boots.png'
                 case 'epic': return '/Items Pack/armor/epic/dragon_scale_boots.png'
                 case 'legendary': return '/Items Pack/armor/legendary/boots_of_swiftness.png'
@@ -247,7 +247,7 @@ export default function AdvancedInventoryPanel({
             case 'gloves':
               switch (rarityPath) {
                 case 'common': return '/Items Pack/armor/common/cloth_gloves.png'
-                case 'uncommon': return '/Items Pack/armor/uncommon/chainmail_gloves.png'
+                case 'uncommon': return '/Items Pack/armor/uncommon/studded_gloves.png'
                 case 'rare': return '/Items Pack/armor/rare/Scale_gloves.png'
                 case 'epic': return '/Items Pack/armor/epic/dragon_scale_gloves.png'
                 case 'legendary': return '/Items Pack/armor/legendary/gauntlets_of_might.png'
