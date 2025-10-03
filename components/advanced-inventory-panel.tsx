@@ -164,15 +164,15 @@ export default function AdvancedInventoryPanel({
       case 'helmet': 
         return <img src="/Items Pack/items/crown.png" alt="Helmet" className={iconStyle} />
       case 'chest': 
-        return <img src="/Items Pack/armor/common/armor_chest_common_1.png" alt="Chest" className={iconStyle} />
+        return <img src="/Items Pack/armor/common/cloth_robe.png" alt="Chest" className={iconStyle} />
       case 'legs': 
-        return <img src="/Items Pack/armor/common/armor_legs_common_1.png" alt="Legs" className={iconStyle} />
+        return <img src="/Items Pack/armor/common/cloth_pants.png" alt="Legs" className={iconStyle} />
       case 'boots': 
-        return <img src="/Items Pack/armor/common/armor_boots_common_1.png" alt="Boots" className={iconStyle} />
+        return <img src="/Items Pack/armor/common/cloth_shoes.png" alt="Boots" className={iconStyle} />
       case 'gloves': 
-        return <img src="/Items Pack/armor/common/armor_gloves_common_1.png" alt="Gloves" className={iconStyle} />
+        return <img src="/Items Pack/armor/common/cloth_gloves.png" alt="Gloves" className={iconStyle} />
       case 'weapon': 
-        return <img src="/Items Pack/weapons/common/sword_common_1.png" alt="Weapon" className={iconStyle} />
+        return <img src="/Items Pack/weapons/common/short_sword.png" alt="Weapon" className={iconStyle} />
       case 'accessory': 
         return <img src="/Items Pack/items/Necklace_of_the_Eternal_Wind.png" alt="Accessory" className={iconStyle} />
       default: 
