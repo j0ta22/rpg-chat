@@ -118,58 +118,58 @@ export class NativeWebSocketClient {
       switch (data.type) {
         case 'gameState':
           console.log('📥 Received gameState');
-          this.onGameState(data.payload);
+          this.onGameState(data.data || data.payload);
           break;
         case 'playerJoined':
           console.log('📥 Received playerJoined');
-          this.onPlayerJoined(data.payload);
+          this.onPlayerJoined(data.data || data.payload);
           break;
         case 'playerLeft':
           console.log('📥 Received playerLeft');
-          this.onPlayerLeft(data.payload);
+          this.onPlayerLeft(data.data || data.payload);
           break;
         case 'chatMessage':
           console.log('📥 Received chatMessage');
-          this.onChatMessage(data.payload);
+          this.onChatMessage(data.data || data.payload);
           break;
         case 'xpUpdate':
           console.log('📥 Received xpUpdate');
           if (this.onXPUpdate) {
-            this.onXPUpdate(data.payload);
+            this.onXPUpdate(data.data || data.payload);
           }
           break;
         case 'heartbeatAck':
           console.log('📥 Received heartbeatAck');
           break;
         case 'playerId':
-          console.log('📥 Received playerId:', data.payload.playerId);
-          this.playerId = data.payload.playerId;
+          console.log('📥 Received playerId:', data.data?.playerId || data.payload?.playerId);
+          this.playerId = data.data?.playerId || data.payload?.playerId;
           if (this.onPlayerId) {
-            this.onPlayerId(data.payload.playerId);
+            this.onPlayerId(data.data?.playerId || data.payload?.playerId);
           }
           break;
         case 'playerMoved':
-          console.log('📥 Received playerMoved:', data.payload);
+          console.log('📥 Received playerMoved:', data.data || data.payload);
           if (this.onPlayerMoved) {
-            this.onPlayerMoved(data.payload);
+            this.onPlayerMoved(data.data || data.payload);
           }
           break;
         case 'combatChallenge':
-          console.log('📥 Received combatChallenge:', data.payload);
+          console.log('📥 Received combatChallenge:', data.data || data.payload);
           if (this.onCombatChallenge) {
-            this.onCombatChallenge(data.payload);
+            this.onCombatChallenge(data.data || data.payload);
           }
           break;
         case 'combatStateUpdate':
-          console.log('📥 Received combatStateUpdate:', data.payload);
+          console.log('📥 Received combatStateUpdate:', data.data || data.payload);
           if (this.onCombatStateUpdate) {
-            this.onCombatStateUpdate(data.payload);
+            this.onCombatStateUpdate(data.data || data.payload);
           }
           break;
         case 'combatChallengeDeclined':
-          console.log('📥 Received combatChallengeDeclined:', data.payload);
+          console.log('📥 Received combatChallengeDeclined:', data.data || data.payload);
           if (this.onCombatChallengeDeclined) {
-            this.onCombatChallengeDeclined(data.payload);
+            this.onCombatChallengeDeclined(data.data || data.payload);
           }
           break;
         default:
