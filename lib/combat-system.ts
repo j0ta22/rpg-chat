@@ -67,42 +67,74 @@ export async function calculatePlayerStats(userId: string, baseStats: any) {
   try {
     console.log('🔧 Calculating player stats with equipment bonuses:', { userId, baseStats })
     
-    const { data: equippedItems, error } = await supabase
-      .from('player_inventory')
+    // Obtener el equipamiento del jugador desde user_equipment
+    const { data: equipment, error: equipmentError } = await supabase
+      .from('user_equipment')
       .select(`
-        item_id,
-        items (
-          stat_bonuses
-        )
+        helmet_item_id,
+        chest_item_id,
+        legs_item_id,
+        boots_item_id,
+        gloves_item_id,
+        weapon_item_id,
+        accessory_item_id
       `)
-      .eq('player_id', userId)
-      .eq('equipped', true)
+      .eq('user_id', userId)
+      .single()
 
-    if (error) {
-      console.error('Error fetching equipped items:', error)
+    if (equipmentError && equipmentError.code !== 'PGRST116') {
+      console.error('Error fetching user equipment:', equipmentError)
       return baseStats
     }
 
     let finalStats = { ...baseStats }
     console.log('📊 Base stats:', finalStats)
     
-    if (equippedItems && equippedItems.length > 0) {
-      console.log('⚔️ Found equipped items:', equippedItems.length)
-      
-      equippedItems.forEach(({ items }, index) => {
-        if (items?.stat_bonuses) {
-          console.log(`📦 Item ${index + 1} bonuses:`, items.stat_bonuses)
-          Object.entries(items.stat_bonuses).forEach(([stat, bonus]) => {
-            if (typeof bonus === 'number') {
-              const oldValue = finalStats[stat] || 0
-              finalStats[stat] = oldValue + bonus
-              console.log(`  +${bonus} ${stat}: ${oldValue} → ${finalStats[stat]}`)
+    if (equipment) {
+      // Obtener IDs de todos los items equipados
+      const equippedItemIds = [
+        equipment.helmet_item_id,
+        equipment.chest_item_id,
+        equipment.legs_item_id,
+        equipment.boots_item_id,
+        equipment.gloves_item_id,
+        equipment.weapon_item_id,
+        equipment.accessory_item_id
+      ].filter(Boolean)
+
+      if (equippedItemIds.length > 0) {
+        console.log('⚔️ Found equipped items:', equippedItemIds.length)
+        
+        // Obtener detalles de los items equipados
+        const { data: items, error: itemsError } = await supabase
+          .from('items')
+          .select('id, name, stat_bonuses')
+          .in('id', equippedItemIds)
+
+        if (itemsError) {
+          console.error('Error fetching item details:', itemsError)
+          return baseStats
+        }
+
+        if (items && items.length > 0) {
+          items.forEach((item, index) => {
+            if (item?.stat_bonuses) {
+              console.log(`📦 Item ${index + 1} (${item.name}) bonuses:`, item.stat_bonuses)
+              Object.entries(item.stat_bonuses).forEach(([stat, bonus]) => {
+                if (typeof bonus === 'number') {
+                  const oldValue = finalStats[stat] || 0
+                  finalStats[stat] = oldValue + bonus
+                  console.log(`  +${bonus} ${stat}: ${oldValue} → ${finalStats[stat]}`)
+                }
+              })
             }
           })
         }
-      })
+      } else {
+        console.log('📦 No equipped items found')
+      }
     } else {
-      console.log('📦 No equipped items found')
+      console.log('📦 No equipment record found')
     }
 
     console.log('📊 Final stats with equipment:', finalStats)
