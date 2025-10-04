@@ -11,7 +11,8 @@
     "dev:full": "concurrently \"npm run server\" \"npm run dev\"",
     "build:server": "cd server && npm install && npm run build",
     "deploy:netlify": "npm run build",
-    "deploy:server": "cd server && npm run build"
+    "deploy:server": "cd server && npm run build",
+    "start:server": "node server/websocket-server-with-rewards.js"
   },
   "dependencies": {
     "@radix-ui/react-label": "^2.1.7",
