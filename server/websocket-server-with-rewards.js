@@ -760,6 +760,16 @@ function generateCombatId() {
   return Math.random().toString(36).substr(2, 9);
 }
 
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.status(200).json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    players: Object.keys(gameState.players).length,
+    uptime: process.uptime()
+  });
+});
+
 // Start server
 const PORT = process.env.PORT || 3001;
 server.listen(PORT, () => {
