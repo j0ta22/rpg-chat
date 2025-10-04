@@ -448,21 +448,31 @@ function handleRespondToChallenge(ws, data) {
       startTime: Date.now()
     };
     
-    // Notify both players
-    const challengerWs = gameState.players[challenge.challenger.id].ws;
-    const challengedWs = gameState.players[challenge.challenged.id].ws;
-    
-    const combatState = combatStates[combatId];
-    
-    challengerWs.send(JSON.stringify({
-      type: 'combatStateUpdate',
-      data: { combatState, isYourTurn: true }
-    }));
-    
-    challengedWs.send(JSON.stringify({
-      type: 'combatStateUpdate',
-      data: { combatState, isYourTurn: false }
-    }));
+  // Notify both players
+  const challengerWs = gameState.players[challenge.challenger.id].ws;
+  const challengedWs = gameState.players[challenge.challenged.id].ws;
+  
+  const combatState = combatStates[combatId];
+  
+  console.log('🔍 Sending combat state to challenger:', {
+    challenger: combatState.challenger,
+    challenged: combatState.challenged
+  });
+  
+  challengerWs.send(JSON.stringify({
+    type: 'combatStateUpdate',
+    data: { combatState, isYourTurn: true }
+  }));
+  
+  console.log('🔍 Sending combat state to challenged:', {
+    challenger: combatState.challenger,
+    challenged: combatState.challenged
+  });
+  
+  challengedWs.send(JSON.stringify({
+    type: 'combatStateUpdate',
+    data: { combatState, isYourTurn: false }
+  }));
     
     console.log('⚔️ Combat started:', challenge.challenger.name, 'vs', challenge.challenged.name);
   }
