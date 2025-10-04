@@ -60,11 +60,8 @@ export class NativeWebSocketClient {
       try {
         console.log('🔌 Connecting to WebSocket server...');
         
-        // Use environment variable for WebSocket URL, fallback to localhost for development
-        let wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:3001';
-        
-        // TEMPORARY: Force local server for testing
-        wsUrl = 'ws://localhost:3002';
+        // Use environment variable for WebSocket URL, fallback to Render server
+        let wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'wss://rpg-chat-mfru.onrender.com';
         
         // Ensure the URL uses wss:// for production and ws:// for development
         if (wsUrl.startsWith('https://')) {
