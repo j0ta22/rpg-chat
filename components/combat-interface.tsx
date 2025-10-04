@@ -87,6 +87,28 @@ export default function CombatInterfaceEnhanced({
     ? combatState.challenged 
     : combatState.challenger
 
+  // Ensure player names are not undefined or empty
+  const safeCurrentPlayer = {
+    ...currentPlayer,
+    name: currentPlayer.name || 'Unknown Player'
+  }
+  const safeOpponent = {
+    ...opponent,
+    name: opponent.name || 'Unknown Player'
+  }
+
+  // Debug logging to identify the "unknown player" issue
+  console.log('🔍 Combat Interface Debug:', {
+    currentPlayerId,
+    combatState: {
+      challenger: combatState.challenger,
+      challenged: combatState.challenged,
+      currentTurn: combatState.currentTurn
+    },
+    currentPlayer: safeCurrentPlayer,
+    opponent: safeOpponent
+  })
+
   // Timer para el turno
   useEffect(() => {
     if (combatState.status !== 'active' || !isCurrentPlayerTurn) {
@@ -242,8 +264,8 @@ export default function CombatInterfaceEnhanced({
           <CardContent className="text-center space-y-4">
             <p className="text-lg">
               {isWinner 
-                ? `¡Has derrotado a ${opponent.name}!` 
-                : `${opponent.name} te ha derrotado!`
+                ? `¡Has derrotado a ${safeOpponent.name}!` 
+                : `${safeOpponent.name} te ha derrotado!`
               }
             </p>
             <div className="space-y-2">
@@ -268,7 +290,7 @@ export default function CombatInterfaceEnhanced({
       <Card className="w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-bold">
-            ⚔️ Combate: {currentPlayer.name} vs {opponent.name}
+            ⚔️ Combate: {safeCurrentPlayer.name} vs {safeOpponent.name}
           </CardTitle>
           <div className="flex items-center justify-center gap-4 text-sm text-gray-600">
             <div className="flex items-center gap-1">
@@ -288,8 +310,8 @@ export default function CombatInterfaceEnhanced({
             {/* Current Player */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <h3 className="font-semibold text-lg">{currentPlayer.name}</h3>
-                <Badge variant="secondary">Nivel {currentPlayer.level}</Badge>
+                <h3 className="font-semibold text-lg">{safeCurrentPlayer.name}</h3>
+                <Badge variant="secondary">Nivel {safeCurrentPlayer.level}</Badge>
               </div>
               <div className="space-y-1">
                 <div className="flex items-center justify-between text-sm">
@@ -297,24 +319,24 @@ export default function CombatInterfaceEnhanced({
                     <Heart className="h-4 w-4 text-red-500" />
                     Vida
                   </span>
-                  <span>{currentPlayer.health}/{currentPlayer.maxHealth}</span>
+                  <span>{safeCurrentPlayer.health}/{safeCurrentPlayer.maxHealth}</span>
                 </div>
                 <Progress 
-                  value={(currentPlayer.health / currentPlayer.maxHealth) * 100} 
+                  value={(safeCurrentPlayer.health / safeCurrentPlayer.maxHealth) * 100} 
                   className="h-2"
                 />
                 <div className="grid grid-cols-3 gap-2 text-xs">
                   <div className="flex items-center gap-1">
                     <Sword className="h-3 w-3 text-red-600" />
-                    <span>{currentPlayer.attack}</span>
+                    <span>{safeCurrentPlayer.attack}</span>
                   </div>
                   <div className="flex items-center gap-1">
                     <Defense className="h-3 w-3 text-blue-600" />
-                    <span>{currentPlayer.defense}</span>
+                    <span>{safeCurrentPlayer.defense}</span>
                   </div>
                   <div className="flex items-center gap-1">
                     <Speed className="h-3 w-3 text-green-600" />
-                    <span>{currentPlayer.speed}</span>
+                    <span>{safeCurrentPlayer.speed}</span>
                   </div>
                 </div>
               </div>
@@ -323,8 +345,8 @@ export default function CombatInterfaceEnhanced({
             {/* Opponent */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <h3 className="font-semibold text-lg">{opponent.name}</h3>
-                <Badge variant="secondary">Nivel {opponent.level}</Badge>
+                <h3 className="font-semibold text-lg">{safeOpponent.name}</h3>
+                <Badge variant="secondary">Nivel {safeOpponent.level}</Badge>
               </div>
               <div className="space-y-1">
                 <div className="flex items-center justify-between text-sm">
@@ -332,24 +354,24 @@ export default function CombatInterfaceEnhanced({
                     <Heart className="h-4 w-4 text-red-500" />
                     Vida
                   </span>
-                  <span>{opponent.health}/{opponent.maxHealth}</span>
+                  <span>{safeOpponent.health}/{safeOpponent.maxHealth}</span>
                 </div>
                 <Progress 
-                  value={(opponent.health / opponent.maxHealth) * 100} 
+                  value={(safeOpponent.health / safeOpponent.maxHealth) * 100} 
                   className="h-2"
                 />
                 <div className="grid grid-cols-3 gap-2 text-xs">
                   <div className="flex items-center gap-1">
                     <Sword className="h-3 w-3 text-red-600" />
-                    <span>{opponent.attack}</span>
+                    <span>{safeOpponent.attack}</span>
                   </div>
                   <div className="flex items-center gap-1">
                     <Defense className="h-3 w-3 text-blue-600" />
-                    <span>{opponent.defense}</span>
+                    <span>{safeOpponent.defense}</span>
                   </div>
                   <div className="flex items-center gap-1">
                     <Speed className="h-3 w-3 text-green-600" />
-                    <span>{opponent.speed}</span>
+                    <span>{safeOpponent.speed}</span>
                   </div>
                 </div>
               </div>
@@ -363,7 +385,7 @@ export default function CombatInterfaceEnhanced({
                 {lastAction.weaponType && getWeaponIcon(lastAction.weaponType)}
                 <span className="font-medium">
                   {getActionDescription(lastAction, 
-                    combatState.challenger.id === lastAction.playerId ? 
+                    combatState.challenger.id === combatState.turns[combatState.turns.length - 1]?.playerId ? 
                     combatState.challenger.name : combatState.challenged.name
                   )}
                 </span>

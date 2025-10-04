@@ -685,6 +685,11 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
   // Función para manejar actualizaciones del estado de combate
   const handleCombatStateUpdate = useCallback((newCombatState: CombatState) => {
     console.log('⚔️ Combat state update received:', newCombatState.status)
+    console.log('🔍 Combat state data:', {
+      challenger: newCombatState.challenger,
+      challenged: newCombatState.challenged,
+      currentTurn: newCombatState.currentTurn
+    })
     setCombatState(newCombatState)
     setShowCombatInterface(true)
     
