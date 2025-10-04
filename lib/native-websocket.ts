@@ -118,62 +118,61 @@ export class NativeWebSocketClient {
       console.log('📥 Raw message received:', data);
       console.log('📥 Message type:', data.type);
       console.log('📥 Message data:', data.data);
-      console.log('📥 Message payload:', data.payload);
       switch (data.type) {
         case 'gameState':
           console.log('📥 Received gameState');
-          this.onGameState(data.data || data.payload);
+          this.onGameState(data.data);
           break;
         case 'playerJoined':
           console.log('📥 Received playerJoined');
-          this.onPlayerJoined(data.data || data.payload);
+          this.onPlayerJoined(data.data);
           break;
         case 'playerLeft':
           console.log('📥 Received playerLeft');
-          this.onPlayerLeft(data.data || data.payload);
+          this.onPlayerLeft(data.data);
           break;
         case 'chatMessage':
           console.log('📥 Received chatMessage');
-          this.onChatMessage(data.data || data.payload);
+          this.onChatMessage(data.data);
           break;
         case 'xpUpdate':
           console.log('📥 Received xpUpdate');
           if (this.onXPUpdate) {
-            this.onXPUpdate(data.data || data.payload);
+            this.onXPUpdate(data.data);
           }
           break;
         case 'heartbeatAck':
           console.log('📥 Received heartbeatAck');
           break;
         case 'playerId':
-          console.log('📥 Received playerId:', data.data?.playerId || data.payload?.playerId);
-          this.playerId = data.data?.playerId || data.payload?.playerId;
+          console.log('📥 Received playerId:', data.data?.playerId);
+          this.playerId = data.data?.playerId;
           if (this.onPlayerId) {
-            this.onPlayerId(data.data?.playerId || data.payload?.playerId);
+            this.onPlayerId(data.data?.playerId);
           }
           break;
         case 'playerMoved':
-          console.log('📥 Received playerMoved:', data.data || data.payload);
+          console.log('📥 Received playerMoved:', data.data);
           if (this.onPlayerMoved) {
-            this.onPlayerMoved(data.data || data.payload);
+            this.onPlayerMoved(data.data);
           }
           break;
         case 'combatChallenge':
-          console.log('📥 Received combatChallenge:', data.data || data.payload);
+          console.log('📥 Received combatChallenge:', data.data);
           if (this.onCombatChallenge) {
-            this.onCombatChallenge(data.data || data.payload);
+            this.onCombatChallenge(data.data);
           }
           break;
         case 'combatStateUpdate':
-          console.log('📥 Received combatStateUpdate:', data.data || data.payload);
+          console.log('📥 Received combatStateUpdate:', data.data);
           if (this.onCombatStateUpdate) {
-            this.onCombatStateUpdate(data.data || data.payload);
+            this.onCombatStateUpdate(data.data);
           }
           break;
         case 'combatChallengeDeclined':
-          console.log('📥 Received combatChallengeDeclined:', data.data || data.payload);
+          console.log('📥 Received combatChallengeDeclined:', data.data);
           if (this.onCombatChallengeDeclined) {
-            this.onCombatChallengeDeclined(data.data || data.payload);
+            this.onCombatChallengeDeclined(data.data);
           }
           break;
         default:
@@ -187,7 +186,7 @@ export class NativeWebSocketClient {
   private sendMessage(type: string, payload: any) {
     if (this.ws && this.isConnected) {
       console.log(`📤 Sending message: ${type}`, payload);
-      this.ws.send(JSON.stringify({ type, payload }));
+      this.ws.send(JSON.stringify({ type, data: payload }));
     } else {
       console.warn('⚠️ Cannot send message - WebSocket not connected');
     }
