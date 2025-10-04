@@ -15,6 +15,9 @@ const gameState = {
   lastUpdate: Date.now()
 };
 
+// Player activity tracking
+const playerActivity = new Map();
+
 const playerStats = {};
 const combatStates = {};
 const combatChallenges = {};
@@ -455,6 +458,9 @@ function handleJoinGame(ws, data) {
     level: 1
   };
   
+  // Track player activity
+  playerActivity.set(playerId, Date.now());
+  
   console.log('🎮 Player joined:', name, 'with ID:', playerId);
   console.log('🎮 Current players count:', Object.keys(gameState.players).length);
   
@@ -716,6 +722,12 @@ function handleCombatAction(ws, data) {
 }
 
 function handleHeartbeat(ws, data) {
+  // Update player activity
+  const playerId = findPlayerByWebSocket(ws);
+  if (playerId) {
+    playerActivity.set(playerId, Date.now());
+  }
+  
   // Send heartbeat acknowledgment
   ws.send(JSON.stringify({
     type: 'heartbeatAck',
@@ -730,6 +742,42 @@ function findPlayerByWebSocket(ws) {
     }
   }
   return null;
+}
+
+// Clean up inactive players (no heartbeat for 30 seconds)
+function cleanupInactivePlayers() {
+  const now = Date.now();
+  const INACTIVE_TIMEOUT = 30000; // 30 seconds
+  let cleanedUp = false;
+  
+  for (const [playerId, lastActivity] of playerActivity.entries()) {
+    if (now - lastActivity > INACTIVE_TIMEOUT) {
+      console.log(`🧹 Cleaning up inactive player: ${playerId}`);
+      
+      // Get player info before removing
+      const player = gameState.players[playerId];
+      
+      // Close WebSocket if still open
+      if (player && player.ws && player.ws.readyState === WebSocket.OPEN) {
+        player.ws.close();
+      }
+      
+      // Remove from game state
+      if (gameState.players[playerId]) {
+        delete gameState.players[playerId];
+      }
+      
+      // Remove from activity tracking
+      playerActivity.delete(playerId);
+      cleanedUp = true;
+    }
+  }
+  
+  // Broadcast updated game state after cleanup
+  if (cleanedUp) {
+    console.log(`🧹 Cleanup completed. Active players: ${Object.keys(gameState.players).length}`);
+    broadcastGameState();
+  }
 }
 
 function broadcastGameState() {
@@ -781,4 +829,8 @@ app.get('/health', (req, res) => {
 const PORT = process.env.PORT || 3001;
 server.listen(PORT, () => {
   console.log(`🚀 Enhanced WebSocket server with rewards running on port ${PORT}`);
+  
+  // Start cleanup interval (every 10 seconds)
+  setInterval(cleanupInactivePlayers, 10000);
+  console.log('🧹 Player cleanup interval started (every 10 seconds)');
 });
