@@ -440,6 +440,14 @@ wss.on('connection', (ws) => {
 function handleJoinGame(ws, data) {
   console.log('🎮 handleJoinGame called with data:', data);
   const { name, avatar, x, y, color } = data;
+  
+  // Validate player data
+  if (!name || name === 'undefined' || name === undefined) {
+    console.log('❌ Invalid player name:', name);
+    ws.close(1000, 'Invalid player name');
+    return;
+  }
+  
   const playerId = generatePlayerId();
   
   gameState.players[playerId] = {

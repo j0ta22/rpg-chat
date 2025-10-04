@@ -1839,7 +1839,8 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
         ctx.textAlign = "center"
         
         // Mostrar nivel si el jugador tiene stats
-        const displayName = player?.stats ? `${name} (Lv.${player.stats.level})` : name
+        const safeName = name || 'Unknown Player'
+        const displayName = player?.stats ? `${safeName} (Lv.${player.stats.level})` : safeName
         ctx.fillText(displayName, nameTextX, nameTextY)
         ctx.textAlign = "left"
       }
