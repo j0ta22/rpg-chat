@@ -116,6 +116,9 @@ export class NativeWebSocketClient {
   private handleMessage(data: any) {
     try {
       console.log('📥 Raw message received:', data);
+      console.log('📥 Message type:', data.type);
+      console.log('📥 Message data:', data.data);
+      console.log('📥 Message payload:', data.payload);
       switch (data.type) {
         case 'gameState':
           console.log('📥 Received gameState');
