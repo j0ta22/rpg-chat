@@ -548,12 +548,40 @@ function handleRespondToChallenge(ws, data) {
   if (!challenge) return;
   
   if (accepted) {
-    // Start combat
+    // Start combat - use fresh player data from gameState
     const combatId = generateCombatId();
+    const challengerData = gameState.players[challenge.challenger.id];
+    const challengedData = gameState.players[challenge.challenged.id];
+    
+    if (!challengerData || !challengedData) {
+      console.log('❌ Player data not found for combat');
+      return;
+    }
+    
     combatStates[combatId] = {
       id: combatId,
-      challenger: { ...challenge.challenger, health: 100, maxHealth: 100 },
-      challenged: { ...challenge.challenged, health: 100, maxHealth: 100 },
+      challenger: { 
+        id: challengerData.id,
+        name: challengerData.name,
+        health: challengerData.stats?.maxHealth || 100, 
+        maxHealth: challengerData.stats?.maxHealth || 100,
+        attack: challengerData.stats?.attack || 10,
+        defense: challengerData.stats?.defense || 5,
+        speed: challengerData.stats?.speed || 5,
+        level: challengerData.stats?.level || 1,
+        isAlive: true
+      },
+      challenged: { 
+        id: challengedData.id,
+        name: challengedData.name,
+        health: challengedData.stats?.maxHealth || 100, 
+        maxHealth: challengedData.stats?.maxHealth || 100,
+        attack: challengedData.stats?.attack || 10,
+        defense: challengedData.stats?.defense || 5,
+        speed: challengedData.stats?.speed || 5,
+        level: challengedData.stats?.level || 1,
+        isAlive: true
+      },
       currentTurn: challenge.challenger.id,
       turns: [],
       status: 'active',
@@ -703,6 +731,17 @@ function handleCombatAction(ws, data) {
     
     challengerWs.send(JSON.stringify(rewardsData));
     challengedWs.send(JSON.stringify(rewardsData));
+  }
+  
+  // Update player names in combat state to ensure they're current
+  const challengerData = gameState.players[combatState.challenger.id];
+  const challengedData = gameState.players[combatState.challenged.id];
+  
+  if (challengerData) {
+    combatState.challenger.name = challengerData.name;
+  }
+  if (challengedData) {
+    combatState.challenged.name = challengedData.name;
   }
   
   // Notify both players
