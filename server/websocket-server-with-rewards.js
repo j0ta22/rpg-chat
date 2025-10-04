@@ -390,10 +390,12 @@ wss.on('connection', (ws) => {
   ws.on('message', (data) => {
     try {
       const message = JSON.parse(data);
-      console.log('📥 Received message:', message.type);
+      console.log('📥 Received message:', message.type, 'from client');
+      console.log('📥 Message data:', message.data);
       
       switch (message.type) {
         case 'joinGame':
+          console.log('🎮 Processing joinGame message...');
           handleJoinGame(ws, message.data);
           break;
         case 'updatePosition':
@@ -433,6 +435,7 @@ wss.on('connection', (ws) => {
 });
 
 function handleJoinGame(ws, data) {
+  console.log('🎮 handleJoinGame called with data:', data);
   const { name, avatar, x, y, color } = data;
   const playerId = generatePlayerId();
   
@@ -452,15 +455,19 @@ function handleJoinGame(ws, data) {
     level: 1
   };
   
-  console.log('🎮 Player joined:', name);
+  console.log('🎮 Player joined:', name, 'with ID:', playerId);
+  console.log('🎮 Current players count:', Object.keys(gameState.players).length);
   
   // Send player ID back
-  ws.send(JSON.stringify({
+  const playerIdMessage = {
     type: 'playerId',
     data: { playerId }
-  }));
+  };
+  console.log('📤 Sending playerId message:', playerIdMessage);
+  ws.send(JSON.stringify(playerIdMessage));
   
   // Broadcast updated game state
+  console.log('📤 Broadcasting game state...');
   broadcastGameState();
 }
 
