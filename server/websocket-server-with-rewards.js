@@ -792,15 +792,7 @@ function broadcastGameState() {
   const gameStateData = {
     type: 'gameState',
     data: {
-      players: Object.values(gameState.players).map(player => ({
-        id: player.id,
-        name: player.name,
-        avatar: player.avatar,
-        x: player.x,
-        y: player.y,
-        color: player.color,
-        direction: player.direction
-      }))
+      players: gameState.players
     }
   };
   
