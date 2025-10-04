@@ -9,16 +9,6 @@ const server = http.createServer(app);
 // Enable CORS
 app.use(cors());
 
-// Health check endpoint for Render
-app.get('/health', (req, res) => {
-  res.status(200).json({ 
-    status: 'ok', 
-    timestamp: new Date().toISOString(),
-    players: Object.keys(gameState.players).length,
-    uptime: process.uptime()
-  });
-});
-
 // Game state
 const gameState = {
   players: {},
@@ -29,584 +19,425 @@ const playerStats = {};
 const combatStates = {};
 const combatChallenges = {};
 
-// Combat constants
-const COMBAT_CONSTANTS = {
-  BASE_DAMAGE_MULTIPLIER: 0.8,
-  CRITICAL_CHANCE_BASE: 0.05,
-  CRITICAL_MULTIPLIER: 2.0,
-  DEFENSE_REDUCTION: 0.01,
-  MAX_DEFENSE_REDUCTION: 0.75,
-  DODGE_CHANCE_BASE: 0.1,
-  SPEED_DODGE_BONUS: 0.002,
-  MAX_DODGE_CHANCE: 0.6,
-  BLOCK_CHANCE_BASE: 0.15,
-  DEFENSE_BLOCK_BONUS: 0.003,
-  MAX_BLOCK_CHANCE: 0.5,
-  LEVEL_DAMAGE_BONUS: 0.05,
-  MAX_LEVEL_BONUS: 0.5
-};
-
-// Rewards constants
-const REWARDS_CONSTANTS = {
-  BASE_GOLD: 25,
-  LEVEL_BONUS_GOLD: 5,
-  MAX_GOLD: 100,
-  BASE_XP: 50,
-  LEVEL_BONUS_XP: 10,
-  PERFORMANCE_BONUS_XP: 25,
-  SURVIVAL_BONUS_XP: 15,
-  MAX_XP: 200,
-  MAX_LEVEL_DIFFERENCE: 5,
-  PENALTY_THRESHOLD: 5,
-  ITEM_DROP_CHANCES: {
-    common: 0.40,
-    uncommon: 0.25,
-    rare: 0.15,
-    epic: 0.10,
-    legendary: 0.05
-  },
-  XP_LOSS_BASE: 20,
-  XP_LOSS_LEVEL_BONUS: 5,
-  MAX_XP_LOSS: 50
-};
-
-// Enhanced damage calculation system
-function calculateDamage(attacker, target, action) {
-  console.log('⚔️ Calculating enhanced damage:', { 
-    attacker: attacker.name, 
-    target: target.name, 
-    action: action.type 
-  });
-  
-  // 1. Calculate base damage
-  const baseDamage = calculateBaseDamage(attacker, action);
-  console.log('📊 Base damage:', baseDamage);
-  
-  // 2. Calculate critical chance
-  const criticalChance = calculateCriticalChance(attacker, action);
-  const isCritical = Math.random() < criticalChance;
-  console.log('💥 Critical chance:', criticalChance, 'Is critical:', isCritical);
-  
-  // 3. Apply critical multiplier
-  let damage = baseDamage;
-  if (isCritical) {
-    damage *= COMBAT_CONSTANTS.CRITICAL_MULTIPLIER;
-  }
-  
-  // 4. Calculate dodge chance
-  const dodgeChance = calculateDodgeChance(target, action);
-  const isDodged = Math.random() < dodgeChance;
-  console.log('💨 Dodge chance:', dodgeChance, 'Is dodged:', isDodged);
-  
-  if (isDodged) {
-    return {
-      damage: 0,
-      isCritical: false,
-      isBlocked: false,
-      isDodged: true,
-      effects: [],
-      blockedBy: 'dodge'
-    };
-  }
-  
-  // 5. Calculate block chance
-  const blockChance = calculateBlockChance(target, action);
-  const isBlocked = Math.random() < blockChance;
-  console.log('🛡️ Block chance:', blockChance, 'Is blocked:', isBlocked);
-  
-  // 6. Apply defense reduction
-  if (!isBlocked) {
-    const defenseReduction = calculateDefenseReduction(target);
-    damage = Math.max(1, damage * (1 - defenseReduction));
-    console.log('🛡️ Defense reduction:', defenseReduction, 'Final damage after defense:', damage);
-  } else {
-    damage = Math.floor(damage * 0.5); // Block reduces damage by half
-    console.log('🛡️ Blocked! Damage reduced to:', damage);
-  }
-  
-  // 7. Apply level bonus
-  const levelBonus = calculateLevelBonus(attacker, target);
-  damage = Math.floor(damage * (1 + levelBonus));
-  console.log('📈 Level bonus:', levelBonus, 'Final damage:', damage);
-  
-  // 8. Calculate special effects
-  const effects = calculateSpecialEffects(attacker, target, action, isCritical);
-  
-  return {
-    damage: Math.max(1, Math.floor(damage)),
-    isCritical,
-    isBlocked,
-    isDodged: false,
-    effects,
-    blockedBy: isBlocked ? 'armor' : null
-  };
-}
-
-function calculateBaseDamage(attacker, action) {
-  let baseDamage = attacker.attack * COMBAT_CONSTANTS.BASE_DAMAGE_MULTIPLIER;
-  
-  // Action type modifiers
-  switch (action.type) {
-    case 'strong_attack':
-      baseDamage *= 1.5; // +50% damage
-      break;
-    case 'quick_attack':
-      baseDamage *= 0.7; // -30% damage
-      break;
-    case 'attack':
-    default:
-      baseDamage *= 1.0; // Normal damage
-      break;
-  }
-  
-  // Weapon type modifiers
-  if (action.weaponType) {
-    const weaponMultipliers = {
-      sword: 1.0,
-      axe: 1.2,
-      mace: 1.15,
-      spear: 0.9,
-      staff: 0.8,
-      dagger: 0.85
-    };
-    baseDamage *= weaponMultipliers[action.weaponType] || 1.0;
-  }
-  
-  // Elemental bonus
-  if (action.element && action.element !== 'none') {
-    baseDamage *= 1.2; // +20% elemental damage
-  }
-  
-  return baseDamage;
-}
-
-function calculateCriticalChance(attacker, action) {
-  let critChance = COMBAT_CONSTANTS.CRITICAL_CHANCE_BASE;
-  
-  // Speed bonus (max 10% additional)
-  const speedBonus = Math.min(attacker.speed * 0.001, 0.1);
-  critChance += speedBonus;
-  
-  // Weapon bonus
-  if (action.weaponType === 'dagger') {
-    critChance += 0.1; // +10% crit for daggers
-  }
-  
-  // Level bonus
-  critChance += attacker.level * 0.005; // +0.5% per level
-  
-  return Math.min(critChance, 0.4); // Max 40% crit chance
-}
-
-function calculateDodgeChance(target, action) {
-  let dodgeChance = COMBAT_CONSTANTS.DODGE_CHANCE_BASE;
-  
-  // Speed bonus
-  dodgeChance += target.speed * COMBAT_CONSTANTS.SPEED_DODGE_BONUS;
-  
-  // Quick attack penalty (harder to dodge)
-  if (action.type === 'quick_attack') {
-    dodgeChance *= 0.7;
-  }
-  
-  return Math.min(dodgeChance, COMBAT_CONSTANTS.MAX_DODGE_CHANCE);
-}
-
-function calculateBlockChance(target, action) {
-  let blockChance = COMBAT_CONSTANTS.BLOCK_CHANCE_BASE;
-  
-  // Defense bonus
-  blockChance += target.defense * COMBAT_CONSTANTS.DEFENSE_BLOCK_BONUS;
-  
-  // Strong attack penalty (harder to block)
-  if (action.type === 'strong_attack') {
-    blockChance *= 0.6;
-  }
-  
-  return Math.min(blockChance, COMBAT_CONSTANTS.MAX_BLOCK_CHANCE);
-}
-
-function calculateDefenseReduction(target) {
-  const reduction = target.defense * COMBAT_CONSTANTS.DEFENSE_REDUCTION;
-  return Math.min(reduction, COMBAT_CONSTANTS.MAX_DEFENSE_REDUCTION);
-}
-
-function calculateLevelBonus(attacker, target) {
-  const levelDiff = attacker.level - target.level;
-  const bonus = levelDiff * COMBAT_CONSTANTS.LEVEL_DAMAGE_BONUS;
-  return Math.min(Math.max(bonus, -0.2), COMBAT_CONSTANTS.MAX_LEVEL_BONUS);
-}
-
-function calculateSpecialEffects(attacker, target, action, isCritical) {
-  const effects = [];
-  
-  // Elemental effects
-  if (action.element && action.element !== 'none' && Math.random() < 0.3) {
-    effects.push(action.element);
-  }
-  
-  // Critical effects
-  if (isCritical) {
-    const criticalEffects = ['stunned', 'bleeding', 'armor_break'];
-    const randomEffect = criticalEffects[Math.floor(Math.random() * criticalEffects.length)];
-    effects.push(randomEffect);
-  }
-  
-  return effects;
-}
-
-function getWeaponType(equippedWeapon) {
-  if (!equippedWeapon) return 'sword';
-  
-  const weaponName = equippedWeapon.name.toLowerCase();
-  
-  if (weaponName.includes('axe') || weaponName.includes('hatchet')) return 'axe';
-  if (weaponName.includes('mace') || weaponName.includes('hammer')) return 'mace';
-  if (weaponName.includes('spear') || weaponName.includes('lance')) return 'spear';
-  if (weaponName.includes('staff') || weaponName.includes('wand')) return 'staff';
-  if (weaponName.includes('dagger') || weaponName.includes('knife')) return 'dagger';
-  
-  return 'sword';
-}
-
-function getWeaponElement(equippedWeapon) {
-  if (!equippedWeapon) return 'none';
-  
-  const weaponName = equippedWeapon.name.toLowerCase();
-  
-  if (weaponName.includes('fire') || weaponName.includes('flame') || weaponName.includes('burn')) return 'fire';
-  if (weaponName.includes('ice') || weaponName.includes('frost') || weaponName.includes('cold')) return 'ice';
-  if (weaponName.includes('lightning') || weaponName.includes('thunder') || weaponName.includes('electric')) return 'lightning';
-  if (weaponName.includes('poison') || weaponName.includes('venom') || weaponName.includes('toxic')) return 'poison';
-  
-  return 'none';
-}
-
-// Rewards calculation functions
-function calculateCombatRewards(combatResult) {
-  console.log('🏆 Calculating combat rewards for:', combatResult.winnerId);
-  
-  const levelDifference = Math.abs(combatResult.winnerLevel - combatResult.loserLevel);
-  const noRewards = levelDifference > REWARDS_CONSTANTS.PENALTY_THRESHOLD;
-  
-  let gold = 0;
-  let experience = 0;
-  let item = undefined;
-  
-  if (!noRewards) {
-    // Calculate gold
-    gold = calculateGoldReward(combatResult.winnerLevel, combatResult.damageDealt);
-    
-    // Calculate XP
-    experience = calculateXPReward(combatResult.winnerLevel, combatResult.damageDealt, combatResult.combatDuration);
-    
-    // Calculate item drop
-    item = calculateItemDrop();
-  }
-  
-  const rewards = {
-    gold,
-    experience,
-    item,
-    penalties: {
-      levelDifference,
-      noRewards,
-      reason: noRewards ? `Diferencia de nivel muy grande (${levelDifference} > ${REWARDS_CONSTANTS.PENALTY_THRESHOLD})` : undefined
-    }
-  };
-  
-  console.log('💰 Combat rewards calculated:', rewards);
-  return rewards;
-}
-
-function calculateGoldReward(winnerLevel, damageDealt) {
-  let gold = REWARDS_CONSTANTS.BASE_GOLD;
-  gold += winnerLevel * REWARDS_CONSTANTS.LEVEL_BONUS_GOLD;
-  
-  // Bonus por daño causado (máximo 20% extra)
-  const damageBonus = Math.min(damageDealt * 0.1, gold * 0.2);
-  gold += damageBonus;
-  
-  return Math.min(Math.floor(gold), REWARDS_CONSTANTS.MAX_GOLD);
-}
-
-function calculateXPReward(winnerLevel, damageDealt, combatDuration) {
-  let xp = REWARDS_CONSTANTS.BASE_XP;
-  xp += winnerLevel * REWARDS_CONSTANTS.LEVEL_BONUS_XP;
-  
-  // Bonus por daño causado
-  const damageBonus = Math.min(damageDealt * 0.5, REWARDS_CONSTANTS.PERFORMANCE_BONUS_XP);
-  xp += damageBonus;
-  
-  // Bonus por duración del combate
-  const durationBonus = Math.min(combatDuration / 10, REWARDS_CONSTANTS.SURVIVAL_BONUS_XP);
-  xp += durationBonus;
-  
-  return Math.min(Math.floor(xp), REWARDS_CONSTANTS.MAX_XP);
-}
-
-function calculateItemDrop() {
-  // 30% chance base de drop
-  if (Math.random() > 0.3) {
-    return undefined;
-  }
-  
-  // Determinar rareza
-  const rarity = determineItemRarity();
-  
-  return {
-    rarity: rarity,
-    name: `Item ${rarity}` // Placeholder - en producción se obtendría de la DB
-  };
-}
-
-function determineItemRarity() {
-  const random = Math.random();
-  let cumulative = 0;
-  
-  for (const [rarity, chance] of Object.entries(REWARDS_CONSTANTS.ITEM_DROP_CHANCES)) {
-    cumulative += chance;
-    if (random <= cumulative) {
-      return rarity;
-    }
-  }
-  
-  return 'common';
-}
-
-function calculateXPLoss(loserLevel, winnerLevel) {
-  const levelDifference = Math.abs(winnerLevel - loserLevel);
-  
-  let xpLoss = REWARDS_CONSTANTS.XP_LOSS_BASE;
-  xpLoss += loserLevel * REWARDS_CONSTANTS.XP_LOSS_LEVEL_BONUS;
-  
-  // Bonus de pérdida si el perdedor es de nivel mucho mayor
-  if (levelDifference > REWARDS_CONSTANTS.PENALTY_THRESHOLD) {
-    xpLoss += levelDifference * 2; // +2 XP perdido por cada nivel de diferencia
-  }
-  
-  return Math.min(xpLoss, REWARDS_CONSTANTS.MAX_XP_LOSS);
-}
-
-// WebSocket server
-const wss = new WebSocket.Server({ server });
-
-// Store WebSocket connections
-const connections = new Map();
-
-wss.on('connection', (ws) => {
-  console.log('🔌 New WebSocket connection');
-  
-  ws.on('message', (data) => {
-    try {
-      const message = JSON.parse(data);
-      console.log('📥 Received message:', message.type);
-      
-      switch (message.type) {
-        case 'joinGame':
-          handleJoinGame(ws, message.data);
-          break;
-        case 'updatePosition':
-          handleUpdatePosition(ws, message.data);
-          break;
-        case 'challengePlayer':
-          handleChallengePlayer(ws, message.data);
-          break;
-        case 'respondToChallenge':
-          handleRespondToChallenge(ws, message.data);
-          break;
-        case 'combatAction':
-          handleCombatAction(ws, message.data);
-          break;
-        case 'heartbeat':
-          handleHeartbeat(ws, message.data);
-          break;
-        default:
-          console.log('❓ Unknown message type:', message.type);
-      }
-    } catch (error) {
-      console.error('❌ Error processing message:', error);
-    }
-  });
-  
-  ws.on('close', () => {
-    console.log('🔌 WebSocket connection closed');
-    // Remove player from game state
-    for (const [playerId, player] of Object.entries(gameState.players)) {
-      if (player.ws === ws) {
-        delete gameState.players[playerId];
-        console.log('👋 Player removed:', player.name);
-        break;
-      }
-    }
-  });
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: Date.now() });
 });
 
-function handleJoinGame(ws, data) {
-  const { name, avatar, x, y, color } = data;
-  const playerId = generatePlayerId();
-  
-  gameState.players[playerId] = {
-    id: playerId,
-    name,
-    avatar,
-    x,
-    y,
-    color,
-    ws,
+// WebSocket server
+const wss = new WebSocket.Server({ 
+  server,
+  path: '/',
+  perMessageDeflate: false
+});
+
+// Helper function to broadcast to all clients
+function broadcastToAll(type, payload) {
+  const message = JSON.stringify({ type, payload });
+  wss.clients.forEach((client) => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(message);
+    }
+  });
+}
+
+// Helper function to send to specific client
+function sendToClient(client, type, payload) {
+  if (client.readyState === WebSocket.OPEN) {
+    client.send(JSON.stringify({ type, payload }));
+  }
+}
+
+// Initialize player stats
+function createInitialStats() {
+  return {
+    level: 1,
+    experience: 0,
     health: 100,
     maxHealth: 100,
     attack: 10,
     defense: 5,
-    speed: 3,
-    level: 1
+    speed: 3
+  };
+}
+
+wss.on('connection', (ws, req) => {
+  console.log(`🔌 Client connected: ${req.socket.remoteAddress}`);
+  
+  ws.on('message', (message) => {
+    try {
+      const data = JSON.parse(message.toString());
+      handleMessage(ws, data);
+    } catch (error) {
+      console.error('❌ Error parsing message:', error);
+    }
+  });
+  
+  ws.on('close', () => {
+    console.log('🔌 Client disconnected');
+    // Find and remove player
+    Object.keys(gameState.players).forEach(playerId => {
+      if (gameState.players[playerId].ws === ws) {
+        const player = gameState.players[playerId];
+        delete gameState.players[playerId];
+        delete playerStats[playerId];
+        gameState.lastUpdate = Date.now();
+        
+        console.log(`👋 Player ${player.name} disconnected`);
+        
+        // Notify other players
+        broadcastToAll('playerLeft', playerId);
+      }
+    });
+  });
+  
+  ws.on('error', (error) => {
+    console.error('❌ WebSocket error:', error);
+  });
+});
+
+function handleMessage(ws, data) {
+  const { type, payload } = data;
+  
+  switch (type) {
+    case 'joinGame':
+      handleJoinGame(ws, payload);
+      break;
+    case 'heartbeat':
+      handleHeartbeat(ws, payload);
+      break;
+    case 'updatePosition':
+      handleUpdatePosition(ws, payload);
+      break;
+    case 'chatMessage':
+      handleChatMessage(ws, payload);
+      break;
+    case 'challengePlayer':
+      handleChallengePlayer(ws, payload);
+      break;
+    case 'respondToChallenge':
+      handleRespondToChallenge(ws, payload);
+      break;
+    case 'combatAction':
+      handleCombatAction(ws, payload);
+      break;
+    default:
+      console.log('📥 Unknown message type:', type);
+  }
+}
+
+function handleJoinGame(ws, playerData) {
+  const playerId = generatePlayerId();
+  const player = {
+    id: playerId,
+    name: playerData.name,
+    avatar: playerData.avatar || 'character_1',
+    color: playerData.color || '#3b82f6',
+    x: playerData.x || 100,
+    y: playerData.y || 150,
+    direction: 'down',
+    lastSeen: Date.now(),
+    ws: ws
   };
   
-  console.log('🎮 Player joined:', name);
+  gameState.players[playerId] = player;
+  gameState.lastUpdate = Date.now();
   
-  // Send player ID back
-  ws.send(JSON.stringify({
-    type: 'playerId',
-    data: { playerId }
-  }));
+  // Initialize player stats
+  playerStats[playerId] = createInitialStats();
   
-  // Broadcast updated game state
-  broadcastGameState();
+  console.log(`🎮 Player ${player.name} joined. Total: ${Object.keys(gameState.players).length}`);
+  
+  // Send player ID to the client
+  sendToClient(ws, 'playerId', { playerId: playerId });
+  
+  // Send initial stats to the player
+  sendToClient(ws, 'xpUpdate', {
+    xpGained: 0,
+    newStats: playerStats[playerId],
+    leveledUp: false,
+    levelsGained: 0
+  });
+  
+  // Send game state to the player (without WebSocket objects)
+  const cleanGameState = {
+    players: Object.fromEntries(
+      Object.entries(gameState.players).map(([id, player]) => [
+        id, 
+        {
+          id: player.id,
+          name: player.name,
+          avatar: player.avatar,
+          color: player.color,
+          x: player.x,
+          y: player.y,
+          direction: player.direction,
+          lastSeen: player.lastSeen,
+          stats: playerStats[id] || null
+        }
+      ])
+    ),
+    lastUpdate: gameState.lastUpdate
+  };
+  sendToClient(ws, 'gameState', cleanGameState);
+  
+  // Notify other players
+  const cleanPlayer = {
+    id: player.id,
+    name: player.name,
+    avatar: player.avatar,
+    color: player.color,
+    x: player.x,
+    y: player.y,
+    direction: player.direction,
+    lastSeen: player.lastSeen,
+    stats: playerStats[playerId] || null
+  };
+  broadcastToAll('playerJoined', cleanPlayer);
+  
+  // Send updated game state to all players (including the new one)
+  const updatedGameState = {
+    players: Object.fromEntries(
+      Object.entries(gameState.players).map(([id, player]) => [
+        id, 
+        {
+          id: player.id,
+          name: player.name,
+          avatar: player.avatar,
+          color: player.color,
+          x: player.x,
+          y: player.y,
+          direction: player.direction,
+          lastSeen: player.lastSeen,
+          stats: playerStats[id] || null
+        }
+      ])
+    ),
+    lastUpdate: gameState.lastUpdate
+  };
+  broadcastToAll('gameState', updatedGameState);
 }
 
 function handleUpdatePosition(ws, data) {
+  // Find player by WebSocket
   const playerId = findPlayerByWebSocket(ws);
-  if (!playerId) return;
-  
-  const player = gameState.players[playerId];
-  if (player) {
-    player.x = data.x;
-    player.y = data.y;
-    player.direction = data.direction;
-    gameState.lastUpdate = Date.now();
+  if (playerId && gameState.players[playerId]) {
+    const oldX = gameState.players[playerId].x;
+    const oldY = gameState.players[playerId].y;
+    
+    gameState.players[playerId].x = data.x;
+    gameState.players[playerId].y = data.y;
+    gameState.players[playerId].direction = data.direction || 'down';
+    gameState.players[playerId].lastSeen = Date.now();
+    
+    // Only broadcast if position actually changed
+    if (oldX !== data.x || oldY !== data.y) {
+      // Only log occasionally to avoid spam
+      if (Math.random() < 0.01) { // 1% of the time
+        console.log(`📍 Position update: Player ${gameState.players[playerId].name} at (${data.x}, ${data.y})`);
+      }
+      
+      // Broadcast position update to all other players
+      const positionUpdate = {
+        playerId: playerId,
+        x: data.x,
+        y: data.y,
+        direction: data.direction || 'down'
+      };
+      
+      // Send to all players except the one who moved
+      wss.clients.forEach((client) => {
+        if (client !== ws && client.readyState === WebSocket.OPEN) {
+          client.send(JSON.stringify({
+            type: 'playerMoved',
+            payload: positionUpdate
+          }));
+        }
+      });
+    }
+  }
+}
+
+function handleHeartbeat(ws, data) {
+  // Find player by WebSocket
+  const playerId = findPlayerByWebSocket(ws);
+  if (playerId && gameState.players[playerId]) {
+    gameState.players[playerId].lastSeen = Date.now();
+    
+    // Update position if provided (fallback for heartbeat)
+    if (data && typeof data.x === 'number' && typeof data.y === 'number') {
+      const oldX = gameState.players[playerId].x;
+      const oldY = gameState.players[playerId].y;
+      
+      gameState.players[playerId].x = data.x;
+      gameState.players[playerId].y = data.y;
+      gameState.players[playerId].direction = data.direction || 'down';
+      
+      // Only broadcast if position actually changed
+      if (oldX !== data.x || oldY !== data.y) {
+        // Only log occasionally to avoid spam
+        if (Math.random() < 0.01) { // 1% of the time
+          console.log(`💓 Heartbeat with position: Player ${gameState.players[playerId].name} at (${data.x}, ${data.y})`);
+        }
+        
+        // Broadcast position update to all other players
+        const positionUpdate = {
+          playerId: playerId,
+          x: data.x,
+          y: data.y,
+          direction: data.direction || 'down'
+        };
+        
+        // Send to all players except the one who moved
+        wss.clients.forEach((client) => {
+          if (client !== ws && client.readyState === WebSocket.OPEN) {
+            client.send(JSON.stringify({
+              type: 'playerMoved',
+              payload: positionUpdate
+            }));
+          }
+        });
+      }
+    }
+    
+    sendToClient(ws, 'heartbeatAck', {});
+  }
+}
+
+function handleChatMessage(ws, data) {
+  const playerId = findPlayerByWebSocket(ws);
+  if (playerId && gameState.players[playerId]) {
+    const message = {
+      id: generateMessageId(),
+      playerId: playerId,
+      playerName: gameState.players[playerId].name,
+      message: data.message,
+      text: data.message, // Alias for compatibility
+      timestamp: Date.now()
+    };
+    
+    console.log(`💬 ${message.playerName}: ${message.message}`);
+    
+    // Broadcast to all players
+    broadcastToAll('chatMessage', message);
   }
 }
 
 function handleChallengePlayer(ws, data) {
   const challengerId = findPlayerByWebSocket(ws);
-  const challengedId = data.challengedId;
+  const challengedId = data.challengedPlayerId;
   
-  if (!challengerId || !challengedId) return;
-  
-  const challenger = gameState.players[challengerId];
-  const challenged = gameState.players[challengedId];
-  
-  if (!challenger || !challenged) return;
-  
-  const challengeId = generateChallengeId();
-  combatChallenges[challengeId] = {
-    id: challengeId,
-    challenger: {
-      id: challengerId,
-      name: challenger.name,
-      stats: {
-        attack: challenger.attack,
-        defense: challenger.defense,
-        speed: challenger.speed,
-        health: challenger.health,
-        level: challenger.level
-      }
-    },
-    challenged: {
-      id: challengedId,
-      name: challenged.name,
-      stats: {
-        attack: challenged.attack,
-        defense: challenged.defense,
-        speed: challenged.speed,
-        health: challenged.health,
-        level: challenged.level
-      }
-    },
-    timestamp: Date.now()
-  };
-  
-  // Send challenge to challenged player
-  challenged.ws.send(JSON.stringify({
-    type: 'combatChallenge',
-    data: {
-      challengeId,
+  if (challengerId && gameState.players[challengerId] && gameState.players[challengedId]) {
+    const challenge = {
+      id: generateChallengeId(),
       challenger: {
-        name: challenger.name,
-        level: challenger.level
+        id: challengerId,
+        name: gameState.players[challengerId].name,
+        stats: playerStats[challengerId]
+      },
+      challenged: {
+        id: challengedId,
+        name: gameState.players[challengedId].name,
+        stats: playerStats[challengedId]
+      },
+      timestamp: Date.now()
+    };
+    
+    // Store challenge
+    combatChallenges[challenge.id] = challenge;
+    
+    console.log(`⚔️ ${challenge.challenger.name} challenges ${challenge.challenged.name}`);
+    
+    // Send challenge to challenged player
+    const challengedWs = gameState.players[challengedId].ws;
+    sendToClient(challengedWs, 'combatChallenge', challenge);
+    
+    // Set timeout to expire challenge
+    setTimeout(() => {
+      if (combatChallenges[challenge.id]) {
+        delete combatChallenges[challenge.id];
+        console.log(`⚔️ Challenge expired: ${challenge.challenger.name} vs ${challenge.challenged.name}`);
       }
-    }
-  }));
-  
-  console.log('⚔️ Combat challenge sent:', challenger.name, '->', challenged.name);
+    }, 30000); // 30 seconds timeout
+  }
 }
 
 function handleRespondToChallenge(ws, data) {
-  const { challengeId, accepted } = data;
+  const playerId = findPlayerByWebSocket(ws);
+  const challengeId = data.challengeId;
+  const accepted = data.accepted;
+  
+  if (!playerId || !challengeId || !combatChallenges[challengeId]) {
+    console.log('❌ Invalid challenge response');
+    return;
+  }
+  
   const challenge = combatChallenges[challengeId];
   
-  if (!challenge) return;
+  // Verify this is the challenged player
+  if (challenge.challenged.id !== playerId) {
+    console.log('❌ Not the challenged player');
+    return;
+  }
+  
+  console.log(`⚔️ Challenge response: ${accepted ? 'accepted' : 'declined'} by ${gameState.players[playerId].name}`);
   
   if (accepted) {
-    // Start combat - use fresh player data from gameState
-    const combatId = generateCombatId();
-    const challengerData = gameState.players[challenge.challenger.id];
-    const challengedData = gameState.players[challenge.challenged.id];
-    
-    if (!challengerData || !challengedData) {
-      console.log('❌ Player data not found for combat');
-      return;
-    }
-    
-    combatStates[combatId] = {
-      id: combatId,
-      challenger: { 
-        id: challengerData.id,
-        name: challengerData.name,
-        health: challengerData.stats?.maxHealth || 100, 
-        maxHealth: challengerData.stats?.maxHealth || 100,
-        attack: challengerData.stats?.attack || 10,
-        defense: challengerData.stats?.defense || 5,
-        speed: challengerData.stats?.speed || 5,
-        level: challengerData.stats?.level || 1,
-        isAlive: true
+    // Create combat state
+    const combatState = {
+      id: generateCombatId(),
+      challenger: {
+        id: challenge.challenger.id,
+        name: challenge.challenger.name,
+        avatar: gameState.players[challenge.challenger.id].avatar || 'character_1',
+        health: 100,
+        maxHealth: 100,
+        isAlive: true,
+        stats: challenge.challenger.stats
       },
-      challenged: { 
-        id: challengedData.id,
-        name: challengedData.name,
-        health: challengedData.stats?.maxHealth || 100, 
-        maxHealth: challengedData.stats?.maxHealth || 100,
-        attack: challengedData.stats?.attack || 10,
-        defense: challengedData.stats?.defense || 5,
-        speed: challengedData.stats?.speed || 5,
-        level: challengedData.stats?.level || 1,
-        isAlive: true
+      challenged: {
+        id: challenge.challenged.id,
+        name: challenge.challenged.name,
+        avatar: gameState.players[challenge.challenged.id].avatar || 'character_1',
+        health: 100,
+        maxHealth: 100,
+        isAlive: true,
+        stats: challenge.challenged.stats
       },
-      currentTurn: challenge.challenger.id,
+      currentTurn: challenge.challenger.id, // Challenger goes first
       turns: [],
       status: 'active',
-      startTime: Date.now(),
-      totalDamageDealt: 0,
-      criticalHits: 0
+      startTime: Date.now()
     };
     
-    // Notify both players
+    combatStates[combatState.id] = combatState;
+    
+    // Send combat state to both players
     const challengerWs = gameState.players[challenge.challenger.id].ws;
     const challengedWs = gameState.players[challenge.challenged.id].ws;
     
-    const combatState = combatStates[combatId];
+    sendToClient(challengerWs, 'combatStateUpdate', combatState);
+    sendToClient(challengedWs, 'combatStateUpdate', combatState);
     
-    challengerWs.send(JSON.stringify({
-      type: 'combatStateUpdate',
-      data: { combatState, isYourTurn: true }
-    }));
+    // Send global message
+    const globalMessage = {
+      id: generateMessageId(),
+      playerId: 'system',
+      playerName: 'System',
+      message: `A fierce brawl broke out at the Drunken Monkey Tavern! ${challenge.challenger.name} vs ${challenge.challenged.name}`,
+      text: `A fierce brawl broke out at the Drunken Monkey Tavern! ${challenge.challenger.name} vs ${challenge.challenged.name}`,
+      timestamp: Date.now()
+    };
+    broadcastToAll('chatMessage', globalMessage);
     
-    challengedWs.send(JSON.stringify({
-      type: 'combatStateUpdate',
-      data: { combatState, isYourTurn: false }
-    }));
-    
-    console.log('⚔️ Combat started:', challenge.challenger.name, 'vs', challenge.challenged.name);
+    console.log(`⚔️ Combat started: ${challenge.challenger.name} vs ${challenge.challenged.name}`);
+  } else {
+    // Send decline message to challenger
+    const challengerWs = gameState.players[challenge.challenger.id].ws;
+    sendToClient(challengerWs, 'combatChallengeDeclined', {
+      challengerName: challenge.challenger.name,
+      challengedName: challenge.challenged.name
+    });
   }
   
   // Clean up challenge
@@ -631,7 +462,7 @@ function handleCombatAction(ws, data) {
     return;
   }
   
-  console.log(`⚔️ Enhanced combat action: ${action.type} by ${gameState.players[playerId].name}`);
+  console.log(`⚔️ Combat action: ${action.type} by ${gameState.players[playerId].name}`);
   
   // Get WebSocket connections
   const challengerWs = gameState.players[combatState.challenger.id].ws;
@@ -644,31 +475,23 @@ function handleCombatAction(ws, data) {
   
   let processedAction = { ...action };
   
-  if (action.type === 'attack' || action.type === 'strong_attack' || action.type === 'quick_attack') {
-    // Enhanced damage calculation
-    const damageResult = calculateDamage(attacker, target, action);
+  if (action.type === 'attack') {
+    // Calculate damage
+    const baseDamage = Math.floor(Math.random() * (25 - 15 + 1)) + 15;
+    const isBlocked = Math.random() < 0.2; // 20% chance of automatic block
+    const isDodged = Math.random() < 0.3; // 30% chance to dodge
     
-    if (!damageResult.isDodged) {
-      target.health = Math.max(0, target.health - damageResult.damage);
+    if (!isDodged) {
+      const finalDamage = isBlocked ? Math.floor(baseDamage * 0.5) : baseDamage;
+      target.health = Math.max(0, target.health - finalDamage);
       target.isAlive = target.health > 0;
       
-      // Track combat statistics
-      combatState.totalDamageDealt += damageResult.damage;
-      if (damageResult.isCritical) {
-        combatState.criticalHits++;
-      }
-      
-      processedAction.damage = damageResult.damage;
-      processedAction.isCritical = damageResult.isCritical;
-      processedAction.isBlocked = damageResult.isBlocked;
-      processedAction.isDodged = false;
-      processedAction.effects = damageResult.effects;
-      processedAction.blockedBy = damageResult.blockedBy;
+      processedAction.damage = finalDamage;
+      processedAction.blocked = isBlocked;
+      processedAction.dodged = false;
     } else {
       processedAction.dodged = true;
       processedAction.damage = 0;
-      processedAction.isCritical = false;
-      processedAction.isBlocked = false;
     }
   }
   
@@ -684,85 +507,97 @@ function handleCombatAction(ws, data) {
   // Switch turns
   combatState.currentTurn = isChallenger ? combatState.challenged.id : combatState.challenger.id;
   
-  // Check for combat end
-  if (target.health <= 0) {
+  // Check for winner
+  let winner = null;
+  if (!combatState.challenger.isAlive) {
+    winner = combatState.challenged.id;
+  } else if (!combatState.challenged.isAlive) {
+    winner = combatState.challenger.id;
+  }
+  
+  if (winner) {
+    // Combat finished
     combatState.status = 'finished';
-    combatState.winner = attacker.id;
+    combatState.winner = winner;
     combatState.endTime = Date.now();
     
-    // Calculate combat duration
-    const combatDuration = Math.floor((combatState.endTime - combatState.startTime) / 1000);
+    const winnerName = winner === combatState.challenger.id ? combatState.challenger.name : combatState.challenged.name;
+    const loserName = winner === combatState.challenger.id ? combatState.challenged.name : combatState.challenger.name;
     
-    // Calculate rewards
-    const combatResult = {
-      winnerId: attacker.id,
-      loserId: target.id,
-      winnerLevel: attacker.level,
-      loserLevel: target.level,
-      combatDuration: combatDuration,
-      damageDealt: combatState.totalDamageDealt,
-      criticalHits: combatState.criticalHits
+    // Send victory message
+    const victoryMessage = {
+      id: generateMessageId(),
+      playerId: 'system',
+      playerName: 'System',
+      message: `A fierce brawl broke out at the Drunken Monkey Tavern! ${winnerName} emerged victorious, while ${loserName} was defeated.`,
+      text: `A fierce brawl broke out at the Drunken Monkey Tavern! ${winnerName} emerged victorious, while ${loserName} was defeated.`,
+      timestamp: Date.now()
     };
+    broadcastToAll('chatMessage', victoryMessage);
     
-    const rewards = calculateCombatRewards(combatResult);
-    const xpLoss = calculateXPLoss(target.level, attacker.level);
+    // Calculate XP for both players
+    const winnerStats = playerStats[winner];
+    const loserStats = playerStats[combatState.challenger.id === winner ? combatState.challenged.id : combatState.challenger.id];
     
-    console.log('🏆 Combat finished! Winner:', attacker.name);
-    console.log('💰 Rewards:', rewards);
-    console.log('💀 XP Loss:', xpLoss);
-    
-    // Send rewards to both players
-    const rewardsData = {
-      type: 'combatRewards',
-      data: {
-        winner: {
-          id: attacker.id,
-          name: attacker.name,
-          rewards: rewards
-        },
-        loser: {
-          id: target.id,
-          name: target.name,
-          xpLoss: xpLoss,
-          levelDifference: Math.abs(attacker.level - target.level)
-        }
-      }
-    };
-    
-    challengerWs.send(JSON.stringify(rewardsData));
-    challengedWs.send(JSON.stringify(rewardsData));
-  }
-  
-  // Update player names in combat state to ensure they're current
-  const challengerData = gameState.players[combatState.challenger.id];
-  const challengedData = gameState.players[combatState.challenged.id];
-  
-  if (challengerData) {
-    combatState.challenger.name = challengerData.name;
-  }
-  if (challengedData) {
-    combatState.challenged.name = challengedData.name;
-  }
-  
-  // Notify both players
-  const combatStateUpdate = {
-    type: 'combatStateUpdate',
-    data: { 
-      combatState, 
-      isYourTurn: combatState.currentTurn === playerId 
+    if (winnerStats && loserStats) {
+      // Winner gets XP
+      const winnerXP = 50; // Base XP for victory
+      const winnerResult = addExperience(winnerStats, winnerXP);
+      playerStats[winner] = winnerResult.newStats;
+      
+      // Loser gets some XP too
+      const loserXP = 20; // Base XP for participation
+      const loserResult = addExperience(loserStats, loserXP);
+      playerStats[combatState.challenger.id === winner ? combatState.challenged.id : combatState.challenger.id] = loserResult.newStats;
+      
+      // Send XP updates
+      
+      sendToClient(challengerWs, 'xpUpdate', {
+        xpGained: combatState.challenger.id === winner ? winnerXP : loserXP,
+        newStats: combatState.challenger.id === winner ? winnerResult.newStats : loserResult.newStats,
+        leveledUp: combatState.challenger.id === winner ? winnerResult.leveledUp : loserResult.leveledUp,
+        levelsGained: combatState.challenger.id === winner ? winnerResult.levelsGained : loserResult.levelsGained
+      });
+      
+      sendToClient(challengedWs, 'xpUpdate', {
+        xpGained: combatState.challenged.id === winner ? winnerXP : loserXP,
+        newStats: combatState.challenged.id === winner ? winnerResult.newStats : loserResult.newStats,
+        leveledUp: combatState.challenged.id === winner ? winnerResult.leveledUp : loserResult.leveledUp,
+        levelsGained: combatState.challenged.id === winner ? winnerResult.levelsGained : loserResult.levelsGained
+      });
     }
-  };
+    
+    // Send updated game state to both players with new stats
+    const cleanGameState = {
+      players: Object.fromEntries(
+        Object.entries(gameState.players).map(([id, player]) => [
+          id, 
+          {
+            id: player.id,
+            name: player.name,
+            avatar: player.avatar,
+            color: player.color,
+            x: player.x,
+            y: player.y,
+            direction: player.direction,
+            lastSeen: player.lastSeen,
+            stats: playerStats[id] || null
+          }
+        ])
+      ),
+      lastUpdate: Date.now()
+    };
+    
+    sendToClient(challengerWs, 'gameState', cleanGameState);
+    sendToClient(challengedWs, 'gameState', cleanGameState);
+    
+    console.log(`⚔️ Combat finished: ${winnerName} defeated ${loserName}`);
+  }
   
-  challengerWs.send(JSON.stringify(combatStateUpdate));
-  challengedWs.send(JSON.stringify(combatStateUpdate));
-}
-
-function handleHeartbeat(ws, data) {
-  // Send heartbeat acknowledgment
-  ws.send(JSON.stringify({
-    type: 'heartbeatAck',
-    data: { timestamp: Date.now() }
-  }));
+  // Send updated combat state to both players
+  
+  sendToClient(challengerWs, 'combatStateUpdate', combatState);
+  sendToClient(challengedWs, 'combatStateUpdate', combatState);
 }
 
 function findPlayerByWebSocket(ws) {
@@ -774,30 +609,11 @@ function findPlayerByWebSocket(ws) {
   return null;
 }
 
-function broadcastGameState() {
-  const gameStateData = {
-    type: 'gameState',
-    data: {
-      players: Object.values(gameState.players).map(player => ({
-        id: player.id,
-        name: player.name,
-        avatar: player.avatar,
-        x: player.x,
-        y: player.y,
-        color: player.color,
-        direction: player.direction
-      }))
-    }
-  };
-  
-  wss.clients.forEach(ws => {
-    if (ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify(gameStateData));
-    }
-  });
+function generatePlayerId() {
+  return Math.random().toString(36).substr(2, 9);
 }
 
-function generatePlayerId() {
+function generateMessageId() {
   return Math.random().toString(36).substr(2, 9);
 }
 
@@ -809,8 +625,60 @@ function generateCombatId() {
   return Math.random().toString(36).substr(2, 9);
 }
 
-// Start server
+// XP System functions
+function addExperience(stats, xpGained) {
+  const newStats = { ...stats };
+  newStats.experience += xpGained;
+  
+  let leveledUp = false;
+  let levelsGained = 0;
+  
+  // Check for level up
+  while (newStats.experience >= calculateXPRequired(newStats.level)) {
+    newStats.level++;
+    newStats.experience -= calculateXPRequired(newStats.level - 1);
+    newStats.maxHealth += 10;
+    newStats.health = newStats.maxHealth; // Full heal on level up
+    newStats.attack += 2;
+    newStats.defense += 1;
+    newStats.speed += 1;
+    leveledUp = true;
+    levelsGained++;
+  }
+  
+  return {
+    newStats,
+    leveledUp,
+    levelsGained
+  };
+}
+
+function calculateXPRequired(level) {
+  return level * 100; // 100 XP per level
+}
+
+// Clean up inactive players every 60 seconds
+setInterval(() => {
+  const now = Date.now();
+  const timeout = 120000; // 2 minutes
+  
+  Object.keys(gameState.players).forEach(playerId => {
+    if (now - gameState.players[playerId].lastSeen > timeout) {
+      const player = gameState.players[playerId];
+      delete gameState.players[playerId];
+      delete playerStats[playerId];
+      gameState.lastUpdate = now;
+      
+      console.log(`👋 Player ${player.name} disconnected due to inactivity`);
+      
+      // Notify other players
+      broadcastToAll('playerLeft', playerId);
+    }
+  });
+}, 60000);
+
 const PORT = process.env.PORT || 3001;
 server.listen(PORT, () => {
-  console.log(`🚀 Enhanced WebSocket server with rewards running on port ${PORT}`);
+  console.log(`🚀 WebSocket server running on port ${PORT}`);
+  console.log(`🌐 WebSocket available at ws://localhost:${PORT}`);
 });

@@ -60,8 +60,8 @@ export class NativeWebSocketClient {
       try {
         console.log('🔌 Connecting to WebSocket server...');
         
-        // Use environment variable for WebSocket URL, fallback to Render server
-        let wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'wss://rpg-chat-mfru.onrender.com';
+        // Use environment variable for WebSocket URL, fallback to localhost for development
+        let wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:3001';
         
         // Ensure the URL uses wss:// for production and ws:// for development
         if (wsUrl.startsWith('https://')) {
@@ -115,64 +115,61 @@ export class NativeWebSocketClient {
 
   private handleMessage(data: any) {
     try {
-      console.log('📥 Raw message received:', data);
-      console.log('📥 Message type:', data.type);
-      console.log('📥 Message data:', data.data);
       switch (data.type) {
         case 'gameState':
           console.log('📥 Received gameState');
-          this.onGameState(data.data);
+          this.onGameState(data.payload);
           break;
         case 'playerJoined':
           console.log('📥 Received playerJoined');
-          this.onPlayerJoined(data.data);
+          this.onPlayerJoined(data.payload);
           break;
         case 'playerLeft':
           console.log('📥 Received playerLeft');
-          this.onPlayerLeft(data.data);
+          this.onPlayerLeft(data.payload);
           break;
         case 'chatMessage':
           console.log('📥 Received chatMessage');
-          this.onChatMessage(data.data);
+          this.onChatMessage(data.payload);
           break;
         case 'xpUpdate':
           console.log('📥 Received xpUpdate');
           if (this.onXPUpdate) {
-            this.onXPUpdate(data.data);
+            this.onXPUpdate(data.payload);
           }
           break;
         case 'heartbeatAck':
           console.log('📥 Received heartbeatAck');
           break;
         case 'playerId':
-          console.log('📥 Received playerId:', data.data?.playerId);
-          this.playerId = data.data?.playerId;
+          console.log('📥 Received playerId:', data.payload.playerId);
+          this.playerId = data.payload.playerId;
           if (this.onPlayerId) {
-            this.onPlayerId(data.data?.playerId);
+            this.onPlayerId(data.payload.playerId);
           }
           break;
         case 'playerMoved':
-          console.log('📥 Received playerMoved:', data.data);
+          console.log('📥 Received playerMoved:', data.payload);
           if (this.onPlayerMoved) {
-            this.onPlayerMoved(data.data);
+            this.onPlayerMoved(data.payload);
           }
           break;
         case 'combatChallenge':
-          console.log('📥 Received combatChallenge:', data.data);
+          console.log('📥 Received combatChallenge:', data.payload);
           if (this.onCombatChallenge) {
-            this.onCombatChallenge(data.data);
+            this.onCombatChallenge(data.payload);
           }
           break;
         case 'combatStateUpdate':
-          console.log('📥 Received combatStateUpdate:', data.data);
+          console.log('📥 Received combatStateUpdate:', data.payload);
           if (this.onCombatStateUpdate) {
-            this.onCombatStateUpdate(data.data);
+            this.onCombatStateUpdate(data.payload);
           }
           break;
         case 'combatChallengeDeclined':
-          console.log('📥 Received combatChallengeDeclined:', data.data);
+          console.log('📥 Received combatChallengeDeclined:', data.payload);
           if (this.onCombatChallengeDeclined) {
-            this.onCombatChallengeDeclined(data.data);
+            this.onCombatChallengeDeclined(data.payload);
           }
           break;
         default:
@@ -186,7 +183,7 @@ export class NativeWebSocketClient {
   private sendMessage(type: string, payload: any) {
     if (this.ws && this.isConnected) {
       console.log(`📤 Sending message: ${type}`, payload);
-      this.ws.send(JSON.stringify({ type, data: payload }));
+      this.ws.send(JSON.stringify({ type, payload }));
     } else {
       console.warn('⚠️ Cannot send message - WebSocket not connected');
     }

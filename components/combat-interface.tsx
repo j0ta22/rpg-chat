@@ -1,66 +1,16 @@
-'use client'
+"use client"
 
-import React, { useState, useEffect } from 'react'
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Progress } from '@/components/ui/progress'
-import { Badge } from '@/components/ui/badge'
+import { useState, useEffect } from "react"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Progress } from "@/components/ui/progress"
+import { Badge } from "@/components/ui/badge"
 import { 
-  Sword, 
-  Shield, 
-  Zap, 
-  Flame, 
-  Snowflake, 
-  Zap as Lightning,
-  Skull,
-  Target,
-  Clock,
-  Heart,
-  Shield as Defense,
-  Zap as Speed
-} from 'lucide-react'
-
-interface CombatPlayer {
-  id: string
-  name: string
-  health: number
-  maxHealth: number
-  attack: number
-  defense: number
-  speed: number
-  level: number
-  isAlive: boolean
-}
-
-interface CombatAction {
-  type: 'attack' | 'strong_attack' | 'quick_attack' | 'block' | 'dodge' | 'special'
-  damage?: number
-  isCritical?: boolean
-  isBlocked?: boolean
-  isDodged?: boolean
-  effects?: string[]
-  blockedBy?: 'armor' | 'shield' | 'dodge' | null
-  weaponType?: string
-  element?: string
-}
-
-interface CombatTurn {
-  playerId: string
-  action: CombatAction
-  timestamp: number
-}
-
-interface CombatState {
-  id: string
-  challenger: CombatPlayer
-  challenged: CombatPlayer
-  currentTurn: string
-  turns: CombatTurn[]
-  status: 'waiting' | 'active' | 'finished'
-  winner?: string
-  startTime: number
-  endTime?: number
-}
+  CombatState, 
+  CombatAction, 
+  CombatPlayer, 
+  CombatUtils,
+} from "@/lib/combat-system"
 
 interface CombatInterfaceProps {
   combatState: CombatState
@@ -69,15 +19,14 @@ interface CombatInterfaceProps {
   onClose: () => void
 }
 
-export default function CombatInterfaceEnhanced({ 
+export default function CombatInterface({ 
   combatState, 
   currentPlayerId, 
   onAction, 
   onClose 
 }: CombatInterfaceProps) {
-  const [timeLeft, setTimeLeft] = useState(30)
+  const [timeLeft, setTimeLeft] = useState(30) // 30 seconds turn timeout
   const [lastAction, setLastAction] = useState<CombatAction | null>(null)
-  const [selectedAction, setSelectedAction] = useState<string | null>(null)
 
   const isCurrentPlayerTurn = combatState.currentTurn === currentPlayerId
   const currentPlayer = combatState.challenger.id === currentPlayerId 
@@ -87,32 +36,10 @@ export default function CombatInterfaceEnhanced({
     ? combatState.challenged 
     : combatState.challenger
 
-  // Ensure player names are not undefined or empty
-  const safeCurrentPlayer = {
-    ...currentPlayer,
-    name: currentPlayer.name || 'Unknown Player'
-  }
-  const safeOpponent = {
-    ...opponent,
-    name: opponent.name || 'Unknown Player'
-  }
-
-  // Debug logging to identify the "unknown player" issue
-  console.log('🔍 Combat Interface Debug:', {
-    currentPlayerId,
-    combatState: {
-      challenger: combatState.challenger,
-      challenged: combatState.challenged,
-      currentTurn: combatState.currentTurn
-    },
-    currentPlayer: safeCurrentPlayer,
-    opponent: safeOpponent
-  })
-
   // Timer para el turno
   useEffect(() => {
     if (combatState.status !== 'active' || !isCurrentPlayerTurn) {
-      setTimeLeft(30)
+      setTimeLeft(30) // Reset to 30 seconds
       return
     }
 
@@ -121,7 +48,7 @@ export default function CombatInterfaceEnhanced({
         if (prev <= 1) {
           // Timeout - ataque automático
           onAction({ type: 'attack' })
-          return 30
+          return 30 // 30 seconds
         }
         return prev - 1
       })
@@ -138,12 +65,11 @@ export default function CombatInterfaceEnhanced({
     }
   }, [combatState.turns])
 
-  const handleAction = (actionType: 'attack' | 'strong_attack' | 'quick_attack' | 'block' | 'dodge') => {
+  const handleAction = (actionType: 'attack' | 'block' | 'dodge') => {
     if (!isCurrentPlayerTurn || combatState.status !== 'active') return
     
     const action: CombatAction = { type: actionType }
     onAction(action)
-    setSelectedAction(null)
   }
 
   const getHealthColor = (health: number, maxHealth: number) => {
@@ -154,129 +80,56 @@ export default function CombatInterfaceEnhanced({
   }
 
   const getActionDescription = (action: CombatAction, playerName: string) => {
-    let description = ''
-    
     switch (action.type) {
       case 'attack':
-        if (action.isDodged) {
-          description = `${playerName} atacó pero fue esquivado!`
-        } else if (action.isBlocked) {
-          description = `${playerName} atacó por ${action.damage} de daño (bloqueado)!`
-        } else {
-          description = `${playerName} atacó por ${action.damage} de daño!`
+        if (action.dodged) {
+          return `${playerName} atacó pero fue esquivado!`
         }
-        break
-      case 'strong_attack':
-        if (action.isDodged) {
-          description = `${playerName} hizo un ataque fuerte pero fue esquivado!`
-        } else if (action.isBlocked) {
-          description = `${playerName} hizo un ataque fuerte por ${action.damage} de daño (bloqueado)!`
-        } else {
-          description = `${playerName} hizo un ataque fuerte por ${action.damage} de daño!`
+        if (action.blocked) {
+          return `${playerName} atacó por ${action.damage} de daño (bloqueado)!`
         }
-        break
-      case 'quick_attack':
-        if (action.isDodged) {
-          description = `${playerName} hizo un ataque rápido pero fue esquivado!`
-        } else if (action.isBlocked) {
-          description = `${playerName} hizo un ataque rápido por ${action.damage} de daño (bloqueado)!`
-        } else {
-          description = `${playerName} hizo un ataque rápido por ${action.damage} de daño!`
-        }
-        break
+        return `${playerName} atacó por ${action.damage} de daño!`
       case 'block':
-        description = `${playerName} se preparó para bloquear!`
-        break
+        return `${playerName} se preparó para bloquear!`
       case 'dodge':
-        description = `${playerName} se preparó para esquivar!`
-        break
+        return `${playerName} se preparó para esquivar!`
       default:
-        description = `${playerName} hizo una acción!`
-    }
-
-    // Add critical hit indicator
-    if (action.isCritical) {
-      description += ' 💥 ¡CRÍTICO!'
-    }
-
-    // Add effects
-    if (action.effects && action.effects.length > 0) {
-      description += ` (Efectos: ${action.effects.join(', ')})`
-    }
-
-    return description
-  }
-
-  const getEffectIcon = (effect: string) => {
-    switch (effect) {
-      case 'fire':
-      case 'burning':
-        return <Flame className="h-4 w-4 text-red-500" />
-      case 'ice':
-      case 'frozen':
-        return <Snowflake className="h-4 w-4 text-blue-500" />
-      case 'lightning':
-      case 'shocked':
-        return <Lightning className="h-4 w-4 text-yellow-500" />
-      case 'poison':
-      case 'poisoned':
-        return <Skull className="h-4 w-4 text-green-500" />
-      case 'stunned':
-        return <Zap className="h-4 w-4 text-purple-500" />
-      case 'bleeding':
-        return <Heart className="h-4 w-4 text-red-600" />
-      case 'armor_break':
-        return <Shield className="h-4 w-4 text-gray-500" />
-      default:
-        return <Target className="h-4 w-4 text-gray-500" />
-    }
-  }
-
-  const getWeaponIcon = (weaponType?: string) => {
-    switch (weaponType) {
-      case 'sword':
-        return <Sword className="h-4 w-4" />
-      case 'axe':
-        return <Sword className="h-4 w-4 text-orange-500" />
-      case 'mace':
-        return <Sword className="h-4 w-4 text-yellow-600" />
-      case 'spear':
-        return <Sword className="h-4 w-4 text-blue-600" />
-      case 'staff':
-        return <Sword className="h-4 w-4 text-purple-500" />
-      case 'dagger':
-        return <Sword className="h-4 w-4 text-gray-600" />
-      default:
-        return <Sword className="h-4 w-4" />
+        return `${playerName} hizo una acción!`
     }
   }
 
   if (combatState.status === 'finished') {
+    console.log('🏁 CombatInterface: Combat finished, showing victory screen')
     const isWinner = combatState.winner === currentPlayerId
     return (
       <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
         <Card className="w-full max-w-md mx-4">
           <CardHeader className="text-center">
             <CardTitle className="text-2xl font-bold">
-              {isWinner ? "🏆 ¡Victoria!" : "💀 Derrota"}
+              {isWinner ? "¡Victoria!" : "Derrota"}
             </CardTitle>
           </CardHeader>
-          <CardContent className="text-center space-y-4">
-            <p className="text-lg">
-              {isWinner 
-                ? `¡Has derrotado a ${safeOpponent.name}!` 
-                : `${safeOpponent.name} te ha derrotado!`
-              }
-            </p>
-            <div className="space-y-2">
-              <p className="text-sm text-gray-600">
-                Duración: {Math.floor((combatState.endTime! - combatState.startTime) / 1000)}s
+          <CardContent className="space-y-4">
+            <div className="text-center">
+              <p className="text-lg mb-4">
+                {isWinner 
+                  ? `¡Has derrotado a ${opponent.name}!` 
+                  : `${opponent.name} te ha derrotado!`
+                }
               </p>
-              <p className="text-sm text-gray-600">
-                Turnos: {combatState.turns.length}
-              </p>
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">
+                  Duración: {Math.floor((combatState.endTime! - combatState.startTime) / 1000)}s
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Turnos: {combatState.turns.length}
+                </p>
+              </div>
             </div>
-            <Button onClick={onClose} className="w-full">
+            <Button onClick={() => {
+              console.log('🚪 CombatInterface: Continuar button clicked')
+              onClose()
+            }} className="w-full" size="lg">
               Continuar
             </Button>
           </CardContent>
@@ -287,184 +140,123 @@ export default function CombatInterfaceEnhanced({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
-      <Card className="w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto">
+      <Card className="w-full max-w-2xl mx-4">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold">
-            ⚔️ Combate: {safeCurrentPlayer.name} vs {safeOpponent.name}
-          </CardTitle>
-          <div className="flex items-center justify-center gap-4 text-sm text-gray-600">
-            <div className="flex items-center gap-1">
-              <Clock className="h-4 w-4" />
-              <span>Tiempo: {timeLeft}s</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <Target className="h-4 w-4" />
-              <span>Turno: {isCurrentPlayerTurn ? 'Tu turno' : 'Esperando'}</span>
-            </div>
+          <CardTitle className="text-2xl font-bold">Combate</CardTitle>
+          <div className="flex justify-center space-x-4">
+            <Badge variant={isCurrentPlayerTurn ? "default" : "secondary"}>
+              {isCurrentPlayerTurn ? "Tu turno" : "Turno del oponente"}
+            </Badge>
+            {isCurrentPlayerTurn && (
+              <Badge variant="destructive">
+                Tiempo: {timeLeft}s
+              </Badge>
+            )}
           </div>
         </CardHeader>
-        
         <CardContent className="space-y-6">
-          {/* Player Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Current Player */}
+          {/* Información de los jugadores */}
+          <div className="grid grid-cols-2 gap-4">
+            {/* Jugador actual */}
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <h3 className="font-semibold text-lg">{safeCurrentPlayer.name}</h3>
-                <Badge variant="secondary">Nivel {safeCurrentPlayer.level}</Badge>
-              </div>
+              <h3 className="font-bold text-center">{currentPlayer.name}</h3>
               <div className="space-y-1">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="flex items-center gap-1">
-                    <Heart className="h-4 w-4 text-red-500" />
-                    Vida
-                  </span>
-                  <span>{safeCurrentPlayer.health}/{safeCurrentPlayer.maxHealth}</span>
+                <div className="flex justify-between text-sm">
+                  <span>Vida:</span>
+                  <span>{currentPlayer.health}/{currentPlayer.maxHealth}</span>
                 </div>
                 <Progress 
-                  value={(safeCurrentPlayer.health / safeCurrentPlayer.maxHealth) * 100} 
+                  value={(currentPlayer.health / currentPlayer.maxHealth) * 100}
                   className="h-2"
                 />
-                <div className="grid grid-cols-3 gap-2 text-xs">
-                  <div className="flex items-center gap-1">
-                    <Sword className="h-3 w-3 text-red-600" />
-                    <span>{safeCurrentPlayer.attack}</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Defense className="h-3 w-3 text-blue-600" />
-                    <span>{safeCurrentPlayer.defense}</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Speed className="h-3 w-3 text-green-600" />
-                    <span>{safeCurrentPlayer.speed}</span>
-                  </div>
-                </div>
               </div>
             </div>
 
-            {/* Opponent */}
+            {/* Oponente */}
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <h3 className="font-semibold text-lg">{safeOpponent.name}</h3>
-                <Badge variant="secondary">Nivel {safeOpponent.level}</Badge>
-              </div>
+              <h3 className="font-bold text-center">{opponent.name}</h3>
               <div className="space-y-1">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="flex items-center gap-1">
-                    <Heart className="h-4 w-4 text-red-500" />
-                    Vida
-                  </span>
-                  <span>{safeOpponent.health}/{safeOpponent.maxHealth}</span>
+                <div className="flex justify-between text-sm">
+                  <span>Vida:</span>
+                  <span>{opponent.health}/{opponent.maxHealth}</span>
                 </div>
                 <Progress 
-                  value={(safeOpponent.health / safeOpponent.maxHealth) * 100} 
+                  value={(opponent.health / opponent.maxHealth) * 100}
                   className="h-2"
                 />
-                <div className="grid grid-cols-3 gap-2 text-xs">
-                  <div className="flex items-center gap-1">
-                    <Sword className="h-3 w-3 text-red-600" />
-                    <span>{safeOpponent.attack}</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Defense className="h-3 w-3 text-blue-600" />
-                    <span>{safeOpponent.defense}</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Speed className="h-3 w-3 text-green-600" />
-                    <span>{safeOpponent.speed}</span>
-                  </div>
-                </div>
               </div>
             </div>
           </div>
 
-          {/* Last Action */}
+          {/* Última acción */}
           {lastAction && (
-            <div className="bg-gray-100 p-3 rounded-lg">
-              <div className="flex items-center gap-2 text-sm">
-                {lastAction.weaponType && getWeaponIcon(lastAction.weaponType)}
-                <span className="font-medium">
-                  {getActionDescription(lastAction, 
-                    combatState.challenger.id === combatState.turns[combatState.turns.length - 1]?.playerId ? 
-                    combatState.challenger.name : combatState.challenged.name
-                  )}
-                </span>
-              </div>
-              {lastAction.effects && lastAction.effects.length > 0 && (
-                <div className="flex items-center gap-1 mt-2">
-                  <span className="text-xs text-gray-600">Efectos:</span>
-                  {lastAction.effects.map((effect, index) => (
-                    <div key={index} className="flex items-center gap-1">
-                      {getEffectIcon(effect)}
-                      <span className="text-xs">{effect}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
+            <div className="text-center p-3 bg-muted rounded-lg">
+              <p className="text-sm font-medium">
+                {getActionDescription(lastAction, 
+                  combatState.turns[combatState.turns.length - 1]?.playerId === currentPlayerId 
+                    ? currentPlayer.name 
+                    : opponent.name
+                )}
+              </p>
             </div>
           )}
 
-          {/* Action Buttons */}
+          {/* Acciones disponibles */}
           {isCurrentPlayerTurn && combatState.status === 'active' && (
-            <div className="space-y-4">
-              <h3 className="font-semibold text-center">Elige tu acción:</h3>
-              
-              {/* Attack Actions */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-                <Button
+            <div className="space-y-3">
+              <h4 className="font-semibold text-center">Elige tu acción:</h4>
+              <div className="grid grid-cols-3 gap-3">
+                <Button 
                   onClick={() => handleAction('attack')}
-                  className="flex items-center gap-2"
-                  variant="default"
-                >
-                  <Sword className="h-4 w-4" />
-                  Ataque Normal
-                </Button>
-                <Button
-                  onClick={() => handleAction('strong_attack')}
-                  className="flex items-center gap-2"
                   variant="destructive"
+                  className="h-16 flex flex-col"
                 >
-                  <Sword className="h-4 w-4" />
-                  Ataque Fuerte
+                  <span className="text-lg">⚔️</span>
+                  <span className="text-xs">Atacar</span>
                 </Button>
-                <Button
-                  onClick={() => handleAction('quick_attack')}
-                  className="flex items-center gap-2"
+                <Button 
+                  onClick={() => handleAction('block')}
                   variant="secondary"
+                  className="h-16 flex flex-col"
                 >
-                  <Zap className="h-4 w-4" />
-                  Ataque Rápido
+                  <span className="text-lg">🛡️</span>
+                  <span className="text-xs">Bloquear</span>
+                </Button>
+                <Button 
+                  onClick={() => handleAction('dodge')}
+                  variant="outline"
+                  className="h-16 flex flex-col"
+                >
+                  <span className="text-lg">💨</span>
+                  <span className="text-xs">Esquivar</span>
                 </Button>
               </div>
-
-              {/* Defense Actions */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                <Button
-                  onClick={() => handleAction('block')}
-                  className="flex items-center gap-2"
-                  variant="outline"
-                >
-                  <Shield className="h-4 w-4" />
-                  Bloquear
-                </Button>
-                <Button
-                  onClick={() => handleAction('dodge')}
-                  className="flex items-center gap-2"
-                  variant="outline"
-                >
-                  <Zap className="h-4 w-4" />
-                  Esquivar
-                </Button>
+              <div className="text-xs text-muted-foreground text-center space-y-1">
+                <p><strong>Atacar:</strong> Inflige daño aleatorio (15-25)</p>
+                <p><strong>Bloquear:</strong> Reduce el daño recibido a la mitad</p>
+                <p><strong>Esquivar:</strong> 30% de probabilidad de evitar el daño</p>
               </div>
             </div>
           )}
 
-          {/* Close Button */}
-          <div className="flex justify-center">
-            <Button onClick={onClose} variant="outline">
-              Salir del Combate
-            </Button>
-          </div>
+          {/* Esperando turno del oponente */}
+          {!isCurrentPlayerTurn && combatState.status === 'active' && (
+            <div className="text-center p-4">
+              <p className="text-lg font-medium">Esperando que {opponent.name} elija su acción...</p>
+              <div className="mt-4">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+              </div>
+            </div>
+          )}
+
+          {/* Botón de cerrar (solo si no es tu turno) */}
+          {!isCurrentPlayerTurn && (
+            <div className="text-center">
+              <Button variant="outline" onClick={onClose}>
+                Minimizar
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

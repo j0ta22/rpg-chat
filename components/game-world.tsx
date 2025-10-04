@@ -685,11 +685,6 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
   // Función para manejar actualizaciones del estado de combate
   const handleCombatStateUpdate = useCallback((newCombatState: CombatState) => {
     console.log('⚔️ Combat state update received:', newCombatState.status)
-    console.log('🔍 Combat state data:', {
-      challenger: newCombatState.challenger,
-      challenged: newCombatState.challenged,
-      currentTurn: newCombatState.currentTurn
-    })
     setCombatState(newCombatState)
     setShowCombatInterface(true)
     
@@ -915,21 +910,8 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
         console.log('📥 Estado del juego recibido:', state)
         }
         
-        // Update all players, but preserve local player if it exists
-        setAllPlayers(prev => {
-          const currentPlayerId = client.getPlayerId()
-          const localPlayer = prev[currentPlayerId]
-          
-          // If we have a local player, merge it with the server state
-          if (localPlayer) {
-            return {
-              ...state.players,
-              [currentPlayerId]: localPlayer // Keep local player data
-            }
-          }
-          
-          return state.players
-        })
+        // Actualizar todos los jugadores directamente
+        setAllPlayers(state.players)
         
         // Separar otros jugadores (sin el actual)
         const currentPlayerId = client.getPlayerId()
@@ -1010,21 +992,6 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
         // Player ID received from server
         console.log('🎯 Player ID received:', playerId)
         setPlayerId(playerId)
-        
-        // Add local player to allPlayers state immediately
-        setAllPlayers(prev => ({
-          ...prev,
-          [playerId]: {
-            id: playerId,
-            name: character.name,
-            avatar: character.avatar,
-            x: localCharacter.x || 100,
-            y: localCharacter.y || 150,
-            color: avatarColors[character.avatar] || "#3b82f6",
-            lastSeen: Date.now(),
-            direction: 'down'
-          }
-        }))
       },
       (data: { playerId: string; x: number; y: number; direction: string }) => {
         // Player moved - start interpolation for smooth movement
@@ -1872,8 +1839,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
         ctx.textAlign = "center"
         
         // Mostrar nivel si el jugador tiene stats
-        const safeName = name || 'Unknown Player'
-        const displayName = player?.stats ? `${safeName} (Lv.${player.stats.level})` : safeName
+        const displayName = player?.stats ? `${name} (Lv.${player.stats.level})` : name
         ctx.fillText(displayName, nameTextX, nameTextY)
         ctx.textAlign = "left"
       }
@@ -2026,6 +1992,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
       // FALLBACK: Buscar por nombre
       localPlayer = Object.values(allPlayers).find(p => p.name === localCharacter.name)
       if (localPlayer) {
+        console.log(`🔍 Found local player by name: ${localPlayer.name} (ID: ${localPlayer.id})`)
         setPlayerId(localPlayer.id) // Actualizar playerId
       }
     }
