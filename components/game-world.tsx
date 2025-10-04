@@ -1991,7 +1991,13 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
       playerId,
       localCharacterName: localCharacter.name,
       allPlayersKeys: Object.keys(allPlayers),
-      allPlayersNames: Object.values(allPlayers).map(p => p.name)
+      allPlayersNames: Object.values(allPlayers).map(p => p.name),
+      allPlayersData: Object.entries(allPlayers).map(([id, player]) => ({
+        id,
+        name: player.name,
+        x: player.x,
+        y: player.y
+      }))
     })
     
     if (playerId && allPlayers[playerId]) {
@@ -2000,6 +2006,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
     } else {
       // FALLBACK: Buscar por nombre
       console.log('⚠️ PlayerId not found, searching by name...')
+      console.log('🔍 Available players:', Object.entries(allPlayers).map(([id, player]) => `${id}: ${player.name}`))
       localPlayer = Object.values(allPlayers).find(p => p.name === localCharacter.name)
       if (localPlayer) {
         console.log(`🔍 Found local player by name: ${localPlayer.name} (ID: ${localPlayer.id})`)
