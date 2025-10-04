@@ -1987,32 +1987,13 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
     // Dibujar jugador local desde localCharacter (para asegurar posición correcta)
     // Intentar encontrar el jugador local por nombre si playerId no está disponible
     let localPlayer = null
-    console.log('🔍 Player rendering debug:', {
-      playerId,
-      localCharacterName: localCharacter.name,
-      allPlayersKeys: Object.keys(allPlayers),
-      allPlayersNames: Object.values(allPlayers).map(p => p.name),
-      allPlayersData: Object.entries(allPlayers).map(([id, player]) => ({
-        id,
-        name: player.name,
-        x: player.x,
-        y: player.y
-      }))
-    })
-    
     if (playerId && allPlayers[playerId]) {
       localPlayer = allPlayers[playerId]
-      console.log('✅ Using playerId to find local player:', localPlayer.name)
     } else {
       // FALLBACK: Buscar por nombre
-      console.log('⚠️ PlayerId not found, searching by name...')
-      console.log('🔍 Available players:', Object.entries(allPlayers).map(([id, player]) => `${id}: ${player.name}`))
       localPlayer = Object.values(allPlayers).find(p => p.name === localCharacter.name)
       if (localPlayer) {
-        console.log(`🔍 Found local player by name: ${localPlayer.name} (ID: ${localPlayer.id})`)
         setPlayerId(localPlayer.id) // Actualizar playerId
-      } else {
-        console.log('❌ No local player found in allPlayers')
       }
     }
     
