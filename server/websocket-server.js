@@ -383,6 +383,10 @@ function handleRespondToChallenge(ws, data) {
   console.log(`⚔️ Challenge response: ${accepted ? 'accepted' : 'declined'} by ${gameState.players[playerId].name}`);
   
   if (accepted) {
+    // Get player stats from playerStats object
+    const challengerStats = playerStats[challenge.challenger.id] || {};
+    const challengedStats = playerStats[challenge.challenged.id] || {};
+    
     // Create combat state
     const combatState = {
       id: generateCombatId(),
@@ -390,19 +394,19 @@ function handleRespondToChallenge(ws, data) {
         id: challenge.challenger.id,
         name: challenge.challenger.name,
         avatar: gameState.players[challenge.challenger.id].avatar || 'character_1',
-        health: (challenge.challenger.stats && (challenge.challenger.stats.health || challenge.challenger.stats.maxHealth)) || 100,
-        maxHealth: (challenge.challenger.stats && challenge.challenger.stats.maxHealth) || 100,
+        health: (challengerStats.health || challengerStats.maxHealth) || 100,
+        maxHealth: challengerStats.maxHealth || 100,
         isAlive: true,
-        stats: challenge.challenger.stats
+        stats: challengerStats
       },
       challenged: {
         id: challenge.challenged.id,
         name: challenge.challenged.name,
         avatar: gameState.players[challenge.challenged.id].avatar || 'character_1',
-        health: (challenge.challenged.stats && (challenge.challenged.stats.health || challenge.challenged.stats.maxHealth)) || 100,
-        maxHealth: (challenge.challenged.stats && challenge.challenged.stats.maxHealth) || 100,
+        health: (challengedStats.health || challengedStats.maxHealth) || 100,
+        maxHealth: challengedStats.maxHealth || 100,
         isAlive: true,
-        stats: challenge.challenged.stats
+        stats: challengedStats
       },
       currentTurn: challenge.challenger.id, // Challenger goes first
       turns: [],
