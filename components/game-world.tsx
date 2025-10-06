@@ -8,6 +8,7 @@ import { SocketMultiplayerClient, type CombatChallenge, type CombatState, type C
 import { NativeWebSocketClient, type Player, type GameState, type ChatMessage } from "@/lib/native-websocket"
 import { savePlayerProgress, loadPlayerProgress, type PlayerSaveData, type PlayerStats } from "@/lib/player-persistence"
 import { calculatePlayerStats } from "@/lib/combat-system"
+import { calculateXPToNext } from "@/lib/xp-system"
 import { supabase } from "@/lib/supabase"
 import CombatInterface from "./combat-interface"
 import CombatChallengeComponent from "./combat-challenge"
@@ -404,7 +405,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
     speed: number
   } | null>(character.stats ? {
     ...character.stats,
-    experienceToNext: character.stats.level * 100
+    experienceToNext: calculateXPToNext(character.stats.level, character.stats.experience)
   } : null)
   const [isSaving, setIsSaving] = useState(false)
   const [isLoadingProgress, setIsLoadingProgress] = useState(true)
@@ -776,7 +777,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
         // Actualizar stats del jugador con bonuses de equipamiento
         const baseStats = {
           ...savedData.stats,
-          experienceToNext: savedData.stats.level * 100 // Calcular XP requerido para el siguiente nivel
+          experienceToNext: calculateXPToNext(savedData.stats.level, savedData.stats.experience)
         }
         
         // Calcular stats finales incluyendo bonuses de equipamiento
