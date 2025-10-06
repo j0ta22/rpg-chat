@@ -104,6 +104,8 @@ async function addItemToPlayerInventory(userId, itemId) {
 }
 
 async function savePlayerStatsToDatabase(playerId, newStats) {
+  console.log('💾 Attempting to save player stats:', { playerId, newStats });
+  
   if (!supabase) {
     console.log('⚠️ Supabase not available - skipping stats save');
     return false;
@@ -112,29 +114,49 @@ async function savePlayerStatsToDatabase(playerId, newStats) {
   try {
     // Find the player's user_id from the player data
     const player = gameState.players[playerId];
+    console.log('🔍 Player data found:', { playerId, player: player ? { name: player.name, userId: player.userId } : null });
+    
     if (!player || !player.userId) {
       console.log('❌ No user ID found for player:', playerId);
       return false;
     }
     
-    const { error } = await supabase
+    console.log('💾 Updating player stats in database:', {
+      userId: player.userId,
+      name: player.name,
+      stats: newStats
+    });
+    
+    const { data, error } = await supabase
       .from('players')
       .update({
         stats: newStats,
         updated_at: new Date().toISOString()
       })
       .eq('user_id', player.userId)
-      .eq('name', player.name);
+      .eq('name', player.name)
+      .select();
 
     if (error) {
-      console.error('Error saving player stats:', error);
+      console.error('❌ Error saving player stats:', error);
+      console.error('❌ Error details:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code
+      });
       return false;
     }
 
-    console.log('✅ Player stats saved to database:', player.name, newStats);
+    console.log('✅ Player stats saved to database successfully:', {
+      playerName: player.name,
+      userId: player.userId,
+      updatedRows: data?.length || 0,
+      newStats
+    });
     return true;
   } catch (error) {
-    console.error('Error saving player stats:', error);
+    console.error('❌ Exception saving player stats:', error);
     return false;
   }
 }
