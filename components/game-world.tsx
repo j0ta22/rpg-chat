@@ -1116,6 +1116,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
           x: localCharacter.x || 100,
           y: localCharacter.y || 150,
           color: avatarColors[character.avatar] || "#3b82f6",
+          userId: user?.id // Include user ID for server database operations
         })
       }, 500)
     }).catch((error) => {

@@ -103,6 +103,42 @@ async function addItemToPlayerInventory(userId, itemId) {
   }
 }
 
+async function savePlayerStatsToDatabase(playerId, newStats) {
+  if (!supabase) {
+    console.log('⚠️ Supabase not available - skipping stats save');
+    return false;
+  }
+  
+  try {
+    // Find the player's user_id from the player data
+    const player = gameState.players[playerId];
+    if (!player || !player.userId) {
+      console.log('❌ No user ID found for player:', playerId);
+      return false;
+    }
+    
+    const { error } = await supabase
+      .from('players')
+      .update({
+        stats: newStats,
+        updated_at: new Date().toISOString()
+      })
+      .eq('user_id', player.userId)
+      .eq('name', player.name);
+
+    if (error) {
+      console.error('Error saving player stats:', error);
+      return false;
+    }
+
+    console.log('✅ Player stats saved to database:', player.name, newStats);
+    return true;
+  } catch (error) {
+    console.error('Error saving player stats:', error);
+    return false;
+  }
+}
+
 // Game state
 const gameState = {
   players: {},
@@ -231,7 +267,8 @@ function handleJoinGame(ws, playerData) {
     y: playerData.y || 150,
     direction: 'down',
     lastSeen: Date.now(),
-    ws: ws
+    ws: ws,
+    userId: playerData.userId // Store user ID for database operations
   };
   
   gameState.players[playerId] = player;
@@ -663,7 +700,12 @@ async function handleCombatAction(ws, data) {
       // Loser gets some XP too
       const loserXP = 20; // Base XP for participation
       const loserResult = addExperience(loserStats, loserXP);
-      playerStats[combatState.challenger.id === winner ? combatState.challenged.id : combatState.challenger.id] = loserResult.newStats;
+      const loserId = combatState.challenger.id === winner ? combatState.challenged.id : combatState.challenger.id;
+      playerStats[loserId] = loserResult.newStats;
+      
+      // Save stats to database
+      await savePlayerStatsToDatabase(winner, winnerResult.newStats);
+      await savePlayerStatsToDatabase(loserId, loserResult.newStats);
       
       // Send XP updates
       
