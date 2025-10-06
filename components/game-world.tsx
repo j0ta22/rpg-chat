@@ -1087,6 +1087,8 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
       setWebsocketClient(client)
       
       // Cargar progreso guardado antes de unirse al juego
+      // Pequeño delay para asegurar que cualquier guardado previo haya terminado
+      await new Promise(resolve => setTimeout(resolve, 1000))
       const progressLoaded = await loadPlayerProgressFromSupabase()
       
       // Si no hay progreso guardado, crear stats iniciales y guardarlos

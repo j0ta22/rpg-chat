@@ -89,6 +89,8 @@ export async function loadPlayerProgress(playerName: string): Promise<PlayerSave
       .select('*')
       .eq('name', playerName)
       .eq('user_id', userId)
+      .order('updated_at', { ascending: false })
+      .limit(1)
       .single()
     
     if (error) {
