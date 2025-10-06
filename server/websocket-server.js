@@ -13,10 +13,22 @@ app.use(cors());
 // Supabase configuration
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_ANON_KEY;
-const supabase = createClient(supabaseUrl, supabaseKey);
+let supabase = null;
+
+if (supabaseUrl && supabaseKey) {
+  supabase = createClient(supabaseUrl, supabaseKey);
+  console.log('✅ Supabase client initialized');
+} else {
+  console.log('⚠️ Supabase not configured - item drops disabled');
+}
 
 // Item drop system
 async function selectRandomItem(playerLevel) {
+  if (!supabase) {
+    console.log('⚠️ Supabase not available - skipping item drop');
+    return null;
+  }
+  
   try {
     // Get items appropriate for player level (within 3 levels)
     const minLevel = Math.max(1, playerLevel - 1);
@@ -63,6 +75,11 @@ async function selectRandomItem(playerLevel) {
 }
 
 async function addItemToPlayerInventory(userId, itemId) {
+  if (!supabase) {
+    console.log('⚠️ Supabase not available - skipping inventory update');
+    return false;
+  }
+  
   try {
     const { error } = await supabase
       .from('player_inventory')
