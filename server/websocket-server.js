@@ -11,8 +11,8 @@ const server = http.createServer(app);
 app.use(cors());
 
 // Supabase configuration
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_ANON_KEY;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 let supabase = null;
 
 if (supabaseUrl && supabaseKey) {
