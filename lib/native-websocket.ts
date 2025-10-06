@@ -53,7 +53,8 @@ export class NativeWebSocketClient {
     private onPlayerMoved?: (data: { playerId: string; x: number; y: number; direction: string }) => void,
     private onCombatChallenge?: (challenge: any) => void,
     private onCombatStateUpdate?: (combatState: any) => void,
-    private onCombatChallengeDeclined?: (data: any) => void
+    private onCombatChallengeDeclined?: (data: any) => void,
+    private onItemDrop?: (itemDrop: any) => void
   ) {}
 
   async connect(): Promise<void> {
@@ -177,6 +178,12 @@ export class NativeWebSocketClient {
           console.log('📥 Received combatChallengeDeclined:', data.payload);
           if (this.onCombatChallengeDeclined) {
             this.onCombatChallengeDeclined(data.payload);
+          }
+          break;
+        case 'itemDrop':
+          console.log('📥 Received itemDrop:', data.payload);
+          if (this.onItemDrop) {
+            this.onItemDrop(data.payload);
           }
           break;
         default:

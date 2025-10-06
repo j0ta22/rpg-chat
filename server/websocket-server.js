@@ -2,12 +2,89 @@ const express = require('express');
 const http = require('http');
 const WebSocket = require('ws');
 const cors = require('cors');
+const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
 const server = http.createServer(app);
 
 // Enable CORS
 app.use(cors());
+
+// Supabase configuration
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_ANON_KEY;
+const supabase = createClient(supabaseUrl, supabaseKey);
+
+// Item drop system
+async function selectRandomItem(playerLevel) {
+  try {
+    // Get items appropriate for player level (within 3 levels)
+    const minLevel = Math.max(1, playerLevel - 1);
+    const maxLevel = playerLevel + 2;
+    
+    const { data: items, error } = await supabase
+      .from('items')
+      .select('id, name, rarity, level_required, equipment_slot')
+      .gte('level_required', minLevel)
+      .lte('level_required', maxLevel)
+      .neq('equipment_slot', 'consumable') // Don't drop consumables
+      .order('rarity', { ascending: true });
+
+    if (error || !items || items.length === 0) {
+      console.error('Error fetching items for drop:', error);
+      return null;
+    }
+
+    // Weighted selection based on rarity
+    const rarityWeights = {
+      'common': 50,
+      'uncommon': 30,
+      'rare': 15,
+      'epic': 4,
+      'legendary': 1
+    };
+
+    // Create weighted pool
+    const weightedItems = [];
+    items.forEach(item => {
+      const weight = rarityWeights[item.rarity] || 1;
+      for (let i = 0; i < weight; i++) {
+        weightedItems.push(item);
+      }
+    });
+
+    // Select random item
+    const randomIndex = Math.floor(Math.random() * weightedItems.length);
+    return weightedItems[randomIndex];
+  } catch (error) {
+    console.error('Error selecting random item:', error);
+    return null;
+  }
+}
+
+async function addItemToPlayerInventory(userId, itemId) {
+  try {
+    const { error } = await supabase
+      .from('player_inventory')
+      .insert({
+        user_id: userId,
+        item_id: itemId,
+        quantity: 1,
+        equipped: false,
+        acquired_date: new Date().toISOString()
+      });
+
+    if (error) {
+      console.error('Error adding item to inventory:', error);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error adding item to inventory:', error);
+    return false;
+  }
+}
 
 // Game state
 const gameState = {
@@ -609,18 +686,38 @@ function handleCombatAction(ws, data) {
         };
         broadcastToAll('chatMessage', rewardMessage);
 
-        // Optional: random item drop (simple low chance)
-        if (Math.random() < 0.15) { // 15% drop chance
-          const dropMessage = {
-            id: generateMessageId(),
-            playerId: 'system',
-            playerName: 'System',
-            message: `${winnerName} found a mysterious item shard!`,
-            text: `${winnerName} found a mysterious item shard!`,
-            timestamp: Date.now()
-          };
-          broadcastToAll('chatMessage', dropMessage);
-          // Client could interpret this and maybe open a chest UI later
+        // Random item drop (15% chance)
+        if (Math.random() < 0.15) {
+          try {
+            const winnerLevel = winnerResult.newStats?.level || 1;
+            const droppedItem = await selectRandomItem(winnerLevel);
+            
+            if (droppedItem) {
+              // Add item to winner's inventory
+              const success = await addItemToPlayerInventory(winner, droppedItem.id);
+              
+              if (success) {
+                const dropMessage = {
+                  id: generateMessageId(),
+                  playerId: 'system',
+                  playerName: 'System',
+                  message: `${winnerName} found a ${droppedItem.rarity} ${droppedItem.name}!`,
+                  text: `${winnerName} found a ${droppedItem.rarity} ${droppedItem.name}!`,
+                  timestamp: Date.now()
+                };
+                broadcastToAll('chatMessage', dropMessage);
+                
+                // Notify winner about the item drop
+                const winnerWs = winner === combatState.challenger.id ? challengerWs : challengedWs;
+                sendToClient(winnerWs, 'itemDrop', {
+                  item: droppedItem,
+                  message: `You found a ${droppedItem.rarity} ${droppedItem.name}!`
+                });
+              }
+            }
+          } catch (error) {
+            console.error('Error processing item drop:', error);
+          }
         }
       } catch (e) {
         console.error('❌ Error sending gold reward:', e);

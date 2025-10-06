@@ -1066,6 +1066,12 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
         // Combat challenge declined
         console.log('⚔️ Combat challenge declined by:', data.challengedName)
         setCombatChallenge(null)
+      },
+      (itemDrop: any) => {
+        // Item drop received
+        console.log('🎁 Item drop received:', itemDrop)
+        showRewardMessage(itemDrop.message)
+        // Optionally refresh inventory or show item notification
       }
     )
 
