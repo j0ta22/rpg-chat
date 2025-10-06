@@ -141,10 +141,10 @@ function createInitialStats() {
 wss.on('connection', (ws, req) => {
   console.log(`🔌 Client connected: ${req.socket.remoteAddress}`);
   
-  ws.on('message', (message) => {
+  ws.on('message', async (message) => {
     try {
       const data = JSON.parse(message.toString());
-      handleMessage(ws, data);
+      await handleMessage(ws, data);
     } catch (error) {
       console.error('❌ Error parsing message:', error);
     }
@@ -173,7 +173,7 @@ wss.on('connection', (ws, req) => {
   });
 });
 
-function handleMessage(ws, data) {
+async function handleMessage(ws, data) {
   const { type, payload } = data;
   
   switch (type) {
@@ -196,7 +196,7 @@ function handleMessage(ws, data) {
       handleRespondToChallenge(ws, payload);
       break;
     case 'combatAction':
-      handleCombatAction(ws, payload);
+      await handleCombatAction(ws, payload);
       break;
     default:
       console.log('📥 Unknown message type:', type);
@@ -525,7 +525,7 @@ function handleRespondToChallenge(ws, data) {
   delete combatChallenges[challengeId];
 }
 
-function handleCombatAction(ws, data) {
+async function handleCombatAction(ws, data) {
   const playerId = findPlayerByWebSocket(ws);
   const combatId = data.combatId;
   const action = data.action;
