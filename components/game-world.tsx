@@ -1018,6 +1018,15 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
         // Player ID received from server
         console.log('🎯 Player ID received:', playerId)
         setPlayerId(playerId)
+        
+        // Send real player stats to server
+        if (playerStats) {
+          console.log('📤 Sending real player stats to server:', playerStats)
+          client.sendMessage('updatePlayerStats', {
+            playerId: playerId,
+            stats: playerStats
+          })
+        }
       },
       (data: { playerId: string; x: number; y: number; direction: string }) => {
         // Player moved - start interpolation for smooth movement

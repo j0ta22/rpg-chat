@@ -273,8 +273,23 @@ async function handleMessage(ws, data) {
     case 'combatAction':
       await handleCombatAction(ws, payload);
       break;
+    case 'updatePlayerStats':
+      handleUpdatePlayerStats(ws, payload);
+      break;
     default:
       console.log('📥 Unknown message type:', type);
+  }
+}
+
+function handleUpdatePlayerStats(ws, payload) {
+  const { playerId, stats } = payload;
+  
+  if (playerId && playerStats[playerId]) {
+    console.log(`📊 Updating player stats for ${playerId}:`, stats);
+    playerStats[playerId] = { ...playerStats[playerId], ...stats };
+    console.log(`✅ Player stats updated:`, playerStats[playerId]);
+  } else {
+    console.log(`❌ Player not found for stats update:`, playerId);
   }
 }
 
@@ -296,7 +311,7 @@ function handleJoinGame(ws, playerData) {
   gameState.players[playerId] = player;
   gameState.lastUpdate = Date.now();
   
-  // Initialize player stats
+  // Initialize player stats (will be updated when client sends real stats)
   playerStats[playerId] = createInitialStats();
   
   console.log(`🎮 Player ${player.name} joined. Total: ${Object.keys(gameState.players).length}`);
@@ -304,13 +319,7 @@ function handleJoinGame(ws, playerData) {
   // Send player ID to the client
   sendToClient(ws, 'playerId', { playerId: playerId });
   
-  // Send initial stats to the player
-  sendToClient(ws, 'xpUpdate', {
-    xpGained: 0,
-    newStats: playerStats[playerId],
-    leveledUp: false,
-    levelsGained: 0
-  });
+  // Don't send initial stats - let client send its real stats from database
   
   // Send game state to the player (without WebSocket objects)
   const cleanGameState = {
