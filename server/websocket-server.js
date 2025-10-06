@@ -390,8 +390,8 @@ function handleRespondToChallenge(ws, data) {
         id: challenge.challenger.id,
         name: challenge.challenger.name,
         avatar: gameState.players[challenge.challenger.id].avatar || 'character_1',
-        health: 100,
-        maxHealth: 100,
+        health: (challenge.challenger.stats && (challenge.challenger.stats.health || challenge.challenger.stats.maxHealth)) || 100,
+        maxHealth: (challenge.challenger.stats && challenge.challenger.stats.maxHealth) || 100,
         isAlive: true,
         stats: challenge.challenger.stats
       },
@@ -399,8 +399,8 @@ function handleRespondToChallenge(ws, data) {
         id: challenge.challenged.id,
         name: challenge.challenged.name,
         avatar: gameState.players[challenge.challenged.id].avatar || 'character_1',
-        health: 100,
-        maxHealth: 100,
+        health: (challenge.challenged.stats && (challenge.challenged.stats.health || challenge.challenged.stats.maxHealth)) || 100,
+        maxHealth: (challenge.challenged.stats && challenge.challenged.stats.maxHealth) || 100,
         isAlive: true,
         stats: challenge.challenged.stats
       },
@@ -476,13 +476,30 @@ function handleCombatAction(ws, data) {
   let processedAction = { ...action };
   
   if (action.type === 'attack') {
-    // Calculate damage
-    const baseDamage = Math.floor(Math.random() * (25 - 15 + 1)) + 15;
-    const isBlocked = Math.random() < 0.2; // 20% chance of automatic block
-    const isDodged = Math.random() < 0.3; // 30% chance to dodge
+    // Calculate damage using stats
+    const attackerStats = attacker.stats || {};
+    const targetStats = target.stats || {};
+    const attack = typeof attackerStats.attack === 'number' ? attackerStats.attack : 15;
+    const defense = typeof targetStats.defense === 'number' ? targetStats.defense : 5;
+    const attackerSpeed = typeof attackerStats.speed === 'number' ? attackerStats.speed : 10;
+    const targetSpeed = typeof targetStats.speed === 'number' ? targetStats.speed : 10;
+
+    // Base damage derived from attack with small variance
+    const variance = Math.floor(Math.random() * 5) - 2; // -2..+2
+    const baseDamage = Math.max(1, attack + variance);
+
+    // Chances influenced by stats
+    const baseDodge = 0.05;
+    const baseBlock = 0.05;
+    const speedDiff = targetSpeed - attackerSpeed; // faster target -> higher dodge
+    const isDodged = Math.random() < Math.max(0.05, Math.min(0.5, baseDodge + speedDiff * 0.01));
+    const isBlocked = !isDodged && (Math.random() < Math.max(0.05, Math.min(0.4, baseBlock + defense * 0.01)));
     
     if (!isDodged) {
-      const finalDamage = isBlocked ? Math.floor(baseDamage * 0.5) : baseDamage;
+      // Defense reduces damage multiplicatively (2% per defense point), min 1 dmg
+      const defenseReduction = Math.max(0, Math.min(0.8, defense * 0.02));
+      const mitigated = Math.max(1, Math.floor(baseDamage * (1 - defenseReduction)));
+      const finalDamage = isBlocked ? Math.max(1, Math.floor(mitigated * 0.5)) : mitigated;
       target.health = Math.max(0, target.health - finalDamage);
       target.isAlive = target.health > 0;
       

@@ -512,8 +512,22 @@ export async function getUserEquipment(userId: string): Promise<UserEquipment> {
       }
     }
 
-    // Map items to their slots
-    const itemMap = new Map(items.map(item => [item.id, item]))
+    // Map items to their slots and convert to Item interface
+    const itemMap = new Map(items.map(item => [
+      item.id, 
+      {
+        id: item.id,
+        name: item.name,
+        description: item.description,
+        itemType: item.item_type,
+        rarity: item.rarity,
+        statBonuses: item.stat_bonuses || {},
+        price: item.price,
+        iconUrl: item.icon_url,
+        levelRequired: item.level_required || 1,
+        equipmentSlot: item.equipment_slot || 'consumable'
+      }
+    ]))
 
     return {
       helmet: equipment.helmet_item_id ? itemMap.get(equipment.helmet_item_id) || null : null,
