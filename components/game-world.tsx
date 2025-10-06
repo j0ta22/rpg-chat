@@ -754,6 +754,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
   // Función para cargar progreso del jugador desde Supabase
   const loadPlayerProgressFromSupabase = useCallback(async () => {
     console.log('🔄 loadPlayerProgressFromSupabase called for:', localCharacter.name)
+    console.log('🔄 Current user ID:', user?.id)
     
     if (!localCharacter.name) {
       console.log('❌ No character name available for loading')
@@ -762,7 +763,10 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
     }
     
     try {
+      console.log('🔍 Calling loadPlayerProgress with name:', localCharacter.name)
       const savedData = await loadPlayerProgress(localCharacter.name)
+      console.log('🔍 loadPlayerProgress result:', savedData)
+      
       if (savedData) {
         console.log('💾 Loading saved progress from Supabase:', savedData)
         console.log('📊 Saved stats:', savedData.stats)
@@ -780,9 +784,12 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
           experienceToNext: calculateXPToNext(savedData.stats.level, savedData.stats.experience)
         }
         
+        console.log('📊 Base stats calculated:', baseStats)
+        
         // Calcular stats finales incluyendo bonuses de equipamiento
         const finalStats = await calculatePlayerStats(user?.id || '', baseStats)
         
+        console.log('📊 Final stats calculated:', finalStats)
         console.log('📊 Setting playerStats to:', finalStats)
         setPlayerStats(finalStats)
         
@@ -799,7 +806,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
       setIsLoadingProgress(false)
       return false
     }
-  }, [localCharacter.name])
+  }, [localCharacter.name, user?.id])
 
   // Función para responder a un desafío
   const respondToChallenge = useCallback((accepted: boolean) => {
