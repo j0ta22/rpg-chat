@@ -988,6 +988,24 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
         }
       },
       handleXPUpdate,
+      // handle gold updates (server tells how much gold to add)
+      async (goldUpdate: { delta: number }) => {
+        try {
+          const delta = goldUpdate?.delta || 0
+          if (delta === 0) return
+          setUserGold(prev => (prev || 0) + delta)
+          // Persist to Supabase
+          if (user?.id) {
+            await supabase
+              .from('users')
+              .update({ gold: (userGold || 0) + delta })
+              .eq('id', user.id)
+          }
+          showRewardMessage(`You earned ${delta} gold!`)
+        } catch (e) {
+          console.error('Error applying gold update:', e)
+        }
+      },
       (playerId: string) => {
         // Player ID received from server
         console.log('🎯 Player ID received:', playerId)

@@ -586,6 +586,45 @@ function handleCombatAction(ws, data) {
         leveledUp: combatState.challenged.id === winner ? winnerResult.leveledUp : loserResult.leveledUp,
         levelsGained: combatState.challenged.id === winner ? winnerResult.levelsGained : loserResult.levelsGained
       });
+
+      // Gold rewards
+      try {
+        const baseGold = 20; // base gold for victory
+        const levelBonus = Math.max(0, Math.floor((winnerResult.newStats?.level || 1) / 5)) * 5;
+        const goldReward = baseGold + levelBonus; // scale a bit with level
+        const winnerWs = winner === combatState.challenger.id ? challengerWs : challengedWs;
+        const loserWs = winner === combatState.challenger.id ? challengedWs : challengerWs;
+
+        // Notify winner about gold reward (client persists to DB)
+        sendToClient(winnerWs, 'goldUpdate', { delta: goldReward });
+
+        // Also send a chat message about rewards
+        const rewardMessage = {
+          id: generateMessageId(),
+          playerId: 'system',
+          playerName: 'System',
+          message: `${winnerName} earned ${goldReward} gold for the victory!`,
+          text: `${winnerName} earned ${goldReward} gold for the victory!`,
+          timestamp: Date.now()
+        };
+        broadcastToAll('chatMessage', rewardMessage);
+
+        // Optional: random item drop (simple low chance)
+        if (Math.random() < 0.15) { // 15% drop chance
+          const dropMessage = {
+            id: generateMessageId(),
+            playerId: 'system',
+            playerName: 'System',
+            message: `${winnerName} found a mysterious item shard!`,
+            text: `${winnerName} found a mysterious item shard!`,
+            timestamp: Date.now()
+          };
+          broadcastToAll('chatMessage', dropMessage);
+          // Client could interpret this and maybe open a chest UI later
+        }
+      } catch (e) {
+        console.error('❌ Error sending gold reward:', e);
+      }
     }
     
     // Send updated game state to both players with new stats

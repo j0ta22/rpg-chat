@@ -48,6 +48,7 @@ export class NativeWebSocketClient {
     private onPlayerLeft: (playerId: string) => void,
     private onChatMessage: (message: ChatMessage) => void,
     private onXPUpdate?: (xpUpdate: any) => void,
+    private onGoldUpdate?: (goldUpdate: { delta: number }) => void,
     private onPlayerId?: (playerId: string) => void,
     private onPlayerMoved?: (data: { playerId: string; x: number; y: number; direction: string }) => void,
     private onCombatChallenge?: (challenge: any) => void,
@@ -136,6 +137,12 @@ export class NativeWebSocketClient {
           console.log('📥 Received xpUpdate');
           if (this.onXPUpdate) {
             this.onXPUpdate(data.payload);
+          }
+          break;
+        case 'goldUpdate':
+          console.log('📥 Received goldUpdate:', data.payload);
+          if (this.onGoldUpdate) {
+            this.onGoldUpdate(data.payload);
           }
           break;
         case 'heartbeatAck':
