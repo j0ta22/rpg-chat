@@ -715,6 +715,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
     
     // Update player stats
     setPlayerStats(xpUpdate.newStats)
+    setUserLevel(xpUpdate.newStats.level) // Update user level display
     
     // Also update the player in allPlayers so the level shows correctly
     if (playerId) {
@@ -792,6 +793,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
         console.log('📊 Final stats calculated:', finalStats)
         console.log('📊 Setting playerStats to:', finalStats)
         setPlayerStats(finalStats)
+        setUserLevel(finalStats.level) // Update user level display
         
         console.log('✅ Progress loaded successfully from Supabase')
         setIsLoadingProgress(false)
@@ -1114,6 +1116,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
           speed: 5
         }
         setPlayerStats(initialStats)
+        setUserLevel(initialStats.level) // Update user level display
         
         // Guardar stats iniciales después de un breve delay
         setTimeout(() => {
