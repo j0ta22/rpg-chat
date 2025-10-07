@@ -795,6 +795,17 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
         setPlayerStats(finalStats)
         setUserLevel(finalStats.level) // Update user level display
         
+        // Update local player stats in allPlayers for name display
+        if (playerId) {
+          setAllPlayers(prev => ({
+            ...prev,
+            [playerId]: {
+              ...prev[playerId],
+              stats: finalStats
+            }
+          }))
+        }
+        
         console.log('✅ Progress loaded successfully from Supabase')
         setIsLoadingProgress(false)
         return true
@@ -1117,6 +1128,17 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
         }
         setPlayerStats(initialStats)
         setUserLevel(initialStats.level) // Update user level display
+        
+        // Update local player stats in allPlayers for name display
+        if (playerId) {
+          setAllPlayers(prev => ({
+            ...prev,
+            [playerId]: {
+              ...prev[playerId],
+              stats: initialStats
+            }
+          }))
+        }
         
         // Guardar stats iniciales después de un breve delay
         setTimeout(() => {
