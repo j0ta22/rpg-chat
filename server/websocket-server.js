@@ -738,6 +738,9 @@ async function handleCombatAction(ws, data) {
       await savePlayerStatsToDatabase(winner, winnerResult.newStats);
       await savePlayerStatsToDatabase(loserId, loserResult.newStats);
       
+      // Save combat to database and update win/loss stats
+      await saveCombatToDatabase(combatState, winner, winnerName, loserName);
+      
       // Send XP updates
       
       sendToClient(challengerWs, 'xpUpdate', {
@@ -902,6 +905,154 @@ function addExperience(stats, xpGained) {
 
 function calculateXPRequired(level) {
   return level * 100; // 100 XP per level
+}
+
+// Save combat to database and update win/loss statistics
+async function saveCombatToDatabase(combatState, winnerId, winnerName, loserName) {
+  if (!supabase) {
+    console.log('⚠️ Supabase not available - skipping combat save');
+    return;
+  }
+  
+  try {
+    console.log(`💾 Saving combat to database: ${winnerName} vs ${loserName}`);
+    
+    // Get player IDs
+    const player1Id = combatState.challenger.id;
+    const player2Id = combatState.challenged.id;
+    const winner = winnerId;
+    const loser = winnerId === player1Id ? player2Id : player1Id;
+    
+    // Calculate combat duration
+    const duration = combatState.endTime - combatState.startTime;
+    
+    // Get player stats for the combat record
+    const player1Stats = playerStats[player1Id] || {};
+    const player2Stats = playerStats[player2Id] || {};
+    
+    // Save combat record
+    const { data: combat, error: combatError } = await supabase
+      .from('combats')
+      .insert({
+        player1_id: player1Id,
+        player2_id: player2Id,
+        winner_id: winner,
+        player1_stats: player1Stats,
+        player2_stats: player2Stats,
+        combat_duration: Math.floor(duration / 1000), // Convert to seconds
+        player1_level: player1Stats.level || 1,
+        player2_level: player2Stats.level || 1,
+        damage_dealt: 0, // Could be calculated from combat turns
+        critical_hits: 0, // Could be calculated from combat turns
+        gold_reward: 20, // Base gold reward
+        xp_reward: 50, // Base XP reward
+        xp_loss: 0, // No XP loss for losing
+        level_difference: Math.abs((player1Stats.level || 1) - (player2Stats.level || 1)),
+        no_rewards: false
+      })
+      .select()
+      .single();
+    
+    if (combatError) {
+      console.error('❌ Error saving combat:', combatError);
+      return;
+    }
+    
+    console.log(`✅ Combat saved with ID: ${combat.id}`);
+    
+    // Update win/loss statistics for both players
+    await updatePlayerCombatStats(winner, loser);
+    
+  } catch (error) {
+    console.error('❌ Error saving combat to database:', error);
+  }
+}
+
+// Update player combat statistics (wins/losses/win_rate)
+async function updatePlayerCombatStats(winnerId, loserId) {
+  if (!supabase) {
+    console.log('⚠️ Supabase not available - skipping stats update');
+    return;
+  }
+  
+  try {
+    console.log(`📊 Updating combat stats for winner: ${winnerId}, loser: ${loserId}`);
+    
+    // Update winner's stats
+    const { error: winnerError } = await supabase
+      .from('users')
+      .update({ 
+        total_wins: supabase.raw('total_wins + 1'),
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', winnerId);
+    
+    if (winnerError) {
+      console.error('❌ Error updating winner stats:', winnerError);
+    }
+    
+    // Update loser's stats
+    const { error: loserError } = await supabase
+      .from('users')
+      .update({ 
+        total_losses: supabase.raw('total_losses + 1'),
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', loserId);
+    
+    if (loserError) {
+      console.error('❌ Error updating loser stats:', loserError);
+    }
+    
+    // Update win rates for both players
+    await updateWinRate(winnerId);
+    await updateWinRate(loserId);
+    
+    console.log('✅ Combat stats updated successfully');
+    
+  } catch (error) {
+    console.error('❌ Error updating combat stats:', error);
+  }
+}
+
+// Update win rate for a player
+async function updateWinRate(userId) {
+  if (!supabase) {
+    return;
+  }
+  
+  try {
+    // Get current wins and losses
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('total_wins, total_losses')
+      .eq('id', userId)
+      .single();
+    
+    if (userError || !user) {
+      console.error('❌ Error fetching user stats for win rate:', userError);
+      return;
+    }
+    
+    const totalCombats = user.total_wins + user.total_losses;
+    const winRate = totalCombats > 0 ? (user.total_wins / totalCombats) * 100 : 0;
+    
+    // Update win rate
+    const { error: updateError } = await supabase
+      .from('users')
+      .update({ 
+        win_rate: Math.round(winRate * 100) / 100, // Round to 2 decimal places
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', userId);
+    
+    if (updateError) {
+      console.error('❌ Error updating win rate:', updateError);
+    }
+    
+  } catch (error) {
+    console.error('❌ Error updating win rate:', error);
+  }
 }
 
 // Clean up inactive players every 60 seconds
