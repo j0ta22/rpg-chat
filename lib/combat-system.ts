@@ -279,29 +279,62 @@ export async function getPlayerRanking(): Promise<PlayerRanking[]> {
   try {
     console.log('🏆 getPlayerRanking: Starting to fetch rankings...')
     
-    // For now, use direct query since RPC function filters out users with no combat data
-    // TODO: Fix RPC function to show all users
-    const { data: rankings, error } = await supabase
-      .from('users')
-      .select('username, total_wins, total_losses, win_rate')
-      .order('win_rate', { ascending: false })
-      .order('total_wins', { ascending: false })
-      .limit(50) // Limit to prevent too many results
+    // Get all players
+    const { data: players, error: playersError } = await supabase
+      .from('players')
+      .select('id, name, user_id')
+      .limit(50)
 
-    if (error) {
-      console.error('Error fetching rankings:', error)
+    if (playersError) {
+      console.error('Error fetching players:', playersError)
       return []
     }
 
-    console.log('Direct query successful, found', rankings?.length || 0, 'users')
-    return rankings?.map((player, index) => ({
-      username: player.username,
-      wins: player.total_wins || 0,
-      losses: player.total_losses || 0,
-      winRate: player.win_rate || 0,
-      totalCombats: (player.total_wins || 0) + (player.total_losses || 0),
-      rank: index + 1
-    })) || []
+    if (!players || players.length === 0) {
+      console.log('No players found')
+      return []
+    }
+
+    // Get user stats for all players
+    const userIds = players.map(p => p.user_id).filter(id => id)
+    const { data: users, error: usersError } = await supabase
+      .from('users')
+      .select('id, total_wins, total_losses, win_rate')
+      .in('id', userIds)
+
+    if (usersError) {
+      console.error('Error fetching user stats:', usersError)
+      return []
+    }
+
+    // Combine players with their user stats
+    const playerRankings = players
+      .map(player => {
+        const userStats = users?.find(u => u.id === player.user_id)
+        return {
+          username: player.name, // Use player name instead of username
+          wins: userStats?.total_wins || 0,
+          losses: userStats?.total_losses || 0,
+          winRate: userStats?.win_rate || 0,
+          totalCombats: (userStats?.total_wins || 0) + (userStats?.total_losses || 0),
+          playerId: player.id,
+          userId: player.user_id
+        }
+      })
+      .sort((a, b) => {
+        // Sort by win rate first, then by total wins
+        if (b.winRate !== a.winRate) {
+          return b.winRate - a.winRate
+        }
+        return b.wins - a.wins
+      })
+      .map((player, index) => ({
+        ...player,
+        rank: index + 1
+      }))
+
+    console.log('Players query successful, found', playerRankings.length, 'players')
+    return playerRankings
   } catch (error) {
     console.error('Error getting player ranking:', error)
     return []
