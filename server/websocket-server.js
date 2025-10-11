@@ -917,11 +917,22 @@ async function saveCombatToDatabase(combatState, winnerId, winnerName, loserName
   try {
     console.log(`💾 Saving combat to database: ${winnerName} vs ${loserName}`);
     
-    // Get player IDs
+    // Get player IDs and convert to user IDs
     const player1Id = combatState.challenger.id;
     const player2Id = combatState.challenged.id;
-    const winner = winnerId;
-    const loser = winnerId === player1Id ? player2Id : player1Id;
+    const winnerPlayerId = winnerId;
+    const loserPlayerId = winnerId === player1Id ? player2Id : player1Id;
+    
+    // Convert player IDs to user IDs
+    const player1UserId = await getUserIdFromPlayerId(player1Id);
+    const player2UserId = await getUserIdFromPlayerId(player2Id);
+    const winnerUserId = await getUserIdFromPlayerId(winnerPlayerId);
+    const loserUserId = await getUserIdFromPlayerId(loserPlayerId);
+    
+    if (!player1UserId || !player2UserId || !winnerUserId || !loserUserId) {
+      console.error('❌ Could not get user IDs for players - skipping combat save');
+      return;
+    }
     
     // Calculate combat duration
     const duration = combatState.endTime - combatState.startTime;
@@ -934,9 +945,9 @@ async function saveCombatToDatabase(combatState, winnerId, winnerName, loserName
     const { data: combat, error: combatError } = await supabase
       .from('combats')
       .insert({
-        player1_id: player1Id,
-        player2_id: player2Id,
-        winner_id: winner,
+        player1_id: player1UserId,
+        player2_id: player2UserId,
+        winner_id: winnerUserId,
         player1_stats: player1Stats,
         player2_stats: player2Stats,
         combat_duration: Math.floor(duration / 1000), // Convert to seconds
@@ -961,7 +972,7 @@ async function saveCombatToDatabase(combatState, winnerId, winnerName, loserName
     console.log(`✅ Combat saved with ID: ${combat.id}`);
     
     // Update win/loss statistics for both players
-    await updatePlayerCombatStats(winner, loser);
+    await updatePlayerCombatStats(winnerUserId, loserUserId);
     
   } catch (error) {
     console.error('❌ Error saving combat to database:', error);
