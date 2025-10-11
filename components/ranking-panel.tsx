@@ -23,13 +23,17 @@ export default function RankingPanel({}: RankingPanelProps) {
 
   const loadRankings = async () => {
     try {
+      console.log('🏆 RankingPanel: Starting to load rankings...')
       setLoading(true)
       const data = await getPlayerRanking()
+      console.log('🏆 RankingPanel: getPlayerRanking result:', data)
       setRankings(data)
+      console.log('🏆 RankingPanel: Rankings set, length:', data?.length || 0)
     } catch (error) {
-      console.error('Error loading rankings:', error)
+      console.error('🏆 RankingPanel: Error loading rankings:', error)
     } finally {
       setLoading(false)
+      console.log('🏆 RankingPanel: Loading finished')
     }
   }
 
