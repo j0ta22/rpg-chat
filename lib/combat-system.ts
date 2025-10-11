@@ -283,6 +283,7 @@ export async function getPlayerRanking(): Promise<PlayerRanking[]> {
 
     if (error) {
       console.error('Error fetching rankings via RPC:', error)
+      console.log('Falling back to direct query...')
       
       // Fallback to direct query if RPC fails
       const { data: fallbackRankings, error: fallbackError } = await supabase
@@ -290,12 +291,14 @@ export async function getPlayerRanking(): Promise<PlayerRanking[]> {
         .select('username, total_wins, total_losses, win_rate')
         .order('win_rate', { ascending: false })
         .order('total_wins', { ascending: false })
+        .limit(50) // Limit to prevent too many results
 
       if (fallbackError) {
         console.error('Error fetching rankings via fallback:', fallbackError)
         return []
       }
 
+      console.log('Fallback query successful, found', fallbackRankings?.length || 0, 'users')
       return fallbackRankings?.map((player, index) => ({
         username: player.username,
         wins: player.total_wins || 0,
