@@ -887,7 +887,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
 
   // Configurar audio de fondo
   useEffect(() => {
-    const audio = new Audio('/tavern.wav')
+    const audio = new Audio('/tavern.mp3')
     audio.loop = true
     audio.volume = 0.05 // Volumen moderado
     audioRef.current = audio

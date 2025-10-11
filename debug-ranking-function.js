@@ -1,88 +1,56 @@
-// Script para debuggear la función de ranking
-// Ejecutar en la consola del navegador
+// Debug script to test getPlayerRanking function
+console.log('🔍 Testing getPlayerRanking function...')
 
-console.log('🔍 Debugging ranking function...')
-
-async function debugRankingFunction() {
+// Test the RPC function directly
+async function testRankingFunction() {
   try {
-    // Crear cliente de Supabase
+    // Import supabase client
     const { createClient } = await import('@supabase/supabase-js')
     
-    // Usar las variables de entorno (reemplaza con las reales)
-    const supabaseUrl = 'https://your-project.supabase.co'
-    const supabaseKey = 'your-anon-key'
+    const supabaseUrl = 'https://xxdnqqgwqetwgayqjlrm.supabase.co'
+    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh4ZG5xcWd3cWV0d2dheXFqbHJtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkwOTgzMzksImV4cCI6MjA3NDY3NDMzOX0.GNok2n1dhEvJ3xiHT6sS0-HY34WTmQzWJN1gO7-BrLo'
     
     const supabase = createClient(supabaseUrl, supabaseKey)
     
-    console.log('1. 🔍 Probando consulta directa a users...')
-    const { data: users, error: usersError } = await supabase
+    console.log('1. Testing RPC function get_player_rankings...')
+    const { data: rpcData, error: rpcError } = await supabase
+      .rpc('get_player_rankings')
+    
+    if (rpcError) {
+      console.error('❌ RPC Error:', rpcError)
+    } else {
+      console.log('✅ RPC Success:', rpcData)
+    }
+    
+    console.log('2. Testing direct query fallback...')
+    const { data: directData, error: directError } = await supabase
       .from('users')
       .select('username, total_wins, total_losses, win_rate')
       .order('win_rate', { ascending: false })
       .order('total_wins', { ascending: false })
-
-    if (usersError) {
-      console.error('❌ Error en consulta directa:', usersError)
+      .limit(10)
+    
+    if (directError) {
+      console.error('❌ Direct Query Error:', directError)
     } else {
-      console.log('✅ Consulta directa exitosa:')
-      console.log(`   - Usuarios encontrados: ${users?.length || 0}`)
-      users?.forEach((user, index) => {
-        const totalCombats = (user.total_wins || 0) + (user.total_losses || 0)
-        console.log(`   ${index + 1}. ${user.username}: ${user.total_wins || 0}W/${user.total_losses || 0}L (${user.win_rate || 0}%)`)
-      })
+      console.log('✅ Direct Query Success:', directData)
     }
-
-    console.log('\\n2. 🔍 Probando función RPC...')
-    const { data: rpcRankings, error: rpcError } = await supabase
-      .rpc('get_player_rankings')
-
-    if (rpcError) {
-      console.error('❌ Error en función RPC:', rpcError)
-    } else {
-      console.log('✅ Función RPC exitosa:')
-      console.log(`   - Rankings encontrados: ${rpcRankings?.length || 0}`)
-      rpcRankings?.forEach((player, index) => {
-        console.log(`   ${index + 1}. ${player.username}: ${player.wins || 0}W/${player.losses || 0}L (${player.win_rate || 0}%)`)
-      })
-    }
-
-    console.log('\\n3. 🔍 Verificando usuarios con combates...')
-    const { data: usersWithCombats, error: combatsError } = await supabase
+    
+    console.log('3. Testing users table structure...')
+    const { data: usersData, error: usersError } = await supabase
       .from('users')
       .select('username, total_wins, total_losses, win_rate')
-      .or('total_wins.gt.0,total_losses.gt.0')
-      .order('win_rate', { ascending: false })
-
-    if (combatsError) {
-      console.error('❌ Error en usuarios con combates:', combatsError)
-    } else {
-      console.log('✅ Usuarios con combates:')
-      console.log(`   - Usuarios con combates: ${usersWithCombats?.length || 0}`)
-      usersWithCombats?.forEach((user, index) => {
-        const totalCombats = (user.total_wins || 0) + (user.total_losses || 0)
-        console.log(`   ${index + 1}. ${user.username}: ${user.total_wins || 0}W/${user.total_losses || 0}L (${user.win_rate || 0}%)`)
-      })
-    }
-
-    console.log('\\n4. 🔍 Verificando combates en la base de datos...')
-    const { data: combats, error: combatsCountError } = await supabase
-      .from('combats')
-      .select('id, player1_id, player2_id, winner_id')
       .limit(5)
-
-    if (combatsCountError) {
-      console.error('❌ Error en combates:', combatsCountError)
+    
+    if (usersError) {
+      console.error('❌ Users Query Error:', usersError)
     } else {
-      console.log(`✅ Combates encontrados: ${combats?.length || 0}`)
-      combats?.forEach((combat, index) => {
-        console.log(`   ${index + 1}. Combat ${combat.id}: Winner ${combat.winner_id}`)
-      })
+      console.log('✅ Users Query Success:', usersData)
     }
-
+    
   } catch (error) {
-    console.error('❌ Error general:', error)
+    console.error('❌ General Error:', error)
   }
 }
 
-// Ejecutar
-debugRankingFunction()
+testRankingFunction()

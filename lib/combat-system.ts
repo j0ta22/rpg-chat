@@ -277,45 +277,30 @@ async function updateWinRate(userId: string) {
 // Función para obtener el ranking de jugadores
 export async function getPlayerRanking(): Promise<PlayerRanking[]> {
   try {
-    // First try to use the RPC function for better performance
+    console.log('🏆 getPlayerRanking: Starting to fetch rankings...')
+    
+    // For now, use direct query since RPC function filters out users with no combat data
+    // TODO: Fix RPC function to show all users
     const { data: rankings, error } = await supabase
-      .rpc('get_player_rankings')
+      .from('users')
+      .select('username, total_wins, total_losses, win_rate')
+      .order('win_rate', { ascending: false })
+      .order('total_wins', { ascending: false })
+      .limit(50) // Limit to prevent too many results
 
     if (error) {
-      console.error('Error fetching rankings via RPC:', error)
-      console.log('Falling back to direct query...')
-      
-      // Fallback to direct query if RPC fails
-      const { data: fallbackRankings, error: fallbackError } = await supabase
-        .from('users')
-        .select('username, total_wins, total_losses, win_rate')
-        .order('win_rate', { ascending: false })
-        .order('total_wins', { ascending: false })
-        .limit(50) // Limit to prevent too many results
-
-      if (fallbackError) {
-        console.error('Error fetching rankings via fallback:', fallbackError)
-        return []
-      }
-
-      console.log('Fallback query successful, found', fallbackRankings?.length || 0, 'users')
-      return fallbackRankings?.map((player, index) => ({
-        username: player.username,
-        wins: player.total_wins || 0,
-        losses: player.total_losses || 0,
-        winRate: player.win_rate || 0,
-        totalCombats: (player.total_wins || 0) + (player.total_losses || 0),
-        rank: index + 1
-      })) || []
+      console.error('Error fetching rankings:', error)
+      return []
     }
 
-    return rankings?.map((player) => ({
+    console.log('Direct query successful, found', rankings?.length || 0, 'users')
+    return rankings?.map((player, index) => ({
       username: player.username,
-      wins: player.wins || 0,
-      losses: player.losses || 0,
+      wins: player.total_wins || 0,
+      losses: player.total_losses || 0,
       winRate: player.win_rate || 0,
-      totalCombats: player.total_combats || 0,
-      rank: player.rank_position || 1
+      totalCombats: (player.total_wins || 0) + (player.total_losses || 0),
+      rank: index + 1
     })) || []
   } catch (error) {
     console.error('Error getting player ranking:', error)
