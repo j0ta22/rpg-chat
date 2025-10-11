@@ -245,20 +245,29 @@ async function updatePlayerCombatStats(player1Id: string, player2Id: string, win
 // Función para actualizar win rate
 async function updateWinRate(userId: string) {
   try {
-    const { data: user } = await supabase
-      .from('users')
-      .select('total_wins, total_losses')
-      .eq('id', userId)
-      .single()
+    // Use the RPC function for better performance
+    const { error } = await supabase
+      .rpc('update_user_ranking_stats', { user_id: userId })
 
-    if (user) {
-      const totalCombats = user.total_wins + user.total_losses
-      const winRate = totalCombats > 0 ? (user.total_wins / totalCombats) * 100 : 0
+    if (error) {
+      console.error('Error updating win rate via RPC:', error)
       
-      await supabase
+      // Fallback to manual calculation
+      const { data: user } = await supabase
         .from('users')
-        .update({ win_rate: winRate })
+        .select('total_wins, total_losses')
         .eq('id', userId)
+        .single()
+
+      if (user) {
+        const totalCombats = user.total_wins + user.total_losses
+        const winRate = totalCombats > 0 ? (user.total_wins / totalCombats) * 100 : 0
+        
+        await supabase
+          .from('users')
+          .update({ win_rate: winRate })
+          .eq('id', userId)
+      }
     }
   } catch (error) {
     console.error('Error updating win rate:', error)
@@ -268,24 +277,42 @@ async function updateWinRate(userId: string) {
 // Función para obtener el ranking de jugadores
 export async function getPlayerRanking(): Promise<PlayerRanking[]> {
   try {
+    // First try to use the RPC function for better performance
     const { data: rankings, error } = await supabase
-      .from('users')
-      .select('username, total_wins, total_losses, win_rate')
-      .order('win_rate', { ascending: false })
-      .order('total_wins', { ascending: false })
+      .rpc('get_player_rankings')
 
     if (error) {
-      console.error('Error fetching rankings:', error)
-      return []
+      console.error('Error fetching rankings via RPC:', error)
+      
+      // Fallback to direct query if RPC fails
+      const { data: fallbackRankings, error: fallbackError } = await supabase
+        .from('users')
+        .select('username, total_wins, total_losses, win_rate')
+        .order('win_rate', { ascending: false })
+        .order('total_wins', { ascending: false })
+
+      if (fallbackError) {
+        console.error('Error fetching rankings via fallback:', fallbackError)
+        return []
+      }
+
+      return fallbackRankings?.map((player, index) => ({
+        username: player.username,
+        wins: player.total_wins || 0,
+        losses: player.total_losses || 0,
+        winRate: player.win_rate || 0,
+        totalCombats: (player.total_wins || 0) + (player.total_losses || 0),
+        rank: index + 1
+      })) || []
     }
 
-    return rankings?.map((player, index) => ({
+    return rankings?.map((player) => ({
       username: player.username,
-      wins: player.total_wins || 0,
-      losses: player.total_losses || 0,
+      wins: player.wins || 0,
+      losses: player.losses || 0,
       winRate: player.win_rate || 0,
-      totalCombats: (player.total_wins || 0) + (player.total_losses || 0),
-      rank: index + 1
+      totalCombats: player.total_combats || 0,
+      rank: player.rank_position || 1
     })) || []
   } catch (error) {
     console.error('Error getting player ranking:', error)
