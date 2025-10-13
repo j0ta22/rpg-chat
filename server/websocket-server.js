@@ -981,8 +981,8 @@ async function saveCombatToDatabase(combatState, winnerId, winnerName, loserName
     
     console.log(`✅ Combat saved with ID: ${combat.id}`);
     
-    // Update win/loss statistics for both players
-    await updatePlayerCombatStats(winnerUserId, loserUserId);
+    // Update win/loss statistics for both players (using player IDs, not user IDs)
+    await updatePlayerCombatStats(winnerPlayerId, loserPlayerId);
     
   } catch (error) {
     console.error('❌ Error saving combat to database:', error);
@@ -990,24 +990,74 @@ async function saveCombatToDatabase(combatState, winnerId, winnerName, loserName
 }
 
 // Update player combat statistics (wins/losses/win_rate)
-async function updatePlayerCombatStats(winnerId, loserId) {
+async function updatePlayerCombatStats(winnerPlayerId, loserPlayerId) {
   if (!supabase) {
     console.log('⚠️ Supabase not available - skipping stats update');
     return;
   }
   
   try {
-    console.log(`📊 Updating combat stats for winner: ${winnerId}, loser: ${loserId}`);
+    console.log(`📊 Updating combat stats for winner player: ${winnerPlayerId}, loser player: ${loserPlayerId}`);
     
-    // Update combat stats for both players using RPC function
-    const { error: statsError } = await supabase.rpc('update_combat_stats', {
-      winner_id: winnerId,
-      loser_id: loserId
-    });
+    // Get player data to find their names
+    const winnerPlayer = gameState.players[winnerPlayerId];
+    const loserPlayer = gameState.players[loserPlayerId];
     
-    if (statsError) {
-      console.error('❌ Error updating combat stats:', statsError);
+    if (!winnerPlayer || !loserPlayer) {
+      console.error('❌ Could not find player data for stats update');
+      return;
     }
+    
+    // Update combat stats for both players in the players table
+    // First, get current stats and increment them
+    const { data: winnerData, error: winnerFetchError } = await supabase
+      .from('players')
+      .select('total_wins')
+      .eq('user_id', winnerPlayer.userId)
+      .eq('name', winnerPlayer.name)
+      .single();
+    
+    const { data: loserData, error: loserFetchError } = await supabase
+      .from('players')
+      .select('total_losses')
+      .eq('user_id', loserPlayer.userId)
+      .eq('name', loserPlayer.name)
+      .single();
+    
+    if (winnerFetchError || loserFetchError) {
+      console.error('❌ Error fetching current stats:', winnerFetchError || loserFetchError);
+      return;
+    }
+    
+    const { error: winnerError } = await supabase
+      .from('players')
+      .update({
+        total_wins: (winnerData.total_wins || 0) + 1,
+        updated_at: new Date().toISOString()
+      })
+      .eq('user_id', winnerPlayer.userId)
+      .eq('name', winnerPlayer.name);
+    
+    const { error: loserError } = await supabase
+      .from('players')
+      .update({
+        total_losses: (loserData.total_losses || 0) + 1,
+        updated_at: new Date().toISOString()
+      })
+      .eq('user_id', loserPlayer.userId)
+      .eq('name', loserPlayer.name);
+    
+    if (winnerError) {
+      console.error('❌ Error updating winner stats:', winnerError);
+    }
+    
+    if (loserError) {
+      console.error('❌ Error updating loser stats:', loserError);
+    }
+    
+    // Update win rates for both players
+    await updatePlayerWinRate(winnerPlayer.userId, winnerPlayer.name);
+    await updatePlayerWinRate(loserPlayer.userId, loserPlayer.name);
     
     console.log('✅ Combat stats updated successfully');
     
@@ -1016,7 +1066,48 @@ async function updatePlayerCombatStats(winnerId, loserId) {
   }
 }
 
-// Note: updateWinRate function removed - now handled by RPC function update_combat_stats
+// Update win rate for a specific player
+async function updatePlayerWinRate(userId, playerName) {
+  if (!supabase) {
+    return;
+  }
+  
+  try {
+    // Get current wins and losses for this specific player
+    const { data: player, error: fetchError } = await supabase
+      .from('players')
+      .select('total_wins, total_losses')
+      .eq('user_id', userId)
+      .eq('name', playerName)
+      .single();
+    
+    if (fetchError || !player) {
+      console.error('❌ Error fetching player stats for win rate calculation:', fetchError);
+      return;
+    }
+    
+    // Calculate win rate
+    const totalCombats = player.total_wins + player.total_losses;
+    const winRate = totalCombats > 0 ? Math.round((player.total_wins / totalCombats) * 100 * 100) / 100 : 0;
+    
+    // Update win rate
+    const { error: updateError } = await supabase
+      .from('players')
+      .update({
+        win_rate: winRate,
+        updated_at: new Date().toISOString()
+      })
+      .eq('user_id', userId)
+      .eq('name', playerName);
+    
+    if (updateError) {
+      console.error('❌ Error updating player win rate:', updateError);
+    }
+    
+  } catch (error) {
+    console.error('❌ Error in updatePlayerWinRate:', error);
+  }
+}
 
 // Clean up inactive players every 60 seconds
 setInterval(() => {
