@@ -336,7 +336,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
   // Panel states
   const [showInventoryPanel, setShowInventoryPanel] = useState(false)
   const [showShopPanel, setShowShopPanel] = useState(false)
-  const [userGold, setUserGold] = useState(100)
+  const [userGold, setUserGold] = useState<number | null>(null)
   const [userLevel, setUserLevel] = useState(1)
 
   // Load user data on mount
@@ -361,7 +361,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
 
       if (data) {
         // Only set gold if userGold is not already set (avoid overwriting current gold)
-        if (userGold === null || userGold === undefined) {
+        if (userGold === null) {
           console.log('💰 Loading initial gold from database:', data.gold || 50)
           setUserGold(data.gold || 50)
         } else {
@@ -1023,14 +1023,14 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
           if (delta === 0) return
           
           // Calculate new gold amount
-          const newGoldAmount = (userGold || 0) + delta
+          const newGoldAmount = (userGold ?? 0) + delta
           
           // Update local state
           setUserGold(newGoldAmount)
           
           // Persist to Supabase
           if (user?.id) {
-            console.log(`💰 Updating gold in database: ${userGold || 0} + ${delta} = ${newGoldAmount}`)
+            console.log(`💰 Updating gold in database: ${userGold ?? 0} + ${delta} = ${newGoldAmount}`)
             const { error } = await supabase
               .from('users')
               .update({ gold: newGoldAmount })
@@ -2635,9 +2635,9 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
         isVisible={showInventoryPanel}
         onClose={() => setShowInventoryPanel(false)}
         userId={user?.id || ''}
-        userGold={userGold}
+        userGold={userGold ?? 0}
         userLevel={userLevel}
-        onGoldUpdate={setUserGold}
+        onGoldUpdate={(gold: number) => setUserGold(gold)}
         onStatsUpdate={setPlayerStats}
       />
 
@@ -2646,9 +2646,9 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
         isVisible={showShopPanel}
         onClose={() => setShowShopPanel(false)}
         userId={user?.id || ''}
-        userGold={userGold}
+        userGold={userGold ?? 0}
         userLevel={userLevel}
-        onGoldUpdate={setUserGold}
+        onGoldUpdate={(gold: number) => setUserGold(gold)}
       />
 
     </div>
