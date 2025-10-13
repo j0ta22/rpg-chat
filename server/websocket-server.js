@@ -759,8 +759,8 @@ async function handleCombatAction(ws, data) {
 
       // Gold rewards - Balanced economy system
       try {
-        const baseGold = 15; // base gold for victory (reduced from 20)
-        const levelBonus = (winnerResult.newStats?.level || 1) * 3; // +3 gold per level
+        const baseGold = 10; // base gold for victory (reduced from 15)
+        const levelBonus = Math.max(0, Math.floor((winnerResult.newStats?.level || 1) / 3)); // +1 gold per 3 levels
         let goldReward = baseGold + levelBonus;
         
         // Performance bonuses
@@ -771,12 +771,12 @@ async function handleCombatAction(ws, data) {
         
         // Quick victory bonus (≤3 turns)
         if (combatTurns <= 3) {
-          goldReward += 5;
+          goldReward += 3;
         }
         
         // Perfect victory bonus (no damage taken)
         if (damageTaken === 0) {
-          goldReward += 10;
+          goldReward += 5;
         }
         const winnerWs = winner === combatState.challenger.id ? challengerWs : challengedWs;
         const loserWs = winner === combatState.challenger.id ? challengedWs : challengerWs;
@@ -1041,7 +1041,7 @@ async function saveCombatToDatabase(combatState, winnerId, winnerName, loserName
         player2_level: player2Stats.level || 1,
         damage_dealt: 0, // Could be calculated from combat turns
         critical_hits: 0, // Could be calculated from combat turns
-        gold_reward: 15, // Base gold reward (updated for balanced economy)
+        gold_reward: 10, // Base gold reward (updated for balanced economy)
         xp_reward: 50, // Base XP reward
         xp_loss: 0, // No XP loss for losing
         level_difference: Math.abs((player1Stats.level || 1) - (player2Stats.level || 1)),
