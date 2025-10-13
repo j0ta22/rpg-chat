@@ -360,13 +360,9 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
       }
 
       if (data) {
-        // Only set gold if userGold is not already set (avoid overwriting current gold)
-        if (userGold === null) {
-          console.log('💰 Loading initial gold from database:', data.gold || 50)
-          setUserGold(data.gold || 50)
-        } else {
-          console.log('💰 Gold already set, not overwriting. Current:', userGold, 'DB:', data.gold)
-        }
+        // Always load gold from database to ensure sync
+        console.log('💰 Loading gold from database:', data.gold || 50, 'Current frontend:', userGold)
+        setUserGold(data.gold || 50)
         
         // Calculate level based on combat experience
         const totalCombats = (data.total_wins || 0) + (data.total_losses || 0)
