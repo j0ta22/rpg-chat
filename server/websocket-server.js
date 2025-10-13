@@ -12,14 +12,15 @@ app.use(cors());
 
 // Supabase configuration
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 let supabase = null;
 
-if (supabaseUrl && supabaseKey) {
-  supabase = createClient(supabaseUrl, supabaseKey);
-  console.log('✅ Supabase client initialized');
+if (supabaseUrl && supabaseServiceKey) {
+  supabase = createClient(supabaseUrl, supabaseServiceKey);
+  console.log('✅ Supabase client initialized with service role key');
 } else {
-  console.log('⚠️ Supabase not configured - item drops disabled');
+  console.log('⚠️ Supabase not configured - item drops and gold rewards disabled');
+  console.log('Missing:', !supabaseUrl ? 'NEXT_PUBLIC_SUPABASE_URL' : '', !supabaseServiceKey ? 'SUPABASE_SERVICE_ROLE_KEY' : '');
 }
 
 // Item drop system
