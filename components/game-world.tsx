@@ -354,11 +354,22 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
   const loadUserData = async () => {
     try {
       console.log('🔄 loadUserData called for user:', user?.id)
-      const { data, error } = await supabase
+      console.log('🔄 Making Supabase query...')
+      
+      // Add timeout to detect hanging queries
+      const queryPromise = supabase
         .from('users')
         .select('gold, total_wins, total_losses')
         .eq('id', user?.id)
         .single()
+
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Query timeout after 10 seconds')), 10000)
+      )
+
+      const { data, error } = await Promise.race([queryPromise, timeoutPromise])
+
+      console.log('🔄 Supabase query completed. Data:', data, 'Error:', error)
 
       if (error) {
         console.error('❌ Error loading user data:', error)
