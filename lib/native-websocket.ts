@@ -237,6 +237,10 @@ export class NativeWebSocketClient {
     this.sendMessage('combatAction', { combatId, action });
   }
 
+  updatePlayerStats(playerId: string, stats: any): void {
+    this.sendMessage('updatePlayerStats', { playerId, stats });
+  }
+
   private startHeartbeat(): void {
     this.heartbeatInterval = setInterval(() => {
       if (this.isConnected) {

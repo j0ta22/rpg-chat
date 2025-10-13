@@ -351,6 +351,33 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
     }
   }, [user?.id])
 
+  // Periodic gold sync to ensure consistency
+  useEffect(() => {
+    if (!user?.id) return
+
+    const syncInterval = setInterval(async () => {
+      try {
+        const { data, error } = await supabase
+          .from('users')
+          .select('gold')
+          .eq('id', user.id)
+          .single()
+
+        if (!error && data) {
+          const goldData = data as { gold: number }
+          if (goldData.gold !== null && goldData.gold !== userGold) {
+            console.log('🔄 Periodic sync: Gold mismatch detected. DB:', goldData.gold, 'Frontend:', userGold)
+            setUserGold(goldData.gold)
+          }
+        }
+      } catch (error) {
+        console.error('❌ Error in periodic gold sync:', error)
+      }
+    }, 30000) // Check every 30 seconds
+
+    return () => clearInterval(syncInterval)
+  }, [user?.id, userGold])
+
   const loadUserData = async () => {
     try {
       console.log('🔄 loadUserData called for user:', user?.id)
@@ -367,7 +394,8 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
         setTimeout(() => reject(new Error('Query timeout after 10 seconds')), 10000)
       )
 
-      const { data, error } = await Promise.race([queryPromise, timeoutPromise])
+      const result = await Promise.race([queryPromise, timeoutPromise]) as { data: any; error: any }
+      const { data, error } = result
 
       console.log('🔄 Supabase query completed. Data:', data, 'Error:', error)
 
@@ -378,9 +406,13 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
 
       if (data) {
         // Always load gold from database to ensure sync
-        console.log('💰 Loading gold from database:', data.gold || 50, 'Current frontend:', userGold)
+        const dbGold = data.gold || 0
+        console.log('💰 Loading gold from database:', dbGold, 'Current frontend:', userGold)
         console.log('💰 Raw data from database:', data)
-        setUserGold(data.gold || 50)
+        
+        // Force update the gold state
+        setUserGold(dbGold)
+        console.log('💰 Gold state updated to:', dbGold)
         
         // Calculate level based on combat experience
         const totalCombats = (data.total_wins || 0) + (data.total_losses || 0)
@@ -394,9 +426,13 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
         setUserLevel(level)
       } else {
         console.log('⚠️ No data returned from database')
+        // Set default gold if no data
+        setUserGold(0)
       }
     } catch (error) {
       console.error('❌ Exception in loadUserData:', error)
+      // Set default gold on error
+      setUserGold(0)
     }
   }
 
@@ -1039,13 +1075,35 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
           if (delta === 0) return
           
           // Calculate new gold amount
-          const newGoldAmount = (userGold ?? 0) + delta
+          const currentGold = userGold ?? 0
+          const newGoldAmount = currentGold + delta
           
           // Update local state only (server already saved to database)
           setUserGold(newGoldAmount)
           
-          console.log(`💰 Gold update received: ${userGold ?? 0} + ${delta} = ${newGoldAmount}`)
+          console.log(`💰 Gold update received: ${currentGold} + ${delta} = ${newGoldAmount}`)
           showRewardMessage(`You earned ${delta} gold!`)
+          
+          // Verify the update by checking the database after a short delay
+          setTimeout(async () => {
+            try {
+              const { data, error } = await supabase
+                .from('users')
+                .select('gold')
+                .eq('id', user?.id)
+                .single()
+              
+              if (!error && data) {
+                const goldData = data as { gold: number }
+                if (goldData.gold !== newGoldAmount) {
+                  console.log('⚠️ Gold sync mismatch after update. Expected:', newGoldAmount, 'DB:', goldData.gold)
+                  setUserGold(goldData.gold)
+                }
+              }
+            } catch (e) {
+              console.error('Error verifying gold update:', e)
+            }
+          }, 2000)
         } catch (e) {
           console.error('Error applying gold update:', e)
         }
@@ -1058,10 +1116,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
         // Send real player stats to server
         if (playerStats) {
           console.log('📤 Sending real player stats to server:', playerStats)
-          client.sendMessage('updatePlayerStats', {
-            playerId: playerId,
-            stats: playerStats
-          })
+          client.updatePlayerStats(playerId, playerStats)
         }
       },
       (data: { playerId: string; x: number; y: number; direction: string }) => {
