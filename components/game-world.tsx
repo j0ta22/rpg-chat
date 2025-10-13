@@ -337,6 +337,11 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
   const [showInventoryPanel, setShowInventoryPanel] = useState(false)
   const [showShopPanel, setShowShopPanel] = useState(false)
   const [userGold, setUserGold] = useState<number | null>(null)
+  
+  // Debug userGold changes
+  useEffect(() => {
+    console.log('💰 userGold state changed to:', userGold)
+  }, [userGold])
   const [userLevel, setUserLevel] = useState(1)
 
   // Load user data on mount
@@ -348,6 +353,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
 
   const loadUserData = async () => {
     try {
+      console.log('🔄 loadUserData called for user:', user?.id)
       const { data, error } = await supabase
         .from('users')
         .select('gold, total_wins, total_losses')
@@ -355,13 +361,14 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
         .single()
 
       if (error) {
-        console.error('Error loading user data:', error)
+        console.error('❌ Error loading user data:', error)
         return
       }
 
       if (data) {
         // Always load gold from database to ensure sync
         console.log('💰 Loading gold from database:', data.gold || 50, 'Current frontend:', userGold)
+        console.log('💰 Raw data from database:', data)
         setUserGold(data.gold || 50)
         
         // Calculate level based on combat experience
@@ -374,9 +381,11 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
           calculatedLevel: level
         })
         setUserLevel(level)
+      } else {
+        console.log('⚠️ No data returned from database')
       }
     } catch (error) {
-      console.error('Error loading user data:', error)
+      console.error('❌ Exception in loadUserData:', error)
     }
   }
 
