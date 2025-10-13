@@ -989,35 +989,15 @@ async function updatePlayerCombatStats(winnerId, loserId) {
   try {
     console.log(`📊 Updating combat stats for winner: ${winnerId}, loser: ${loserId}`);
     
-    // Update winner's stats
-    const { error: winnerError } = await supabase
-      .from('users')
-      .update({ 
-        total_wins: supabase.raw('total_wins + 1'),
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', winnerId);
+    // Update combat stats for both players using RPC function
+    const { error: statsError } = await supabase.rpc('update_combat_stats', {
+      winner_id: winnerId,
+      loser_id: loserId
+    });
     
-    if (winnerError) {
-      console.error('❌ Error updating winner stats:', winnerError);
+    if (statsError) {
+      console.error('❌ Error updating combat stats:', statsError);
     }
-    
-    // Update loser's stats
-    const { error: loserError } = await supabase
-      .from('users')
-      .update({ 
-        total_losses: supabase.raw('total_losses + 1'),
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', loserId);
-    
-    if (loserError) {
-      console.error('❌ Error updating loser stats:', loserError);
-    }
-    
-    // Update win rates for both players
-    await updateWinRate(winnerId);
-    await updateWinRate(loserId);
     
     console.log('✅ Combat stats updated successfully');
     
@@ -1026,45 +1006,7 @@ async function updatePlayerCombatStats(winnerId, loserId) {
   }
 }
 
-// Update win rate for a player
-async function updateWinRate(userId) {
-  if (!supabase) {
-    return;
-  }
-  
-  try {
-    // Get current wins and losses
-    const { data: user, error: userError } = await supabase
-      .from('users')
-      .select('total_wins, total_losses')
-      .eq('id', userId)
-      .single();
-    
-    if (userError || !user) {
-      console.error('❌ Error fetching user stats for win rate:', userError);
-      return;
-    }
-    
-    const totalCombats = user.total_wins + user.total_losses;
-    const winRate = totalCombats > 0 ? (user.total_wins / totalCombats) * 100 : 0;
-    
-    // Update win rate
-    const { error: updateError } = await supabase
-      .from('users')
-      .update({ 
-        win_rate: Math.round(winRate * 100) / 100, // Round to 2 decimal places
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', userId);
-    
-    if (updateError) {
-      console.error('❌ Error updating win rate:', updateError);
-    }
-    
-  } catch (error) {
-    console.error('❌ Error updating win rate:', error);
-  }
-}
+// Note: updateWinRate function removed - now handled by RPC function update_combat_stats
 
 // Clean up inactive players every 60 seconds
 setInterval(() => {
