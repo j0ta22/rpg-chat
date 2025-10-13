@@ -907,6 +907,16 @@ function calculateXPRequired(level) {
   return level * 100; // 100 XP per level
 }
 
+// Get user ID from player ID
+async function getUserIdFromPlayerId(playerId) {
+  const player = gameState.players[playerId];
+  if (!player || !player.userId) {
+    console.error('❌ No user ID found for player:', playerId);
+    return null;
+  }
+  return player.userId;
+}
+
 // Save combat to database and update win/loss statistics
 async function saveCombatToDatabase(combatState, winnerId, winnerName, loserName) {
   if (!supabase) {
