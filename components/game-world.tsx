@@ -360,7 +360,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
       }
 
       if (data) {
-        setUserGold(data.gold || 100)
+        setUserGold(data.gold || 50)
         // Calculate level based on combat experience
         const totalCombats = (data.total_wins || 0) + (data.total_losses || 0)
         const level = Math.floor(totalCombats / 5) + 1

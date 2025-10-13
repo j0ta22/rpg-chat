@@ -757,24 +757,48 @@ async function handleCombatAction(ws, data) {
         levelsGained: combatState.challenged.id === winner ? winnerResult.levelsGained : loserResult.levelsGained
       });
 
-      // Gold rewards
+      // Gold rewards - Balanced economy system
       try {
-        const baseGold = 20; // base gold for victory
-        const levelBonus = Math.max(0, Math.floor((winnerResult.newStats?.level || 1) / 5)) * 5;
-        const goldReward = baseGold + levelBonus; // scale a bit with level
+        const baseGold = 15; // base gold for victory (reduced from 20)
+        const levelBonus = (winnerResult.newStats?.level || 1) * 3; // +3 gold per level
+        let goldReward = baseGold + levelBonus;
+        
+        // Performance bonuses
+        const combatTurns = combatState.turns?.length || 0;
+        const damageTaken = combatState.challenger.id === winner ? 
+          (combatState.challenger.damageTaken || 0) : 
+          (combatState.challenged.damageTaken || 0);
+        
+        // Quick victory bonus (≤3 turns)
+        if (combatTurns <= 3) {
+          goldReward += 5;
+        }
+        
+        // Perfect victory bonus (no damage taken)
+        if (damageTaken === 0) {
+          goldReward += 10;
+        }
         const winnerWs = winner === combatState.challenger.id ? challengerWs : challengedWs;
         const loserWs = winner === combatState.challenger.id ? challengedWs : challengerWs;
 
         // Notify winner about gold reward (client persists to DB)
         sendToClient(winnerWs, 'goldUpdate', { delta: goldReward });
 
-        // Also send a chat message about rewards
+        // Also send a chat message about rewards with bonus details
+        let rewardText = `${winnerName} earned ${goldReward} gold for the victory!`;
+        if (combatTurns <= 3) {
+          rewardText += ` (Quick Victory +5 gold)`;
+        }
+        if (damageTaken === 0) {
+          rewardText += ` (Perfect Victory +10 gold)`;
+        }
+        
         const rewardMessage = {
           id: generateMessageId(),
           playerId: 'system',
           playerName: 'System',
-          message: `${winnerName} earned ${goldReward} gold for the victory!`,
-          text: `${winnerName} earned ${goldReward} gold for the victory!`,
+          message: rewardText,
+          text: rewardText,
           timestamp: Date.now()
         };
         broadcastToAll('chatMessage', rewardMessage);
@@ -965,7 +989,7 @@ async function saveCombatToDatabase(combatState, winnerId, winnerName, loserName
         player2_level: player2Stats.level || 1,
         damage_dealt: 0, // Could be calculated from combat turns
         critical_hits: 0, // Could be calculated from combat turns
-        gold_reward: 20, // Base gold reward
+        gold_reward: 15, // Base gold reward (updated for balanced economy)
         xp_reward: 50, // Base XP reward
         xp_loss: 0, // No XP loss for losing
         level_difference: Math.abs((player1Stats.level || 1) - (player2Stats.level || 1)),
