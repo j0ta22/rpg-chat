@@ -781,7 +781,13 @@ async function handleCombatAction(ws, data) {
         const winnerWs = winner === combatState.challenger.id ? challengerWs : challengedWs;
         const loserWs = winner === combatState.challenger.id ? challengedWs : challengerWs;
 
-        // Notify winner about gold reward (client persists to DB)
+        // Get winner user ID
+        const winnerUserId = await getUserIdFromPlayerId(winner);
+        
+        // Save gold reward to database directly
+        await saveGoldRewardToDatabase(winnerUserId, goldReward);
+        
+        // Notify winner about gold reward
         sendToClient(winnerWs, 'goldUpdate', { delta: goldReward });
 
         // Also send a chat message about rewards with bonus details
@@ -939,6 +945,52 @@ async function getUserIdFromPlayerId(playerId) {
     return null;
   }
   return player.userId;
+}
+
+// Save gold reward to database
+async function saveGoldRewardToDatabase(userId, goldReward) {
+  if (!supabase) {
+    console.log('⚠️ Supabase not available - skipping gold reward save');
+    return false;
+  }
+  
+  try {
+    console.log(`💰 Saving gold reward to database: User ${userId}, Reward: ${goldReward}`);
+    
+    // Get current gold
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('gold')
+      .eq('id', userId)
+      .single();
+
+    if (userError || !user) {
+      console.error('❌ Error fetching user gold:', userError);
+      return false;
+    }
+
+    const newGold = (user.gold || 0) + goldReward;
+    
+    // Update gold in database
+    const { error: updateError } = await supabase
+      .from('users')
+      .update({ 
+        gold: newGold,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', userId);
+
+    if (updateError) {
+      console.error('❌ Error updating user gold:', updateError);
+      return false;
+    }
+
+    console.log(`✅ Gold reward saved successfully: ${user.gold || 0} + ${goldReward} = ${newGold}`);
+    return true;
+  } catch (error) {
+    console.error('❌ Exception saving gold reward:', error);
+    return false;
+  }
 }
 
 // Save combat to database and update win/loss statistics
