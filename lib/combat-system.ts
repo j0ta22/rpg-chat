@@ -14,6 +14,8 @@ export interface PlayerRanking {
   winRate: number
   totalCombats: number
   rank: number
+  playerId?: string
+  userId?: string
 }
 
 export interface Item {
@@ -279,10 +281,10 @@ export async function getPlayerRanking(): Promise<PlayerRanking[]> {
   try {
     console.log('🏆 getPlayerRanking: Starting to fetch rankings...')
     
-    // Get all players
+    // Get all players with their combat statistics directly from the players table
     const { data: players, error: playersError } = await supabase
       .from('players')
-      .select('id, name, user_id')
+      .select('id, name, user_id, total_wins, total_losses, win_rate')
       .limit(50)
 
     if (playersError) {
@@ -295,32 +297,24 @@ export async function getPlayerRanking(): Promise<PlayerRanking[]> {
       return []
     }
 
-    // Get user stats for all players
-    const userIds = players.map(p => p.user_id).filter(id => id)
-    const { data: users, error: usersError } = await supabase
-      .from('users')
-      .select('id, total_wins, total_losses, win_rate')
-      .in('id', userIds)
+    console.log('🏆 Raw players data:', players)
 
-    if (usersError) {
-      console.error('Error fetching user stats:', usersError)
-      return []
-    }
-
-    // Combine players with their user stats
+    // Create player rankings directly from players table data
     const playerRankings = players
       .map(player => {
-        const userStats = users?.find(u => u.id === player.user_id)
-        return {
-          username: player.name, // Use player name instead of username
-          wins: userStats?.total_wins || 0,
-          losses: userStats?.total_losses || 0,
-          winRate: userStats?.win_rate || 0,
-          totalCombats: (userStats?.total_wins || 0) + (userStats?.total_losses || 0),
+        const ranking = {
+          username: player.name,
+          wins: player.total_wins || 0,
+          losses: player.total_losses || 0,
+          winRate: player.win_rate || 0,
+          totalCombats: (player.total_wins || 0) + (player.total_losses || 0),
           playerId: player.id,
           userId: player.user_id
         }
+        console.log('🏆 Player ranking data:', ranking)
+        return ranking
       })
+      .filter(player => player.totalCombats > 0) // Only show players who have fought
       .sort((a, b) => {
         // Sort by win rate first, then by total wins
         if (b.winRate !== a.winRate) {
@@ -333,7 +327,8 @@ export async function getPlayerRanking(): Promise<PlayerRanking[]> {
         rank: index + 1
       }))
 
-    console.log('Players query successful, found', playerRankings.length, 'players')
+    console.log('🏆 Final player rankings:', playerRankings)
+    console.log('Players query successful, found', playerRankings.length, 'players with combat stats')
     return playerRankings
   } catch (error) {
     console.error('Error getting player ranking:', error)
