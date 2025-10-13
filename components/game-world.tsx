@@ -1014,13 +1014,26 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
         try {
           const delta = goldUpdate?.delta || 0
           if (delta === 0) return
-          setUserGold(prev => (prev || 0) + delta)
+          
+          // Calculate new gold amount
+          const newGoldAmount = (userGold || 0) + delta
+          
+          // Update local state
+          setUserGold(newGoldAmount)
+          
           // Persist to Supabase
           if (user?.id) {
-            await supabase
+            console.log(`💰 Updating gold in database: ${userGold || 0} + ${delta} = ${newGoldAmount}`)
+            const { error } = await supabase
               .from('users')
-              .update({ gold: (userGold || 0) + delta })
+              .update({ gold: newGoldAmount })
               .eq('id', user.id)
+            
+            if (error) {
+              console.error('❌ Error updating gold in database:', error)
+            } else {
+              console.log('✅ Gold updated successfully in database')
+            }
           }
           showRewardMessage(`You earned ${delta} gold!`)
         } catch (e) {
