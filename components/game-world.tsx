@@ -630,6 +630,8 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
   // Update enemies when currentMap changes
   useEffect(() => {
     console.log(`🗺️ Map changed to: ${currentMap.id}, enemies: ${currentMap.enemies.length}`)
+    console.log(`🗺️ Current character position:`, { x: localCharacter.x, y: localCharacter.y })
+    console.log(`🗺️ Current camera position:`, { x: camera.x, y: camera.y })
     setEnemies(currentMap.enemies)
     
     // Re-filter players when map changes
@@ -645,7 +647,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
       console.log(`🗺️ Re-filtered players:`, Object.keys(filtered))
       return filtered
     })
-  }, [currentMap])
+  }, [currentMap, localCharacter.x, localCharacter.y, camera.x, camera.y])
 
   // Handle enemy respawn
   useEffect(() => {
@@ -705,18 +707,34 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
       // Transition to the target map
       const newMap = mapManager.transitionToMap(currentDoor.targetMap, currentDoor.targetSpawnPoint)
       if (newMap) {
+        console.log(`🚪 Starting map transition to: ${currentDoor.targetMap}`)
+        console.log(`🚪 Target spawn point:`, currentDoor.targetSpawnPoint)
+        console.log(`🚪 New map dimensions:`, { width: newMap.width, height: newMap.height })
+        console.log(`🚪 Canvas dimensions:`, { width: CANVAS_WIDTH, height: CANVAS_HEIGHT })
+        
         setCurrentMap(newMap)
+        
         // Update player position to spawn point
-        setLocalCharacter(prev => ({
-          ...prev,
-          x: currentDoor.targetSpawnPoint.x,
-          y: currentDoor.targetSpawnPoint.y
-        }))
-        // Update camera to follow player
-        setCamera({
-          x: Math.max(0, Math.min(newMap.width - CANVAS_WIDTH, currentDoor.targetSpawnPoint.x - CANVAS_WIDTH / 2)),
-          y: Math.max(0, Math.min(newMap.height - CANVAS_HEIGHT, currentDoor.targetSpawnPoint.y - CANVAS_HEIGHT / 2))
+        setLocalCharacter(prev => {
+          const newCharacter = {
+            ...prev,
+            x: currentDoor.targetSpawnPoint.x,
+            y: currentDoor.targetSpawnPoint.y
+          }
+          console.log(`🚪 Updated character position:`, { x: newCharacter.x, y: newCharacter.y })
+          return newCharacter
         })
+        
+        // Update camera to follow player
+        const newCameraX = Math.max(0, Math.min(newMap.width - CANVAS_WIDTH, currentDoor.targetSpawnPoint.x - CANVAS_WIDTH / 2))
+        const newCameraY = Math.max(0, Math.min(newMap.height - CANVAS_HEIGHT, currentDoor.targetSpawnPoint.y - CANVAS_HEIGHT / 2))
+        
+        setCamera({
+          x: newCameraX,
+          y: newCameraY
+        })
+        
+        console.log(`🚪 Updated camera position:`, { x: newCameraX, y: newCameraY })
         
         // Update player's map on server
         if (websocketClient) {
