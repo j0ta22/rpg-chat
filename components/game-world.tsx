@@ -592,8 +592,8 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
     setCurrentShop(nearbyShop || null)
   }, [currentMap.shops])
 
-  const checkNearbyEnemies = useCallback((playerX: number, playerY: number) => {
-    console.log(`🔍 checkNearbyEnemies called at ${new Date().toISOString()}`)
+  const checkNearbyEnemies = useCallback((playerX: number, playerY: number, source = 'unknown') => {
+    console.log(`🔍 checkNearbyEnemies called at ${new Date().toISOString()} from source: ${source}`)
     console.log(`🔍 Checking enemies - Total enemies: ${enemies.length}`)
     console.log(`🔍 Current map: ${currentMap.id}`)
     
@@ -624,7 +624,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
     if (localCharacter.x && localCharacter.y) {
       checkNearbyDoor(localCharacter.x, localCharacter.y)
       checkNearbyShop(localCharacter.x, localCharacter.y)
-      checkNearbyEnemies(localCharacter.x, localCharacter.y)
+      checkNearbyEnemies(localCharacter.x, localCharacter.y, 'useEffect')
     }
   }, [localCharacter.x, localCharacter.y, checkNearbyDoor, checkNearbyShop, checkNearbyEnemies])
 
@@ -2337,7 +2337,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
       checkNearbyPlayers(newX, newY)
       checkNearbyDoor(newX, newY)
       checkNearbyShop(newX, newY)
-      checkNearbyEnemies(newX, newY)
+      checkNearbyEnemies(newX, newY, 'updateGame')
       
       return true // Indica que hubo cambios
     }
@@ -3080,7 +3080,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
             <button 
               onClick={() => {
                 console.log('🔧 Manual enemy check triggered')
-                checkNearbyEnemies(localCharacter.x, localCharacter.y)
+                checkNearbyEnemies(localCharacter.x, localCharacter.y, 'manual')
               }}
               className="mt-2 px-2 py-1 bg-blue-600 text-white text-xs rounded"
             >
