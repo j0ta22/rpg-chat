@@ -608,8 +608,18 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
       console.log(`🔍 Enemy check: ${enemy.name} at (${enemy.x}, ${enemy.y}), player at (${playerX}, ${playerY}), distance: ${distance.toFixed(1)}`)
       return distance <= 60 // Interaction radius for enemies
     })
-    console.log(`👹 Nearby enemy:`, nearbyEnemy ? nearbyEnemy.name : 'none')
-    setNearbyEnemy(nearbyEnemy || null)
+    
+    const newNearbyEnemy = nearbyEnemy || null
+    console.log(`👹 Nearby enemy found:`, newNearbyEnemy ? newNearbyEnemy.name : 'none')
+    
+    // Only update state if it actually changed to avoid unnecessary re-renders
+    setNearbyEnemy(prev => {
+      if (prev?.id !== newNearbyEnemy?.id) {
+        console.log(`👹 Enemy state changing from ${prev?.name || 'null'} to ${newNearbyEnemy?.name || 'null'}`)
+        return newNearbyEnemy
+      }
+      return prev
+    })
   }, [enemies, currentMap.id])
 
   // Verificar proximidad inicial a la puerta, shop y enemigos
@@ -658,6 +668,11 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
   useEffect(() => {
     console.log('🚪 nearbyDoor state changed:', nearbyDoor)
   }, [nearbyDoor])
+
+  // Monitorear cambios en nearbyEnemy
+  useEffect(() => {
+    console.log('👹 nearbyEnemy state changed:', nearbyEnemy ? nearbyEnemy.name : 'null')
+  }, [nearbyEnemy])
 
   // Función para interactuar con NPC
   const interactWithNPC = useCallback(() => {
