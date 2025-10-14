@@ -338,7 +338,6 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
   const [nearbyEnemy, setNearbyEnemy] = useState<Enemy | null>(null)
   const [showEnemyDialog, setShowEnemyDialog] = useState(false)
   const [enemies, setEnemies] = useState<Enemy[]>(currentMap.enemies)
-  const [enemyCheckTimeout, setEnemyCheckTimeout] = useState<NodeJS.Timeout | null>(null)
   
   // Panel states
   const [showInventoryPanel, setShowInventoryPanel] = useState(false)
@@ -620,29 +619,13 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
     setNearbyEnemy(newNearbyEnemy)
   }, [enemies, currentMap.id])
 
-  // Debounced version of checkNearbyEnemies to prevent rapid-fire calls
-  const debouncedCheckNearbyEnemies = useCallback((playerX: number, playerY: number, source = 'unknown') => {
-    // Clear existing timeout
-    if (enemyCheckTimeout) {
-      clearTimeout(enemyCheckTimeout)
-    }
-    
-    // Set new timeout
-    const timeout = setTimeout(() => {
-      checkNearbyEnemies(playerX, playerY, source)
-    }, 50) // 50ms debounce
-    
-    setEnemyCheckTimeout(timeout)
-  }, [checkNearbyEnemies, enemyCheckTimeout])
-
-  // Verificar proximidad inicial a la puerta, shop y enemigos
+  // Verificar proximidad inicial a la puerta y shop
   useEffect(() => {
     if (localCharacter.x && localCharacter.y) {
       checkNearbyDoor(localCharacter.x, localCharacter.y)
       checkNearbyShop(localCharacter.x, localCharacter.y)
-      checkNearbyEnemies(localCharacter.x, localCharacter.y, 'useEffect')
     }
-  }, [localCharacter.x, localCharacter.y, checkNearbyDoor, checkNearbyShop, checkNearbyEnemies])
+  }, [localCharacter.x, localCharacter.y, checkNearbyDoor, checkNearbyShop])
 
   // Update enemies when currentMap changes
   useEffect(() => {
@@ -2353,7 +2336,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
       checkNearbyPlayers(newX, newY)
       checkNearbyDoor(newX, newY)
       checkNearbyShop(newX, newY)
-      debouncedCheckNearbyEnemies(newX, newY, 'updateGame')
+      checkNearbyEnemies(newX, newY, 'updateGame')
       
       return true // Indica que hubo cambios
     }
