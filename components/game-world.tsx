@@ -593,6 +593,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
   }, [currentMap.shops])
 
   const checkNearbyEnemies = useCallback((playerX: number, playerY: number) => {
+    console.log(`🔍 checkNearbyEnemies called at ${new Date().toISOString()}`)
     console.log(`🔍 Checking enemies - Total enemies: ${enemies.length}`)
     console.log(`🔍 Current map: ${currentMap.id}`)
     
@@ -614,6 +615,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
     
     // Always update state for debugging
     console.log(`👹 Setting nearbyEnemy to:`, newNearbyEnemy ? newNearbyEnemy.name : 'null')
+    console.log(`👹 State update timestamp: ${new Date().toISOString()}`)
     setNearbyEnemy(newNearbyEnemy)
   }, [enemies, currentMap.id])
 
