@@ -6,9 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { SocketMultiplayerClient, type CombatChallenge, type CombatState, type CombatAction } from "@/lib/socket-multiplayer"
 import { NativeWebSocketClient, type Player, type GameState, type ChatMessage } from "@/lib/native-websocket"
-import { savePlayerProgress, loadPlayerProgress, type PlayerSaveData, type PlayerStats } from "@/lib/player-persistence"
+import { savePlayerProgress, loadPlayerProgress, type PlayerSaveData } from "@/lib/player-persistence"
 import { calculatePlayerStats } from "@/lib/combat-system"
-import { calculateXPToNext } from "@/lib/xp-system"
+import { calculateXPToNext, addExperience, calculateCombatXP, type PlayerStats } from "@/lib/xp-system"
 import { supabase } from "@/lib/supabase"
 import { MapManager, type MapConfig, type Door, type NPC as MapNPC, type Shop, type Enemy } from "@/lib/map-system"
 
@@ -38,6 +38,10 @@ interface PvECombatState {
   turnNumber: number
   isPlayerTurn: boolean
   enemyId: string
+  // Combat tracking for XP calculation
+  damageDealt: number
+  damageTaken: number
+  isFirstBlood: boolean
 }
 import CombatInterface from "./combat-interface"
 import PvECombatInterface from "./pve-combat-interface"
@@ -795,7 +799,11 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
         currentTurn: 'player',
         turnNumber: 1,
         isPlayerTurn: true,
-        enemyId: nearbyEnemy.id
+        enemyId: nearbyEnemy.id,
+        // Initialize combat tracking for XP calculation
+        damageDealt: 0,
+        damageTaken: 0,
+        isFirstBlood: false
       }
       setPveCombatState(enemyCombatState)
       setShowPvECombatInterface(true)
@@ -808,8 +816,11 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
   }, [])
 
   // Función para manejar el final del combate PvE
-  const handlePvECombatEnd = useCallback((result: 'victory' | 'defeat', enemyId: string) => {
+  const handlePvECombatEnd = useCallback(async (result: 'victory' | 'defeat', enemyId: string, combatStats?: { damageDealt: number, damageTaken: number, turnsTaken: number, isFirstBlood: boolean }) => {
     setShowPvECombatInterface(false)
+    
+    // Get current combat state for XP calculation
+    const currentCombatState = pveCombatState
     setPveCombatState(null)
     
     if (result === 'victory') {
@@ -829,8 +840,8 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
       
       // Find the defeated enemy to get rewards
       const defeatedEnemy = enemies.find(e => e.id === enemyId)
-      if (defeatedEnemy) {
-        // Add gold and XP rewards
+      if (defeatedEnemy && currentCombatState && playerStats) {
+        // Add gold rewards
         const newGold = (userGold ?? 0) + defeatedEnemy.rewards.gold
         setUserGold(newGold)
         
@@ -852,8 +863,56 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
           }
         }
         
-        // TODO: Add XP system integration
-        console.log(`🎉 Defeated ${defeatedEnemy.name}! Gained ${defeatedEnemy.rewards.gold} gold and ${defeatedEnemy.rewards.xp} XP`)
+        // Calculate and apply XP rewards
+        const finalCombatStats = combatStats || {
+          damageDealt: currentCombatState.damageDealt,
+          damageTaken: currentCombatState.damageTaken,
+          turnsTaken: currentCombatState.turnNumber,
+          isFirstBlood: currentCombatState.isFirstBlood
+        }
+        
+        const xpGained = calculateCombatXP(
+          true, // isVictory
+          finalCombatStats.damageDealt,
+          finalCombatStats.damageTaken,
+          finalCombatStats.turnsTaken,
+          finalCombatStats.isFirstBlood
+        )
+        
+        console.log(`📊 Combat stats: damageDealt=${finalCombatStats.damageDealt}, damageTaken=${finalCombatStats.damageTaken}, turns=${finalCombatStats.turnsTaken}, firstBlood=${finalCombatStats.isFirstBlood}`)
+        console.log(`🎯 XP calculated: ${xpGained} XP`)
+        
+        // Apply XP and handle level ups
+        const xpResult = addExperience(playerStats, xpGained)
+        
+        // Update player stats
+        setPlayerStats(xpResult.newStats)
+        setUserLevel(xpResult.newStats.level)
+        
+        // Show level up notification if applicable
+        if (xpResult.leveledUp && xpResult.levelUpReward) {
+          setLevelUpNotification({
+            levelsGained: xpResult.levelsGained,
+            newLevel: xpResult.newStats.level,
+            rewards: xpResult.levelUpReward
+          })
+          
+          // Auto-hide level up notification after 5 seconds
+          setTimeout(() => {
+            setLevelUpNotification(null)
+          }, 5000)
+        }
+        
+        // Save updated stats to database
+        setTimeout(() => {
+          console.log('💾 Auto-saving after XP update')
+          savePlayerProgressToSupabase()
+        }, 100)
+        
+        console.log(`🎉 Defeated ${defeatedEnemy.name}! Gained ${defeatedEnemy.rewards.gold} gold and ${xpGained} XP`)
+        if (xpResult.leveledUp) {
+          console.log(`🎊 Level up! Now level ${xpResult.newStats.level}`)
+        }
       }
     } else {
       // Player loses - respawn in tavern and lose XP
@@ -874,10 +933,38 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
         })
       }
       
-      // TODO: Implement XP loss system
-      console.log(`📉 Lost XP due to PvE defeat`)
+      // Calculate consolation XP for defeat
+      if (currentCombatState && playerStats) {
+        const defeatCombatStats = combatStats || {
+          damageDealt: currentCombatState.damageDealt,
+          damageTaken: currentCombatState.damageTaken,
+          turnsTaken: currentCombatState.turnNumber,
+          isFirstBlood: currentCombatState.isFirstBlood
+        }
+        
+        const consolationXP = calculateCombatXP(
+          false, // isVictory
+          defeatCombatStats.damageDealt,
+          defeatCombatStats.damageTaken,
+          defeatCombatStats.turnsTaken,
+          defeatCombatStats.isFirstBlood
+        )
+        
+        if (consolationXP > 0) {
+          const xpResult = addExperience(playerStats, consolationXP)
+          setPlayerStats(xpResult.newStats)
+          setUserLevel(xpResult.newStats.level)
+          
+          console.log(`💔 Defeat consolation: gained ${consolationXP} XP`)
+          
+          // Save updated stats
+          setTimeout(() => {
+            savePlayerProgressToSupabase()
+          }, 100)
+        }
+      }
     }
-  }, [enemies, userGold, mapManager, CANVAS_WIDTH, CANVAS_HEIGHT, user])
+  }, [enemies, userGold, mapManager, CANVAS_WIDTH, CANVAS_HEIGHT, user, pveCombatState, playerStats])
 
   // Función para guardar progreso del jugador en Supabase
   const savePlayerProgressToSupabase = useCallback(async () => {

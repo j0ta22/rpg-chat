@@ -33,11 +33,15 @@ interface PvECombatState {
   turnNumber: number
   isPlayerTurn: boolean
   enemyId: string
+  // Combat tracking for XP calculation
+  damageDealt: number
+  damageTaken: number
+  isFirstBlood: boolean
 }
 
 interface PvECombatInterfaceProps {
   combatState: PvECombatState
-  onCombatEnd: (result: 'victory' | 'defeat', enemyId: string) => void
+  onCombatEnd: (result: 'victory' | 'defeat', enemyId: string, combatStats?: { damageDealt: number, damageTaken: number, turnsTaken: number, isFirstBlood: boolean }) => void
   onClose: () => void
 }
 
@@ -77,10 +81,19 @@ const PvECombatInterface: React.FC<PvECombatInterfaceProps> = ({
       
       addToLog(`${currentState.player.name} deals ${damage} damage!`)
       
+      // Track damage dealt and first blood
+      const isFirstBlood = currentState.damageDealt === 0 && damage > 0
+      
       if (newEnemyHealth <= 0) {
         addToLog(`${currentState.enemy.name} is defeated!`)
         setTimeout(() => {
-          onCombatEnd('victory', currentState.enemyId)
+          const combatStats = {
+            damageDealt: currentState.damageDealt + damage,
+            damageTaken: currentState.damageTaken,
+            turnsTaken: currentState.turnNumber,
+            isFirstBlood: isFirstBlood
+          }
+          onCombatEnd('victory', currentState.enemyId, combatStats)
         }, 1000)
         return
       }
@@ -89,7 +102,9 @@ const PvECombatInterface: React.FC<PvECombatInterfaceProps> = ({
         ...prev,
         enemy: { ...prev.enemy, health: newEnemyHealth },
         currentTurn: 'enemy',
-        isPlayerTurn: false
+        isPlayerTurn: false,
+        damageDealt: prev.damageDealt + damage,
+        isFirstBlood: prev.isFirstBlood || isFirstBlood
       }))
 
       // Enemy turn after a delay
@@ -111,7 +126,13 @@ const PvECombatInterface: React.FC<PvECombatInterfaceProps> = ({
       if (newPlayerHealth <= 0) {
         addToLog(`${currentState.player.name} is defeated!`)
         setTimeout(() => {
-          onCombatEnd('defeat', currentState.enemyId)
+          const combatStats = {
+            damageDealt: currentState.damageDealt,
+            damageTaken: currentState.damageTaken + damage,
+            turnsTaken: currentState.turnNumber,
+            isFirstBlood: currentState.isFirstBlood
+          }
+          onCombatEnd('defeat', currentState.enemyId, combatStats)
         }, 1000)
         return
       }
@@ -121,7 +142,8 @@ const PvECombatInterface: React.FC<PvECombatInterfaceProps> = ({
         player: { ...prev.player, health: newPlayerHealth },
         currentTurn: 'player',
         isPlayerTurn: true,
-        turnNumber: prev.turnNumber + 1
+        turnNumber: prev.turnNumber + 1,
+        damageTaken: prev.damageTaken + damage
       }))
 
       setIsProcessing(false)
