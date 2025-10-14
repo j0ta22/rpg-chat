@@ -159,7 +159,7 @@ export const TAVERN_MAP: MapConfig = {
       width: 128,
       height: 32,
       targetMap: 'exterior',
-      targetSpawnPoint: { x: 800, y: 100 },
+      targetSpawnPoint: { x: 2800, y: 2100 }, // Updated to match new exterior spawn point
       interactionRadius: 50,
       name: 'Exit to Dark Swamp',
       description: 'A weathered door that creaks ominously. Beyond lies a murky, foreboding swamp filled with twisted trees and dark secrets.'
