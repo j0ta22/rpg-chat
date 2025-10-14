@@ -137,8 +137,8 @@ export const TAVERN_MAP: MapConfig = {
       targetMap: 'exterior',
       targetSpawnPoint: { x: 800, y: 100 },
       interactionRadius: 50,
-      name: 'Exit to Exterior',
-      description: 'A sturdy wooden door leading to the outside world.'
+      name: 'Exit to Dark Swamp',
+      description: 'A weathered door that creaks ominously. Beyond lies a murky, foreboding swamp filled with twisted trees and dark secrets.'
     }
   ],
   shops: [
@@ -152,10 +152,10 @@ export const TAVERN_MAP: MapConfig = {
   ]
 }
 
-// Exterior Map (New Map)
+// Exterior Map (Dark Swamp)
 export const EXTERIOR_MAP: MapConfig = {
   id: 'exterior',
-  name: 'The Exterior',
+  name: 'The Dark Swamp',
   width: 2000,
   height: 1500,
   spawnPoint: { x: 800, y: 100 },
@@ -187,21 +187,21 @@ export const EXTERIOR_MAP: MapConfig = {
   ],
   npcs: [
     {
-      id: 'traveler',
-      name: 'Traveler',
+      id: 'swamp_hermit',
+      name: 'Swamp Hermit',
       x: 500,
       y: 400,
       avatar: 'character_5',
-      dialog: "The world outside the tavern is vast and full of adventure!",
+      dialog: "Beware, traveler... this swamp holds many secrets and dangers. The twisted trees whisper of ancient evils that lurk in the murky depths.",
       interactionRadius: 80
     },
     {
-      id: 'merchant',
-      name: 'Merchant',
+      id: 'dark_merchant',
+      name: 'Shadow Merchant',
       x: 1200,
       y: 600,
       avatar: 'character_10',
-      dialog: "I trade goods from distant lands. What do you need?",
+      dialog: "I deal in rare and forbidden goods from the darkest corners of the realm. But beware... my prices are not always paid in gold.",
       interactionRadius: 80
     }
   ],
@@ -216,7 +216,7 @@ export const EXTERIOR_MAP: MapConfig = {
       targetSpawnPoint: { x: 1344, y: 1100 },
       interactionRadius: 50,
       name: 'Enter Tavern',
-      description: 'The warm glow of the tavern beckons you inside.'
+      description: 'The warm glow of the tavern beckons you back to safety from this dark, foreboding swamp.'
     }
   ],
   shops: [
@@ -225,7 +225,7 @@ export const EXTERIOR_MAP: MapConfig = {
       x: 1200,
       y: 600,
       interactionRadius: 80,
-      name: 'Traveling Merchant'
+      name: 'Shadow Merchant'
     }
   ]
 }

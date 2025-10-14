@@ -1758,41 +1758,52 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
     generateOriginalTavernTerrain(ctx, cameraX, cameraY)
   }, [generateOriginalTavernTerrain])
 
-  // Exterior terrain rendering
+  // Exterior terrain rendering - Dark Swamp Style
   const generateExteriorTerrain = useCallback((ctx: CanvasRenderingContext2D, cameraX: number, cameraY: number) => {
-    // Grass base with natural gradient
-    const grassGradient = ctx.createLinearGradient(0, 0, 0, MAP_HEIGHT)
-    grassGradient.addColorStop(0, "#7cb342")
-    grassGradient.addColorStop(0.3, "#689f38")
-    grassGradient.addColorStop(0.7, "#558b2f")
-    grassGradient.addColorStop(1, "#33691e")
-    ctx.fillStyle = grassGradient
+    // Dark swamp base with murky gradient
+    const swampGradient = ctx.createLinearGradient(0, 0, 0, MAP_HEIGHT)
+    swampGradient.addColorStop(0, "#2d5016") // Dark green
+    swampGradient.addColorStop(0.3, "#1b3009") // Very dark green
+    swampGradient.addColorStop(0.7, "#0f1a05") // Almost black green
+    swampGradient.addColorStop(1, "#0a0f03") // Deep black green
+    ctx.fillStyle = swampGradient
     ctx.fillRect(-cameraX, -cameraY, MAP_WIDTH, MAP_HEIGHT)
 
-    // Add grass texture with small variations
+    // Add swamp texture with murky variations
     for (let x = 0; x < MAP_WIDTH; x += 16) {
       for (let y = 0; y < MAP_HEIGHT; y += 16) {
-        const variation = Math.sin(x * 0.05 + y * 0.05) * 0.1
-        const grassVariation = (x + y) % 64
+        const variation = Math.sin(x * 0.03 + y * 0.03) * 0.15
+        const swampVariation = (x + y) % 80
         
-        if (grassVariation === 0) {
-          // Lighter grass patches
-          ctx.fillStyle = `#${Math.floor(124 + variation * 20).toString(16)}${Math.floor(179 + variation * 15).toString(16)}${Math.floor(66 + variation * 10).toString(16)}`
+        if (swampVariation === 0) {
+          // Murky water patches
+          ctx.fillStyle = `#${Math.floor(45 + variation * 10).toString(16)}${Math.floor(60 + variation * 8).toString(16)}${Math.floor(30 + variation * 5).toString(16)}`
           ctx.fillRect(x - cameraX, y - cameraY, 16, 16)
-        } else if (grassVariation === 32) {
-          // Darker grass patches
-          ctx.fillStyle = `#${Math.floor(86 + variation * 15).toString(16)}${Math.floor(125 + variation * 12).toString(16)}${Math.floor(47 + variation * 8).toString(16)}`
+        } else if (swampVariation === 20) {
+          // Darker swamp areas
+          ctx.fillStyle = `#${Math.floor(25 + variation * 8).toString(16)}${Math.floor(35 + variation * 6).toString(16)}${Math.floor(15 + variation * 4).toString(16)}`
+          ctx.fillRect(x - cameraX, y - cameraY, 16, 16)
+        } else if (swampVariation === 40) {
+          // Muddy patches
+          ctx.fillStyle = `#${Math.floor(60 + variation * 12).toString(16)}${Math.floor(45 + variation * 10).toString(16)}${Math.floor(25 + variation * 6).toString(16)}`
           ctx.fillRect(x - cameraX, y - cameraY, 16, 16)
         }
       }
     }
 
-    // Add dirt paths
-    ctx.fillStyle = "#8d6e63"
+    // Add murky water pools
+    ctx.fillStyle = "#1a2e0a"
+    ctx.fillRect(300 - cameraX, 200 - cameraY, 150, 100) // Water pool 1
+    ctx.fillRect(800 - cameraX, 400 - cameraY, 200, 80) // Water pool 2
+    ctx.fillRect(1200 - cameraX, 300 - cameraY, 120, 150) // Water pool 3
+    ctx.fillRect(500 - cameraX, 800 - cameraY, 180, 90) // Water pool 4
+
+    // Add dark muddy paths
+    ctx.fillStyle = "#2d1b0a"
     ctx.fillRect(400 - cameraX, 0 - cameraY, 200, MAP_HEIGHT) // Vertical path
     ctx.fillRect(0 - cameraX, 600 - cameraY, MAP_WIDTH, 100) // Horizontal path
 
-    // Render collision objects for exterior
+    // Render collision objects for swamp
     collisionObjects.forEach((obj) => {
       const objX = obj.x - cameraX
       const objY = obj.y - cameraY
@@ -1800,45 +1811,58 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
       if (objX + obj.width > -50 && objX < CANVAS_WIDTH + 50 && objY + obj.height > -50 && objY < CANVAS_HEIGHT + 50) {
         switch (obj.type) {
           case "wall":
-            ctx.fillStyle = "#5d4037"
+            ctx.fillStyle = "#1a1a0a"
             ctx.fillRect(objX, objY, obj.width, obj.height)
             break
           case "tree":
-            // Tree trunk
-            ctx.fillStyle = "#4e342e"
+            // Dead tree trunk
+            ctx.fillStyle = "#2d1b0a"
             ctx.fillRect(objX + 24, objY + 40, 16, 24)
-            // Tree foliage
-            ctx.fillStyle = "#2e7d32"
+            // Dead tree branches (twisted and dark)
+            ctx.fillStyle = "#1a0f05"
             ctx.beginPath()
-            ctx.arc(objX + 32, objY + 32, 32, 0, Math.PI * 2)
+            ctx.arc(objX + 32, objY + 32, 28, 0, Math.PI * 2)
+            ctx.fill()
+            // Add some twisted branches
+            ctx.fillStyle = "#0f0a03"
+            ctx.beginPath()
+            ctx.arc(objX + 20, objY + 20, 12, 0, Math.PI * 2)
+            ctx.fill()
+            ctx.beginPath()
+            ctx.arc(objX + 44, objY + 25, 10, 0, Math.PI * 2)
             ctx.fill()
             break
           case "rock":
-            ctx.fillStyle = "#616161"
+            // Dark swamp rocks
+            ctx.fillStyle = "#1a1a0a"
             ctx.beginPath()
             ctx.arc(objX + 24, objY + 24, 24, 0, Math.PI * 2)
             ctx.fill()
-            // Rock highlights
-            ctx.fillStyle = "#9e9e9e"
+            // Mossy rock highlights
+            ctx.fillStyle = "#2d5016"
             ctx.beginPath()
             ctx.arc(objX + 20, objY + 20, 8, 0, Math.PI * 2)
             ctx.fill()
             break
           case "house":
-            // House base
-            ctx.fillStyle = "#8d6e63"
+            // Abandoned swamp hut
+            ctx.fillStyle = "#2d1b0a"
             ctx.fillRect(objX, objY + 48, obj.width, 48)
-            // House roof
-            ctx.fillStyle = "#d32f2f"
+            // Mossy roof
+            ctx.fillStyle = "#1a3009"
             ctx.beginPath()
             ctx.moveTo(objX, objY + 48)
             ctx.lineTo(objX + 64, objY)
             ctx.lineTo(objX + 128, objY + 48)
             ctx.closePath()
             ctx.fill()
-            // Door
-            ctx.fillStyle = "#4e342e"
+            // Dark door
+            ctx.fillStyle = "#0a0a0a"
             ctx.fillRect(objX + 48, objY + 64, 32, 32)
+            // Add some swamp vines
+            ctx.fillStyle = "#1a2e0a"
+            ctx.fillRect(objX + 10, objY + 20, 4, 60)
+            ctx.fillRect(objX + 110, objY + 15, 4, 70)
             break
         }
       }
