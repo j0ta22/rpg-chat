@@ -596,6 +596,13 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
     console.log(`🔍 checkNearbyEnemies called at ${new Date().toISOString()} from source: ${source}`)
     console.log(`🔍 Checking enemies - Total enemies: ${enemies.length}`)
     console.log(`🔍 Current map: ${currentMap.id}`)
+    console.log(`🔍 Player position: (${playerX}, ${playerY})`)
+    
+    if (enemies.length === 0) {
+      console.log(`🔍 No enemies available for checking`)
+      setNearbyEnemy(null)
+      return
+    }
     
     const foundEnemy = enemies.find(enemy => {
       console.log(`🔍 Checking enemy: ${enemy.name}, isAlive: ${enemy.isAlive}`)
@@ -619,13 +626,14 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
     setNearbyEnemy(newNearbyEnemy)
   }, [enemies, currentMap.id])
 
-  // Verificar proximidad inicial a la puerta y shop
+  // Verificar proximidad inicial a la puerta, shop y enemigos
   useEffect(() => {
     if (localCharacter.x && localCharacter.y) {
       checkNearbyDoor(localCharacter.x, localCharacter.y)
       checkNearbyShop(localCharacter.x, localCharacter.y)
+      checkNearbyEnemies(localCharacter.x, localCharacter.y, 'useEffect')
     }
-  }, [localCharacter.x, localCharacter.y, checkNearbyDoor, checkNearbyShop])
+  }, [localCharacter.x, localCharacter.y, checkNearbyDoor, checkNearbyShop, checkNearbyEnemies])
 
   // Update enemies when currentMap changes
   useEffect(() => {
