@@ -2494,9 +2494,10 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
     }
 
     // Dibujar otros jugadores (usando posiciones interpoladas si están disponibles)
-    Object.values(allPlayers).forEach((player) => {
-      // Solo dibujar si no es el jugador local y está marcado como visible
-      if (player.id !== playerId && playerVisibility[player.id] !== false) {
+    // Use otherPlayers instead of allPlayers to respect map filtering
+    Object.values(otherPlayers).forEach((player) => {
+      // Solo dibujar si está marcado como visible
+      if (playerVisibility[player.id] !== false) {
         // Usar posición interpolada si está disponible, sino usar la posición normal
         const interpolatedPlayer = interpolatedPlayers[player.id]
         const renderPlayer = interpolatedPlayer || player
