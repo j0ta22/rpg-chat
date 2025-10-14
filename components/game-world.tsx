@@ -1358,9 +1358,8 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
   }, [spriteImages])
 
 
-  const generateTerrain = useCallback((ctx: CanvasRenderingContext2D, cameraX: number, cameraY: number) => {
-    ctx.imageSmoothingEnabled = false
-
+  // Original tavern terrain generation (moved from generateTerrain)
+  const generateOriginalTavernTerrain = useCallback((ctx: CanvasRenderingContext2D, cameraX: number, cameraY: number) => {
     // Enhanced stone floor base with better texture
     const baseGradient = ctx.createLinearGradient(0, 0, 0, MAP_HEIGHT)
     baseGradient.addColorStop(0, "#8b7d6b")
@@ -1751,7 +1750,112 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
         ctx.fillRect(logoX + 2, logoY + 2, logoWidth, logoHeight)
       }
     }
-  }, [tavernLogo])
+  }, [tavernLogo, MAP_WIDTH, MAP_HEIGHT, collisionObjects, CANVAS_WIDTH, CANVAS_HEIGHT])
+
+  // Tavern terrain rendering - calls the original terrain generation
+  const generateTavernTerrain = useCallback((ctx: CanvasRenderingContext2D, cameraX: number, cameraY: number) => {
+    // Call the original terrain generation function
+    generateOriginalTavernTerrain(ctx, cameraX, cameraY)
+  }, [generateOriginalTavernTerrain])
+
+  // Exterior terrain rendering
+  const generateExteriorTerrain = useCallback((ctx: CanvasRenderingContext2D, cameraX: number, cameraY: number) => {
+    // Grass base with natural gradient
+    const grassGradient = ctx.createLinearGradient(0, 0, 0, MAP_HEIGHT)
+    grassGradient.addColorStop(0, "#7cb342")
+    grassGradient.addColorStop(0.3, "#689f38")
+    grassGradient.addColorStop(0.7, "#558b2f")
+    grassGradient.addColorStop(1, "#33691e")
+    ctx.fillStyle = grassGradient
+    ctx.fillRect(-cameraX, -cameraY, MAP_WIDTH, MAP_HEIGHT)
+
+    // Add grass texture with small variations
+    for (let x = 0; x < MAP_WIDTH; x += 16) {
+      for (let y = 0; y < MAP_HEIGHT; y += 16) {
+        const variation = Math.sin(x * 0.05 + y * 0.05) * 0.1
+        const grassVariation = (x + y) % 64
+        
+        if (grassVariation === 0) {
+          // Lighter grass patches
+          ctx.fillStyle = `#${Math.floor(124 + variation * 20).toString(16)}${Math.floor(179 + variation * 15).toString(16)}${Math.floor(66 + variation * 10).toString(16)}`
+          ctx.fillRect(x - cameraX, y - cameraY, 16, 16)
+        } else if (grassVariation === 32) {
+          // Darker grass patches
+          ctx.fillStyle = `#${Math.floor(86 + variation * 15).toString(16)}${Math.floor(125 + variation * 12).toString(16)}${Math.floor(47 + variation * 8).toString(16)}`
+          ctx.fillRect(x - cameraX, y - cameraY, 16, 16)
+        }
+      }
+    }
+
+    // Add dirt paths
+    ctx.fillStyle = "#8d6e63"
+    ctx.fillRect(400 - cameraX, 0 - cameraY, 200, MAP_HEIGHT) // Vertical path
+    ctx.fillRect(0 - cameraX, 600 - cameraY, MAP_WIDTH, 100) // Horizontal path
+
+    // Render collision objects for exterior
+    collisionObjects.forEach((obj) => {
+      const objX = obj.x - cameraX
+      const objY = obj.y - cameraY
+
+      if (objX + obj.width > -50 && objX < CANVAS_WIDTH + 50 && objY + obj.height > -50 && objY < CANVAS_HEIGHT + 50) {
+        switch (obj.type) {
+          case "wall":
+            ctx.fillStyle = "#5d4037"
+            ctx.fillRect(objX, objY, obj.width, obj.height)
+            break
+          case "tree":
+            // Tree trunk
+            ctx.fillStyle = "#4e342e"
+            ctx.fillRect(objX + 24, objY + 40, 16, 24)
+            // Tree foliage
+            ctx.fillStyle = "#2e7d32"
+            ctx.beginPath()
+            ctx.arc(objX + 32, objY + 32, 32, 0, Math.PI * 2)
+            ctx.fill()
+            break
+          case "rock":
+            ctx.fillStyle = "#616161"
+            ctx.beginPath()
+            ctx.arc(objX + 24, objY + 24, 24, 0, Math.PI * 2)
+            ctx.fill()
+            // Rock highlights
+            ctx.fillStyle = "#9e9e9e"
+            ctx.beginPath()
+            ctx.arc(objX + 20, objY + 20, 8, 0, Math.PI * 2)
+            ctx.fill()
+            break
+          case "house":
+            // House base
+            ctx.fillStyle = "#8d6e63"
+            ctx.fillRect(objX, objY + 48, obj.width, 48)
+            // House roof
+            ctx.fillStyle = "#d32f2f"
+            ctx.beginPath()
+            ctx.moveTo(objX, objY + 48)
+            ctx.lineTo(objX + 64, objY)
+            ctx.lineTo(objX + 128, objY + 48)
+            ctx.closePath()
+            ctx.fill()
+            // Door
+            ctx.fillStyle = "#4e342e"
+            ctx.fillRect(objX + 48, objY + 64, 32, 32)
+            break
+        }
+      }
+    })
+  }, [MAP_WIDTH, MAP_HEIGHT, collisionObjects, CANVAS_WIDTH, CANVAS_HEIGHT])
+
+  // Render terrain based on current map
+  const generateTerrain = useCallback((ctx: CanvasRenderingContext2D, cameraX: number, cameraY: number) => {
+    ctx.imageSmoothingEnabled = false
+
+    // Render terrain based on current map
+    if (currentMap.id === 'tavern') {
+      generateTavernTerrain(ctx, cameraX, cameraY)
+    } else if (currentMap.id === 'exterior') {
+      generateExteriorTerrain(ctx, cameraX, cameraY)
+    }
+  }, [currentMap.id, generateTavernTerrain, generateExteriorTerrain])
 
   const drawPlayer = useCallback(
     (
