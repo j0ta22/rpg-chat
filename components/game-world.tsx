@@ -631,6 +631,20 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
   useEffect(() => {
     console.log(`🗺️ Map changed to: ${currentMap.id}, enemies: ${currentMap.enemies.length}`)
     setEnemies(currentMap.enemies)
+    
+    // Re-filter players when map changes
+    console.log(`🗺️ Re-filtering players due to map change to: ${currentMap.id}`)
+    setOtherPlayers(prev => {
+      const filtered = Object.fromEntries(
+        Object.entries(prev).filter(([id, player]) => {
+          const isInSameMap = player.currentMap === currentMap.id
+          console.log(`🗺️ Re-filter: Player ${player.name} (${id}): map=${player.currentMap}, current=${currentMap.id}, match=${isInSameMap}`)
+          return isInSameMap
+        })
+      )
+      console.log(`🗺️ Re-filtered players:`, Object.keys(filtered))
+      return filtered
+    })
   }, [currentMap])
 
   // Handle enemy respawn
@@ -1301,34 +1315,47 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
           return prev
         })
       },
-      (playerId: string, currentMap: string) => {
+      (playerId: string, newMap: string) => {
         // Player changed map
-        console.log(`🗺️ Player ${playerId} changed map to: ${currentMap}`)
+        console.log(`🗺️ Player ${playerId} changed map to: ${newMap}`)
         
         // Update player's map in allPlayers
         setAllPlayers(prev => {
           if (prev[playerId]) {
-            return {
+            const updated = {
               ...prev,
               [playerId]: {
                 ...prev[playerId],
-                currentMap: currentMap
+                currentMap: newMap
               }
             }
+            console.log(`🗺️ Updated allPlayers for ${playerId}: map=${newMap}`)
+            return updated
           }
           return prev
         })
         
-        // Update player's map in otherPlayers
+        // Update player's map in otherPlayers and filter if needed
         setOtherPlayers(prev => {
           if (prev[playerId]) {
-            return {
+            const updated = {
               ...prev,
               [playerId]: {
                 ...prev[playerId],
-                currentMap: currentMap
+                currentMap: newMap
               }
             }
+            console.log(`🗺️ Updated otherPlayers for ${playerId}: map=${newMap}`)
+            
+            // If the player moved to a different map, remove them from otherPlayers
+            if (newMap !== currentMap.id) {
+              console.log(`🗺️ Removing ${playerId} from otherPlayers (moved to different map)`)
+              const filtered = { ...updated }
+              delete filtered[playerId]
+              return filtered
+            }
+            
+            return updated
           }
           return prev
         })
@@ -3160,4 +3187,5 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
     </div>
   )
 }
+
 
