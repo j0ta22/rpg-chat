@@ -2353,6 +2353,11 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
       return false // Indica que no hay cambios
     }
     
+    // Debug: Log movement attempt
+    console.log(`🎮 Movement attempt - Keys:`, Array.from(keys))
+    console.log(`🎮 Current position:`, { x: localCharacter.x, y: localCharacter.y })
+    console.log(`🎮 Map bounds:`, { width: MAP_WIDTH, height: MAP_HEIGHT })
+    
     let newX = localCharacter.x
     let newY = localCharacter.y
     let moved = false
@@ -2360,7 +2365,9 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
     // Process movement with simplified logic and direction tracking
     if (keys.has("ArrowLeft") || keys.has("KeyA")) {
       const testX = newX - MOVE_SPEED
-      if (testX >= PLAYER_SIZE / 2 && !checkCollision(testX, newY)) {
+      const collision = checkCollision(testX, newY)
+      console.log(`🎮 Left: testX=${testX}, collision=${collision}, bounds=${testX >= PLAYER_SIZE / 2}`)
+      if (testX >= PLAYER_SIZE / 2 && !collision) {
         newX = testX
         setPlayerDirection('left')
         moved = true
@@ -2369,7 +2376,9 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
     
     if (keys.has("ArrowRight") || keys.has("KeyD")) {
       const testX = newX + MOVE_SPEED
-      if (testX <= MAP_WIDTH - PLAYER_SIZE / 2 && !checkCollision(testX, newY)) {
+      const collision = checkCollision(testX, newY)
+      console.log(`🎮 Right: testX=${testX}, collision=${collision}, bounds=${testX <= MAP_WIDTH - PLAYER_SIZE / 2}`)
+      if (testX <= MAP_WIDTH - PLAYER_SIZE / 2 && !collision) {
         newX = testX
         setPlayerDirection('right')
         moved = true
@@ -2378,7 +2387,9 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
     
     if (keys.has("ArrowUp") || keys.has("KeyW")) {
       const testY = newY - MOVE_SPEED
-      if (testY >= PLAYER_SIZE / 2 && !checkCollision(newX, testY)) {
+      const collision = checkCollision(newX, testY)
+      console.log(`🎮 Up: testY=${testY}, collision=${collision}, bounds=${testY >= PLAYER_SIZE / 2}`)
+      if (testY >= PLAYER_SIZE / 2 && !collision) {
         newY = testY
         setPlayerDirection('up')
         moved = true
@@ -2387,7 +2398,9 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
     
     if (keys.has("ArrowDown") || keys.has("KeyS")) {
       const testY = newY + MOVE_SPEED
-      if (testY <= MAP_HEIGHT - PLAYER_SIZE / 2 && !checkCollision(newX, testY)) {
+      const collision = checkCollision(newX, testY)
+      console.log(`🎮 Down: testY=${testY}, collision=${collision}, bounds=${testY <= MAP_HEIGHT - PLAYER_SIZE / 2}`)
+      if (testY <= MAP_HEIGHT - PLAYER_SIZE / 2 && !collision) {
         newY = testY
         setPlayerDirection('down')
         moved = true
@@ -2745,7 +2758,11 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
       }
       
       // Teclas de movimiento
-      setKeys((prev) => new Set(prev).add(e.code))
+      setKeys((prev) => {
+        const newKeys = new Set(prev).add(e.code)
+        console.log(`🎮 Key pressed: ${e.code}, keys now:`, Array.from(newKeys))
+        return newKeys
+      })
     }
 
     const handleKeyUp = (e: KeyboardEvent) => {
@@ -2755,6 +2772,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
       setKeys((prev) => {
         const newKeys = new Set(prev)
         newKeys.delete(e.code)
+        console.log(`🎮 Key released: ${e.code}, keys now:`, Array.from(newKeys))
         return newKeys
       })
     }
