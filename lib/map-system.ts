@@ -183,39 +183,39 @@ export const EXTERIOR_MAP: MapConfig = {
   name: 'The Dark Swamp',
   width: 2000,
   height: 1500,
-  spawnPoint: { x: 800, y: 100 },
+  spawnPoint: { x: 2800, y: 2100 }, // Offset to avoid coordinate overlap with tavern
   collisionObjects: [
-    // Outer walls
-    { x: 0, y: 0, width: 2000, height: 32, type: "wall" }, // Top wall
-    { x: 0, y: 1468, width: 2000, height: 32, type: "wall" }, // Bottom wall
-    { x: 0, y: 0, width: 32, height: 1500, type: "wall" }, // Left wall
-    { x: 1968, y: 0, width: 32, height: 1500, type: "wall" }, // Right wall
+    // Outer walls (offset by +2000, +1500)
+    { x: 2000, y: 1500, width: 2000, height: 32, type: "wall" }, // Top wall
+    { x: 2000, y: 2968, width: 2000, height: 32, type: "wall" }, // Bottom wall
+    { x: 2000, y: 1500, width: 32, height: 1500, type: "wall" }, // Left wall
+    { x: 3968, y: 1500, width: 32, height: 1500, type: "wall" }, // Right wall
 
-    // Trees and natural obstacles
-    { x: 200, y: 200, width: 64, height: 64, type: "tree" },
-    { x: 400, y: 300, width: 64, height: 64, type: "tree" },
-    { x: 600, y: 150, width: 64, height: 64, type: "tree" },
-    { x: 1200, y: 400, width: 64, height: 64, type: "tree" },
-    { x: 1400, y: 250, width: 64, height: 64, type: "tree" },
-    { x: 1600, y: 350, width: 64, height: 64, type: "tree" },
+    // Trees and natural obstacles (offset by +2000, +1500)
+    { x: 2200, y: 1700, width: 64, height: 64, type: "tree" },
+    { x: 2400, y: 1800, width: 64, height: 64, type: "tree" },
+    { x: 2600, y: 1650, width: 64, height: 64, type: "tree" },
+    { x: 3200, y: 1900, width: 64, height: 64, type: "tree" },
+    { x: 3400, y: 1750, width: 64, height: 64, type: "tree" },
+    { x: 3600, y: 1850, width: 64, height: 64, type: "tree" },
 
-    // Rocks
-    { x: 300, y: 500, width: 48, height: 48, type: "rock" },
-    { x: 800, y: 600, width: 48, height: 48, type: "rock" },
-    { x: 1100, y: 700, width: 48, height: 48, type: "rock" },
-    { x: 1500, y: 800, width: 48, height: 48, type: "rock" },
+    // Rocks (offset by +2000, +1500)
+    { x: 2300, y: 2000, width: 48, height: 48, type: "rock" },
+    { x: 2800, y: 2100, width: 48, height: 48, type: "rock" },
+    { x: 3100, y: 2200, width: 48, height: 48, type: "rock" },
+    { x: 3500, y: 2300, width: 48, height: 48, type: "rock" },
 
-    // Buildings
-    { x: 100, y: 800, width: 128, height: 96, type: "house" },
-    { x: 300, y: 900, width: 128, height: 96, type: "house" },
-    { x: 1700, y: 1000, width: 128, height: 96, type: "house" },
+    // Buildings (offset by +2000, +1500)
+    { x: 2100, y: 2300, width: 128, height: 96, type: "house" },
+    { x: 2300, y: 2400, width: 128, height: 96, type: "house" },
+    { x: 3700, y: 2500, width: 128, height: 96, type: "house" },
   ],
   npcs: [
     {
       id: 'swamp_hermit',
       name: 'Swamp Hermit',
-      x: 500,
-      y: 400,
+      x: 2500, // +2000 offset
+      y: 1900, // +1500 offset
       avatar: 'character_5',
       dialog: "Beware, traveler... this swamp holds many secrets and dangers. The twisted trees whisper of ancient evils that lurk in the murky depths.",
       interactionRadius: 80
@@ -223,8 +223,8 @@ export const EXTERIOR_MAP: MapConfig = {
     {
       id: 'dark_merchant',
       name: 'Shadow Merchant',
-      x: 1200,
-      y: 600,
+      x: 3200, // +2000 offset
+      y: 2100, // +1500 offset
       avatar: 'character_10',
       dialog: "I deal in rare and forbidden goods from the darkest corners of the realm. But beware... my prices are not always paid in gold.",
       interactionRadius: 80
@@ -233,8 +233,8 @@ export const EXTERIOR_MAP: MapConfig = {
   doors: [
     {
       id: 'tavern_door',
-      x: 800,
-      y: 0,
+      x: 2800, // +2000 offset
+      y: 1500, // +1500 offset
       width: 128,
       height: 32,
       targetMap: 'tavern',
@@ -247,19 +247,19 @@ export const EXTERIOR_MAP: MapConfig = {
   shops: [
     {
       id: 'exterior_merchant',
-      x: 1200,
-      y: 600,
+      x: 3200, // +2000 offset
+      y: 2100, // +1500 offset
       interactionRadius: 80,
       name: 'Shadow Merchant'
     }
   ],
   enemies: [
-    // Low level swamp orcs (Level 1-3)
+    // Low level swamp orcs (Level 1-3) - All coordinates offset by +2000, +1500
     {
       id: 'swamp_orc_1',
       name: 'Swamp Orc Scout',
-      x: 300,
-      y: 300,
+      x: 2300, // +2000 offset
+      y: 1800, // +1500 offset
       avatar: 'orc_1',
       level: 1,
       stats: {
@@ -279,8 +279,8 @@ export const EXTERIOR_MAP: MapConfig = {
     {
       id: 'swamp_orc_2',
       name: 'Swamp Orc Warrior',
-      x: 600,
-      y: 500,
+      x: 2600, // +2000 offset
+      y: 2000, // +1500 offset
       avatar: 'orc_2',
       level: 2,
       stats: {
@@ -300,8 +300,8 @@ export const EXTERIOR_MAP: MapConfig = {
     {
       id: 'swamp_orc_3',
       name: 'Swamp Orc Brute',
-      x: 900,
-      y: 400,
+      x: 2900, // +2000 offset
+      y: 1900, // +1500 offset
       avatar: 'orc_3',
       level: 3,
       stats: {
@@ -321,8 +321,8 @@ export const EXTERIOR_MAP: MapConfig = {
     {
       id: 'swamp_orc_4',
       name: 'Swamp Orc Scout',
-      x: 1200,
-      y: 200,
+      x: 3200, // +2000 offset
+      y: 1700, // +1500 offset
       avatar: 'orc_1',
       level: 1,
       stats: {
@@ -342,8 +342,8 @@ export const EXTERIOR_MAP: MapConfig = {
     {
       id: 'swamp_orc_5',
       name: 'Swamp Orc Warrior',
-      x: 1500,
-      y: 700,
+      x: 3500, // +2000 offset
+      y: 2200, // +1500 offset
       avatar: 'orc_2',
       level: 2,
       stats: {
@@ -363,8 +363,8 @@ export const EXTERIOR_MAP: MapConfig = {
     {
       id: 'swamp_orc_6',
       name: 'Swamp Orc Brute',
-      x: 400,
-      y: 900,
+      x: 2400, // +2000 offset
+      y: 2400, // +1500 offset
       avatar: 'orc_3',
       level: 3,
       stats: {
