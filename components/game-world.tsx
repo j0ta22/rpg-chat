@@ -1479,7 +1479,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
       const syncPosition = () => {
         if (websocketClient && websocketClient.isConnectedToServer()) {
           try {
-            websocketClient.updatePlayerPosition(localCharacter.x, localCharacter.y, playerDirection)
+            websocketClient.updatePlayerPosition(localCharacter.x, localCharacter.y, playerDirection, currentMap.id)
             // Only log occasionally to avoid spam
             if (Math.random() < 0.1) { // 10% of the time
               console.log(`🔄 Syncing position: (${localCharacter.x}, ${localCharacter.y})`)
@@ -2370,7 +2370,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
       
       // Enviar actualización de posición inmediatamente para reducir delay
       if (websocketClient && websocketClient.isConnectedToServer()) {
-        websocketClient.updatePlayerPosition(newX, newY, playerDirection)
+        websocketClient.updatePlayerPosition(newX, newY, playerDirection, currentMap.id)
         // Only log occasionally to avoid spam
         if (Math.random() < 0.05) { // 5% of the time
           console.log(`🎮 Position update sent: (${newX}, ${newY})`)
@@ -2799,7 +2799,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
                 Players Online: {Object.keys(allPlayers).length}
               </div>
               <div className="bg-muted/30 border border-muted p-2 text-destructive font-bold" style={{borderRadius: '0'}}>
-                Location: Drunken Monkey Tavern
+                Location: {currentMap.name}
               </div>
             </div>
           </div>

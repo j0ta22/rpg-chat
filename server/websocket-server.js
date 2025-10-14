@@ -423,6 +423,11 @@ function handleUpdatePosition(ws, data) {
     gameState.players[playerId].direction = data.direction || 'down';
     gameState.players[playerId].lastSeen = Date.now();
     
+    // Update currentMap if provided
+    if (data.currentMap) {
+      gameState.players[playerId].currentMap = data.currentMap;
+    }
+    
     // Only broadcast if position actually changed
     if (oldX !== data.x || oldY !== data.y) {
       // Only log occasionally to avoid spam
@@ -521,6 +526,14 @@ function handleChallengePlayer(ws, data) {
   const challengedId = data.challengedPlayerId;
   
   if (challengerId && gameState.players[challengerId] && gameState.players[challengedId]) {
+    // Check if both players are in the same map
+    const challengerMap = gameState.players[challengerId].currentMap;
+    const challengedMap = gameState.players[challengedId].currentMap;
+    
+    if (challengerMap !== challengedMap) {
+      console.log(`❌ Challenge blocked: Players in different maps (${challengerMap} vs ${challengedMap})`);
+      return;
+    }
     const challenge = {
       id: generateChallengeId(),
       challenger: {

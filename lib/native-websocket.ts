@@ -216,7 +216,7 @@ export class NativeWebSocketClient {
     this.sendMessage('joinGame', playerData);
   }
 
-  updatePlayerPosition(x: number, y: number, direction?: string): void {
+  updatePlayerPosition(x: number, y: number, direction?: string, currentMap?: string): void {
     this.currentPosition = { x, y, direction: direction || 'down' };
     
     // Send immediate position update if connected
@@ -224,7 +224,8 @@ export class NativeWebSocketClient {
       this.sendMessage('updatePosition', {
         x: x,
         y: y,
-        direction: direction || 'down'
+        direction: direction || 'down',
+        currentMap: currentMap
       });
     }
   }
