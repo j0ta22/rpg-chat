@@ -593,8 +593,15 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
   }, [currentMap.shops])
 
   const checkNearbyEnemies = useCallback((playerX: number, playerY: number) => {
+    console.log(`🔍 Checking enemies - Total enemies: ${enemies.length}`)
+    console.log(`🔍 Current map: ${currentMap.id}`)
+    
     const nearbyEnemy = enemies.find(enemy => {
-      if (!enemy.isAlive) return false
+      console.log(`🔍 Checking enemy: ${enemy.name}, isAlive: ${enemy.isAlive}`)
+      if (!enemy.isAlive) {
+        console.log(`🔍 Enemy ${enemy.name} is dead, skipping`)
+        return false
+      }
       const distance = Math.sqrt(
         Math.pow(playerX - enemy.x, 2) + Math.pow(playerY - enemy.y, 2)
       )
@@ -603,7 +610,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
     })
     console.log(`👹 Nearby enemy:`, nearbyEnemy ? nearbyEnemy.name : 'none')
     setNearbyEnemy(nearbyEnemy || null)
-  }, [enemies])
+  }, [enemies, currentMap.id])
 
   // Verificar proximidad inicial a la puerta, shop y enemigos
   useEffect(() => {
@@ -616,6 +623,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
 
   // Update enemies when currentMap changes
   useEffect(() => {
+    console.log(`🗺️ Map changed to: ${currentMap.id}, enemies: ${currentMap.enemies.length}`)
     setEnemies(currentMap.enemies)
   }, [currentMap])
 
