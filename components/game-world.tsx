@@ -597,7 +597,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
     console.log(`🔍 Checking enemies - Total enemies: ${enemies.length}`)
     console.log(`🔍 Current map: ${currentMap.id}`)
     
-    const nearbyEnemy = enemies.find(enemy => {
+    const foundEnemy = enemies.find(enemy => {
       console.log(`🔍 Checking enemy: ${enemy.name}, isAlive: ${enemy.isAlive}`)
       if (!enemy.isAlive) {
         console.log(`🔍 Enemy ${enemy.name} is dead, skipping`)
@@ -610,14 +610,21 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
       return distance <= 60 // Interaction radius for enemies
     })
     
-    const newNearbyEnemy = nearbyEnemy || null
+    const newNearbyEnemy = foundEnemy || null
     console.log(`👹 Nearby enemy found:`, newNearbyEnemy ? newNearbyEnemy.name : 'none')
+    
+    // Prevent state override if we already have a nearby enemy and the new result is null
+    // This prevents multiple calls from interfering with each other
+    if (nearbyEnemy && !newNearbyEnemy) {
+      console.log(`🛡️ Preventing state override - keeping existing nearbyEnemy: ${nearbyEnemy.name}`)
+      return
+    }
     
     // Always update state for debugging
     console.log(`👹 Setting nearbyEnemy to:`, newNearbyEnemy ? newNearbyEnemy.name : 'null')
     console.log(`👹 State update timestamp: ${new Date().toISOString()}`)
     setNearbyEnemy(newNearbyEnemy)
-  }, [enemies, currentMap.id])
+  }, [enemies, currentMap.id, nearbyEnemy])
 
   // Verificar proximidad inicial a la puerta, shop y enemigos
   useEffect(() => {
