@@ -3078,6 +3078,27 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
         />
       )}
 
+      {/* Debug Panel - Temporary */}
+      {currentMap.id === 'exterior' && (
+        <div className="fixed top-4 right-4 bg-black bg-opacity-75 text-white p-4 rounded z-40">
+          <div className="text-sm">
+            <div>Map: {currentMap.id}</div>
+            <div>Enemies: {enemies.length}</div>
+            <div>Nearby Enemy: {nearbyEnemy ? nearbyEnemy.name : 'none'}</div>
+            <div>Player: ({localCharacter.x}, {localCharacter.y})</div>
+            <button 
+              onClick={() => {
+                console.log('🔧 Manual enemy check triggered')
+                checkNearbyEnemies(localCharacter.x, localCharacter.y)
+              }}
+              className="mt-2 px-2 py-1 bg-blue-600 text-white text-xs rounded"
+            >
+              Check Enemies
+            </button>
+          </div>
+        </div>
+      )}
+
     </div>
   )
 }
