@@ -2362,12 +2362,21 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
     let newY = localCharacter.y
     let moved = false
 
+    // Calculate map bounds with offset for exterior map
+    const mapOffsetX = currentMap.id === 'exterior' ? 2000 : 0
+    const mapOffsetY = currentMap.id === 'exterior' ? 1500 : 0
+    const minX = mapOffsetX + PLAYER_SIZE / 2
+    const maxX = mapOffsetX + MAP_WIDTH - PLAYER_SIZE / 2
+    const minY = mapOffsetY + PLAYER_SIZE / 2
+    const maxY = mapOffsetY + MAP_HEIGHT - PLAYER_SIZE / 2
+
     // Process movement with simplified logic and direction tracking
     if (keys.has("ArrowLeft") || keys.has("KeyA")) {
       const testX = newX - MOVE_SPEED
       const collision = checkCollision(testX, newY)
-      console.log(`🎮 Left: testX=${testX}, collision=${collision}, bounds=${testX >= PLAYER_SIZE / 2}`)
-      if (testX >= PLAYER_SIZE / 2 && !collision) {
+      const inBounds = testX >= minX
+      console.log(`🎮 Left: testX=${testX}, collision=${collision}, bounds=${inBounds} (minX=${minX})`)
+      if (inBounds && !collision) {
         newX = testX
         setPlayerDirection('left')
         moved = true
@@ -2377,8 +2386,9 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
     if (keys.has("ArrowRight") || keys.has("KeyD")) {
       const testX = newX + MOVE_SPEED
       const collision = checkCollision(testX, newY)
-      console.log(`🎮 Right: testX=${testX}, collision=${collision}, bounds=${testX <= MAP_WIDTH - PLAYER_SIZE / 2}`)
-      if (testX <= MAP_WIDTH - PLAYER_SIZE / 2 && !collision) {
+      const inBounds = testX <= maxX
+      console.log(`🎮 Right: testX=${testX}, collision=${collision}, bounds=${inBounds} (maxX=${maxX})`)
+      if (inBounds && !collision) {
         newX = testX
         setPlayerDirection('right')
         moved = true
@@ -2388,8 +2398,9 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
     if (keys.has("ArrowUp") || keys.has("KeyW")) {
       const testY = newY - MOVE_SPEED
       const collision = checkCollision(newX, testY)
-      console.log(`🎮 Up: testY=${testY}, collision=${collision}, bounds=${testY >= PLAYER_SIZE / 2}`)
-      if (testY >= PLAYER_SIZE / 2 && !collision) {
+      const inBounds = testY >= minY
+      console.log(`🎮 Up: testY=${testY}, collision=${collision}, bounds=${inBounds} (minY=${minY})`)
+      if (inBounds && !collision) {
         newY = testY
         setPlayerDirection('up')
         moved = true
@@ -2399,8 +2410,9 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
     if (keys.has("ArrowDown") || keys.has("KeyS")) {
       const testY = newY + MOVE_SPEED
       const collision = checkCollision(newX, testY)
-      console.log(`🎮 Down: testY=${testY}, collision=${collision}, bounds=${testY <= MAP_HEIGHT - PLAYER_SIZE / 2}`)
-      if (testY <= MAP_HEIGHT - PLAYER_SIZE / 2 && !collision) {
+      const inBounds = testY <= maxY
+      console.log(`🎮 Down: testY=${testY}, collision=${collision}, bounds=${inBounds} (maxY=${maxY})`)
+      if (inBounds && !collision) {
         newY = testY
         setPlayerDirection('down')
         moved = true
@@ -2458,8 +2470,8 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
       // Update camera to follow player
       const targetCameraX = newX - CANVAS_WIDTH / 2
       const targetCameraY = newY - CANVAS_HEIGHT / 2
-      const clampedCameraX = Math.max(0, Math.min(MAP_WIDTH - CANVAS_WIDTH, targetCameraX))
-      const clampedCameraY = Math.max(0, Math.min(MAP_HEIGHT - CANVAS_HEIGHT, targetCameraY))
+      const clampedCameraX = Math.max(mapOffsetX, Math.min(mapOffsetX + MAP_WIDTH - CANVAS_WIDTH, targetCameraX))
+      const clampedCameraY = Math.max(mapOffsetY, Math.min(mapOffsetY + MAP_HEIGHT - CANVAS_HEIGHT, targetCameraY))
       setCamera({ x: clampedCameraX, y: clampedCameraY })
       
       // Check for nearby NPCs, players, door, shop, and enemies
