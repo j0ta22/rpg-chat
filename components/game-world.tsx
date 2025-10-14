@@ -726,8 +726,14 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
         })
         
         // Update camera to follow player
-        const newCameraX = Math.max(0, Math.min(newMap.width - CANVAS_WIDTH, currentDoor.targetSpawnPoint.x - CANVAS_WIDTH / 2))
-        const newCameraY = Math.max(0, Math.min(newMap.height - CANVAS_HEIGHT, currentDoor.targetSpawnPoint.y - CANVAS_HEIGHT / 2))
+        // For exterior map, we need to account for the coordinate offset
+        const mapOffsetX = newMap.id === 'exterior' ? 2000 : 0
+        const mapOffsetY = newMap.id === 'exterior' ? 1500 : 0
+        const effectiveMapWidth = newMap.width
+        const effectiveMapHeight = newMap.height
+        
+        const newCameraX = Math.max(mapOffsetX, Math.min(mapOffsetX + effectiveMapWidth - CANVAS_WIDTH, currentDoor.targetSpawnPoint.x - CANVAS_WIDTH / 2))
+        const newCameraY = Math.max(mapOffsetY, Math.min(mapOffsetY + effectiveMapHeight - CANVAS_HEIGHT, currentDoor.targetSpawnPoint.y - CANVAS_HEIGHT / 2))
         
         setCamera({
           x: newCameraX,
