@@ -703,10 +703,16 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
           x: Math.max(0, Math.min(newMap.width - CANVAS_WIDTH, currentDoor.targetSpawnPoint.x - CANVAS_WIDTH / 2)),
           y: Math.max(0, Math.min(newMap.height - CANVAS_HEIGHT, currentDoor.targetSpawnPoint.y - CANVAS_HEIGHT / 2))
         })
+        
+        // Update player's map on server
+        if (websocketClient) {
+          websocketClient.updatePlayerMap(newMap.id)
+        }
+        
         console.log(`🚪 Transitioned to map: ${currentDoor.targetMap}`)
       }
     }
-  }, [currentDoor, mapManager, CANVAS_WIDTH, CANVAS_HEIGHT])
+  }, [currentDoor, mapManager, CANVAS_WIDTH, CANVAS_HEIGHT, websocketClient])
 
   // Función para desafiar a un jugador
   const challengePlayer = useCallback(() => {
@@ -1100,11 +1106,18 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
         // Actualizar todos los jugadores directamente
         setAllPlayers(state.players)
         
-        // Separar otros jugadores (sin el actual)
+        // Separar otros jugadores (sin el actual) y filtrar por mapa
         const currentPlayerId = client.getPlayerId()
         const others = { ...state.players }
         delete others[currentPlayerId]
-        setOtherPlayers(others)
+        
+        // Filter players by current map
+        const playersInSameMap = Object.fromEntries(
+          Object.entries(others).filter(([id, player]) => 
+            player.currentMap === currentMap.id
+          )
+        )
+        setOtherPlayers(playersInSameMap)
         
         // Marcar todos los jugadores como visibles
         const visibility: Record<string, boolean> = {}
@@ -1117,6 +1130,13 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
         // Player joined
         console.log(`🎮 Player ${player.name} joined the game`)
         
+        // Only add to otherPlayers if they're in the same map
+        if (player.currentMap === currentMap.id) {
+          setOtherPlayers(prev => ({
+            ...prev,
+            [player.id]: player
+          }))
+        }
       },
       (playerId: string) => {
         // Player left
@@ -1267,6 +1287,38 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
           return prev
         })
       },
+      (playerId: string, currentMap: string) => {
+        // Player changed map
+        console.log(`🗺️ Player ${playerId} changed map to: ${currentMap}`)
+        
+        // Update player's map in allPlayers
+        setAllPlayers(prev => {
+          if (prev[playerId]) {
+            return {
+              ...prev,
+              [playerId]: {
+                ...prev[playerId],
+                currentMap: currentMap
+              }
+            }
+          }
+          return prev
+        })
+        
+        // Update player's map in otherPlayers
+        setOtherPlayers(prev => {
+          if (prev[playerId]) {
+            return {
+              ...prev,
+              [playerId]: {
+                ...prev[playerId],
+                currentMap: currentMap
+              }
+            }
+          }
+          return prev
+        })
+      },
       (challenge: any) => {
         // Combat challenge received
         console.log('⚔️ Combat challenge received from:', challenge.challenger.name)
@@ -1345,6 +1397,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
           x: localCharacter.x || 100,
           y: localCharacter.y || 150,
           color: avatarColors[character.avatar] || "#3b82f6",
+          currentMap: currentMap.id, // Include current map ID
           userId: user?.id // Include user ID for server database operations
         })
       }, 500)

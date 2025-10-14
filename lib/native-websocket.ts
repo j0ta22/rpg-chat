@@ -7,6 +7,7 @@ export interface Player {
   lastSeen: number;
   avatar?: string;
   color?: string;
+  currentMap?: string; // Map ID where the player is currently located
   stats?: {
     level: number;
     experience: number;
@@ -51,6 +52,7 @@ export class NativeWebSocketClient {
     private onGoldUpdate?: (goldUpdate: { delta: number }) => void,
     private onPlayerId?: (playerId: string) => void,
     private onPlayerMoved?: (data: { playerId: string; x: number; y: number; direction: string }) => void,
+    private onPlayerMapChanged?: (playerId: string, currentMap: string) => void,
     private onCombatChallenge?: (challenge: any) => void,
     private onCombatStateUpdate?: (combatState: any) => void,
     private onCombatChallengeDeclined?: (data: any) => void,
@@ -162,6 +164,12 @@ export class NativeWebSocketClient {
             this.onPlayerMoved(data.payload);
           }
           break;
+        case 'playerMapChanged':
+          console.log('📥 Received playerMapChanged:', data.payload);
+          if (this.onPlayerMapChanged) {
+            this.onPlayerMapChanged(data.payload.playerId, data.payload.currentMap);
+          }
+          break;
         case 'combatChallenge':
           console.log('📥 Received combatChallenge:', data.payload);
           if (this.onCombatChallenge) {
@@ -218,6 +226,13 @@ export class NativeWebSocketClient {
         y: y,
         direction: direction || 'down'
       });
+    }
+  }
+
+  updatePlayerMap(currentMap: string): void {
+    if (this.isConnected) {
+      this.sendMessage('updatePlayerMap', { currentMap });
+      console.log(`🗺️ Updating player map to: ${currentMap}`);
     }
   }
 

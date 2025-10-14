@@ -277,6 +277,9 @@ async function handleMessage(ws, data) {
     case 'updatePlayerStats':
       handleUpdatePlayerStats(ws, payload);
       break;
+    case 'updatePlayerMap':
+      handleUpdatePlayerMap(ws, payload);
+      break;
     default:
       console.log('📥 Unknown message type:', type);
   }
@@ -294,6 +297,29 @@ function handleUpdatePlayerStats(ws, payload) {
   }
 }
 
+function handleUpdatePlayerMap(ws, payload) {
+  const playerId = findPlayerByWebSocket(ws);
+  const { currentMap } = payload;
+  
+  if (playerId && gameState.players[playerId]) {
+    const oldMap = gameState.players[playerId].currentMap;
+    gameState.players[playerId].currentMap = currentMap;
+    gameState.lastUpdate = Date.now();
+    
+    console.log(`🗺️ Player ${gameState.players[playerId].name} changed map from ${oldMap} to ${currentMap}`);
+    
+    // Broadcast map change to all players
+    const mapUpdate = {
+      playerId: playerId,
+      currentMap: currentMap
+    };
+    
+    broadcastToAll('playerMapChanged', mapUpdate);
+  } else {
+    console.log(`❌ Player not found for map update:`, playerId);
+  }
+}
+
 function handleJoinGame(ws, playerData) {
   const playerId = generatePlayerId();
   const player = {
@@ -305,6 +331,7 @@ function handleJoinGame(ws, playerData) {
     y: playerData.y || 150,
     direction: 'down',
     lastSeen: Date.now(),
+    currentMap: playerData.currentMap || 'tavern', // Store current map ID
     ws: ws,
     userId: playerData.userId // Store user ID for database operations
   };
@@ -336,6 +363,7 @@ function handleJoinGame(ws, playerData) {
           y: player.y,
           direction: player.direction,
           lastSeen: player.lastSeen,
+          currentMap: player.currentMap,
           stats: playerStats[id] || null
         }
       ])
@@ -354,6 +382,7 @@ function handleJoinGame(ws, playerData) {
     y: player.y,
     direction: player.direction,
     lastSeen: player.lastSeen,
+    currentMap: player.currentMap,
     stats: playerStats[playerId] || null
   };
   broadcastToAll('playerJoined', cleanPlayer);
@@ -372,6 +401,7 @@ function handleJoinGame(ws, playerData) {
           y: player.y,
           direction: player.direction,
           lastSeen: player.lastSeen,
+          currentMap: player.currentMap,
           stats: playerStats[id] || null
         }
       ])
@@ -862,6 +892,7 @@ async function handleCombatAction(ws, data) {
             y: player.y,
             direction: player.direction,
             lastSeen: player.lastSeen,
+            currentMap: player.currentMap,
             stats: playerStats[id] || null
           }
         ])

@@ -92,6 +92,7 @@ export interface Player {
   lastSeen: number
   currentMessage?: ChatMessage
   direction?: string
+  currentMap?: string // Map ID where the player is currently located
   stats?: {
     level: number
     experience: number
@@ -115,6 +116,7 @@ export class SocketMultiplayerClient {
   private onPlayerJoin: (player: Player) => void
   private onPlayerLeave: (playerId: string) => void
   private onPlayerMove: (playerId: string, x: number, y: number, direction?: string) => void
+  private onPlayerMapChanged: (playerId: string, currentMap: string) => void
   private onChatMessage: (message: ChatMessage) => void
   private onCombatChallenge?: (challenge: CombatChallenge) => void
   private onCombatStateUpdate?: (combatState: CombatState) => void
@@ -143,6 +145,7 @@ export class SocketMultiplayerClient {
     onPlayerJoin: (player: Player) => void,
     onPlayerLeave: (playerId: string) => void,
     onPlayerMove: (playerId: string, x: number, y: number, direction?: string) => void,
+    onPlayerMapChanged: (playerId: string, currentMap: string) => void,
     onChatMessage: (message: ChatMessage) => void,
     onCombatChallenge?: (challenge: CombatChallenge) => void,
     onCombatStateUpdate?: (combatState: CombatState) => void,
@@ -152,6 +155,7 @@ export class SocketMultiplayerClient {
     this.onPlayerJoin = onPlayerJoin
     this.onPlayerLeave = onPlayerLeave
     this.onPlayerMove = onPlayerMove
+    this.onPlayerMapChanged = onPlayerMapChanged
     this.onChatMessage = onChatMessage
     this.onCombatChallenge = onCombatChallenge
     this.onCombatStateUpdate = onCombatStateUpdate
@@ -268,6 +272,12 @@ export class SocketMultiplayerClient {
     this.socket.on('playerLeft', (playerId: string) => {
       console.log(`👋 Jugador ${playerId} se fue`)
       this.onPlayerLeave(playerId)
+    })
+
+    // Jugador cambió de mapa
+    this.socket.on('playerMapChanged', (data: { playerId: string, currentMap: string }) => {
+      console.log(`🗺️ Player ${data.playerId} changed map to: ${data.currentMap}`)
+      this.onPlayerMapChanged(data.playerId, data.currentMap)
     })
 
     // Jugador se movió
@@ -396,6 +406,13 @@ export class SocketMultiplayerClient {
   updatePlayerPosition(x: number, y: number, direction?: string): void {
     // Solo actualizar posición local, se enviará en el próximo heartbeat
     this.currentPosition = { x, y, direction: direction || 'down' }
+  }
+
+  updatePlayerMap(currentMap: string): void {
+    if (this.socket && this.socket.connected && this.isConnected) {
+      this.socket.emit('updatePlayerMap', { currentMap })
+      console.log(`🗺️ Updating player map to: ${currentMap}`)
+    }
   }
 
   sendChatMessage(message: string): void {
