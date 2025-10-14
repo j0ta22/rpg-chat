@@ -336,6 +336,11 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
   const [nearbyShop, setNearbyShop] = useState<boolean>(false)
   const [currentShop, setCurrentShop] = useState<Shop | null>(null)
   const [nearbyEnemy, setNearbyEnemy] = useState<Enemy | null>(null)
+  
+  // Debug: Log when nearbyEnemy state changes
+  useEffect(() => {
+    console.log(`👹 nearbyEnemy state changed to:`, nearbyEnemy ? nearbyEnemy.name : 'null')
+  }, [nearbyEnemy])
   const [showEnemyDialog, setShowEnemyDialog] = useState(false)
   const [enemies, setEnemies] = useState<Enemy[]>(currentMap.enemies)
   
@@ -594,6 +599,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
 
   const checkNearbyEnemies = useCallback((playerX: number, playerY: number, source = 'unknown') => {
     console.log(`🔍 checkNearbyEnemies called at ${new Date().toISOString()} from source: ${source}`)
+    console.log(`🔍 Current nearbyEnemy state:`, nearbyEnemy ? nearbyEnemy.name : 'null')
     console.log(`🔍 Checking enemies - Total enemies: ${enemies.length}`)
     console.log(`🔍 Current map: ${currentMap.id}`)
     console.log(`🔍 Player position: (${playerX}, ${playerY})`)
@@ -624,7 +630,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
     console.log(`👹 Setting nearbyEnemy to:`, newNearbyEnemy ? newNearbyEnemy.name : 'null')
     console.log(`👹 State update timestamp: ${new Date().toISOString()}`)
     setNearbyEnemy(newNearbyEnemy)
-  }, [enemies, currentMap.id])
+  }, [enemies, currentMap.id, nearbyEnemy])
 
   // Verificar proximidad inicial a la puerta, shop y enemigos
   useEffect(() => {
