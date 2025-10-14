@@ -598,8 +598,10 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
       const distance = Math.sqrt(
         Math.pow(playerX - enemy.x, 2) + Math.pow(playerY - enemy.y, 2)
       )
+      console.log(`🔍 Enemy check: ${enemy.name} at (${enemy.x}, ${enemy.y}), player at (${playerX}, ${playerY}), distance: ${distance.toFixed(1)}`)
       return distance <= 60 // Interaction radius for enemies
     })
+    console.log(`👹 Nearby enemy:`, nearbyEnemy ? nearbyEnemy.name : 'none')
     setNearbyEnemy(nearbyEnemy || null)
   }, [enemies])
 
@@ -2309,11 +2311,12 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
       const clampedCameraY = Math.max(0, Math.min(MAP_HEIGHT - CANVAS_HEIGHT, targetCameraY))
       setCamera({ x: clampedCameraX, y: clampedCameraY })
       
-      // Check for nearby NPCs, players, and door
+      // Check for nearby NPCs, players, door, shop, and enemies
       checkNearbyNPCs(newX, newY)
       checkNearbyPlayers(newX, newY)
-        checkNearbyDoor(newX, newY)
-        checkNearbyShop(newX, newY)
+      checkNearbyDoor(newX, newY)
+      checkNearbyShop(newX, newY)
+      checkNearbyEnemies(newX, newY)
       
       return true // Indica que hubo cambios
     }
@@ -2575,9 +2578,11 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
       // Interactuar con NPC, puerta, shop, enemigo o desafiar jugador con E
       if (e.code === "KeyE") {
         e.preventDefault()
+        console.log(`🔑 Key E pressed - nearbyEnemy:`, nearbyEnemy)
         if (nearbyPlayer) {
           challengePlayer()
         } else if (nearbyEnemy) {
+          console.log(`⚔️ Starting combat with enemy:`, nearbyEnemy.name)
           setShowEnemyDialog(true)
         } else if (nearbyShop) {
           setShowShopPanel(true)
