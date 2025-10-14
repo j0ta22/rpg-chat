@@ -620,7 +620,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
         Math.pow(playerX - enemy.x, 2) + Math.pow(playerY - enemy.y, 2)
       )
       console.log(`🔍 Enemy check: ${enemy.name} at (${enemy.x}, ${enemy.y}), player at (${playerX}, ${playerY}), distance: ${distance.toFixed(1)}`)
-      return distance <= 60 // Interaction radius for enemies
+      return distance <= 120 // Interaction radius for enemies (increased for easier combat initiation)
     })
     
     const newNearbyEnemy = foundEnemy || null
@@ -2769,7 +2769,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
             Math.pow(localCharacter.x - enemy.x, 2) + Math.pow(localCharacter.y - enemy.y, 2)
           )
           console.log(`🔑 Direct enemy check: ${enemy.name} at (${enemy.x}, ${enemy.y}), player at (${localCharacter.x}, ${localCharacter.y}), distance: ${distance.toFixed(1)}`)
-          return distance <= 60
+          return distance <= 120 // Increased interaction radius for easier combat initiation
         })
         
         console.log(`🔑 Direct enemy check result:`, nearbyEnemyDirect ? nearbyEnemyDirect.name : 'none')
