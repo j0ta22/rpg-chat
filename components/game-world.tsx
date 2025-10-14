@@ -10,6 +10,7 @@ import { savePlayerProgress, loadPlayerProgress, type PlayerSaveData, type Playe
 import { calculatePlayerStats } from "@/lib/combat-system"
 import { calculateXPToNext } from "@/lib/xp-system"
 import { supabase } from "@/lib/supabase"
+import { MapManager, type MapConfig, type Door, type NPC as MapNPC, type Shop } from "@/lib/map-system"
 import CombatInterface from "./combat-interface"
 import CombatChallengeComponent from "./combat-challenge"
 import RankingPanel from "./ranking-panel"
@@ -38,7 +39,7 @@ interface NPC {
   x: number
   y: number
   avatar: string
-  message: string
+  dialog: string
   interactionRadius: number
 }
 
@@ -251,47 +252,13 @@ const avatarColors: Record<string, string> = {
   'monkeyking': "#ff6b35",
 }
 
-// Configuración de NPCs
-  const npcs: NPC[] = [
-    {
-      id: "npc_1",
-      name: "Tavern keeper",
-      x: 1364,
-      y: 554,
-      avatar: "character_18",
-      message: "Hail, good traveller! I am Maeve, keeper of Ye Drunken Monkey. Enter ye, take thy seat by ye hearth, and let ye fine ale and tales flow freely. What bringeth thee to mine humble tavern?",
-      interactionRadius: 80
-    },
-    {
-      id: "npc_2",
-      name: "Tavern Crier",
-      x: 1364,
-      y: 698,
-      avatar: "character_27",
-      message: "Greetings, traveler. I sense great power within you. The ancient secrets of this land await those who are worthy...",
-      interactionRadius: 80
-    },
-    {
-      id: "npc_3",
-      name: "Ambassador of Apestore",
-      x: 84,
-      y: 258,
-      avatar: "monkeyking",
-      message: "Greetings, noble adventurer! I am the Ambassador of Apestore, representing the great trading company from the distant lands. We deal in the finest goods and exotic treasures. Perhaps you would be interested in our wares?",
-      interactionRadius: 80
-    },
-    {
-      id: "npc_4",
-      name: "Blacksmith",
-      x: 76,
-      y: 1130,
-      avatar: "blacksmith",
-      message: "Welcome to my shop! I sell equipment up to level 7. Press E to browse my wares.",
-      interactionRadius: 80
-    }
-  ]
+  // NPCs are now managed by the map system
 
 export default function GameWorld({ character, onCharacterUpdate, onBackToCreation, onBackToSelection, onLogout, user }: GameWorldProps) {
+  // Map system
+  const [mapManager] = useState(() => new MapManager())
+  const [currentMap, setCurrentMap] = useState<MapConfig>(mapManager.getCurrentMap())
+  
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [keys, setKeys] = useState<Set<string>>(new Set())
   const animationRef = useRef<number>()
@@ -321,6 +288,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
   const [nearbyNPC, setNearbyNPC] = useState<NPC | null>(null)
   const [showNPCDialog, setShowNPCDialog] = useState(false)
   const [nearbyDoor, setNearbyDoor] = useState<boolean>(false)
+  const [currentDoor, setCurrentDoor] = useState<Door | null>(null)
   const [showDoorDialog, setShowDoorDialog] = useState(false)
   const [playerDirection, setPlayerDirection] = useState<'down' | 'up' | 'left' | 'right'>('down')
   const [isMusicMuted, setIsMusicMuted] = useState(false)
@@ -332,6 +300,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
   const [combatState, setCombatState] = useState<CombatState | null>(null)
   const [showCombatInterface, setShowCombatInterface] = useState(false)
   const [nearbyShop, setNearbyShop] = useState<boolean>(false)
+  const [currentShop, setCurrentShop] = useState<Shop | null>(null)
   
   // Panel states
   const [showInventoryPanel, setShowInventoryPanel] = useState(false)
@@ -503,47 +472,12 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
   
   const CANVAS_WIDTH = canvasSize.width
   const CANVAS_HEIGHT = canvasSize.height
-  const MAP_WIDTH = 1600
-  const MAP_HEIGHT = 1200
+  const MAP_WIDTH = currentMap.width
+  const MAP_HEIGHT = currentMap.height
   const PLAYER_SIZE = 32
   const MOVE_SPEED = 4
 
-  const collisionObjects: CollisionObject[] = [
-    // Outer walls
-    { x: 0, y: 0, width: MAP_WIDTH, height: 32, type: "wall" }, // Top wall
-    { x: 0, y: MAP_HEIGHT - 32, width: MAP_WIDTH, height: 32, type: "wall" }, // Bottom wall
-    { x: 0, y: 0, width: 32, height: MAP_HEIGHT, type: "wall" }, // Left wall
-    { x: MAP_WIDTH - 32, y: 0, width: 32, height: MAP_HEIGHT, type: "wall" }, // Right wall
-
-    // Bar counter (center-left)
-    { x: 200, y: 300, width: 300, height: 64, type: "bar" },
-
-    // Tables and chairs arranged in rows
-    { x: 600, y: 200, width: 96, height: 64, type: "table" },
-    { x: 800, y: 200, width: 96, height: 64, type: "table" },
-    { x: 1000, y: 200, width: 96, height: 64, type: "table" },
-    { x: 600, y: 400, width: 96, height: 64, type: "table" },
-    { x: 800, y: 400, width: 96, height: 64, type: "table" },
-    { x: 1000, y: 400, width: 96, height: 64, type: "table" },
-    { x: 600, y: 600, width: 96, height: 64, type: "table" },
-    { x: 800, y: 600, width: 96, height: 64, type: "table" },
-
-    // Fireplace (top-right corner)
-    { x: MAP_WIDTH - 200, y: 100, width: 128, height: 96, type: "fireplace" },
-
-
-    // Barrels and storage
-    { x: 1200, y: 300, width: 48, height: 48, type: "barrel" },
-    { x: 1200, y: 380, width: 48, height: 48, type: "barrel" },
-    { x: 1280, y: 300, width: 48, height: 48, type: "barrel" },
-    { x: 1280, y: 380, width: 48, height: 48, type: "barrel" },
-
-    // Additional furniture for better tavern feel
-    { x: 50, y: 100, width: 64, height: 32, type: "bench" },
-    { x: 50, y: 200, width: 64, height: 32, type: "bench" },
-    { x: 1300, y: 500, width: 48, height: 96, type: "bookshelf" },
-    { x: 1300, y: 650, width: 48, height: 96, type: "bookshelf" },
-  ]
+  const collisionObjects = currentMap.collisionObjects
 
   const checkCollision = useCallback((newX: number, newY: number): boolean => {
     const playerRect = {
@@ -565,7 +499,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
 
   // Función para detectar NPCs cercanos
   const checkNearbyNPCs = useCallback((playerX: number, playerY: number) => {
-    const nearby = npcs.find(npc => {
+    const nearby = currentMap.npcs.find(npc => {
       const distance = Math.sqrt(
         Math.pow(playerX - npc.x, 2) + Math.pow(playerY - npc.y, 2)
       )
@@ -573,7 +507,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
     })
     
     setNearbyNPC(nearby || null)
-  }, [])
+  }, [currentMap.npcs])
 
   // Función para detectar jugadores cercanos para combate
   const checkNearbyPlayers = useCallback((playerX: number, playerY: number) => {
@@ -592,70 +526,34 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
     setNearbyPlayer(nearby || null)
   }, [playerId, otherPlayers])
 
-  // Verificar proximidad a la puerta
+  // Verificar proximidad a las puertas
   const checkNearbyDoor = useCallback((playerX: number, playerY: number) => {
-    const doorX = 1344
-    const doorY = MAP_HEIGHT - 32
-    const doorWidth = 128
-    const doorHeight = 32
-    const interactionRange = 50
-
-    const isNearDoor = (
-      playerX >= doorX - interactionRange &&
-      playerX <= doorX + doorWidth + interactionRange &&
-      playerY >= doorY - interactionRange &&
-      playerY <= doorY + doorHeight + interactionRange
-    )
-
-    // Debug logs temporales con cálculo detallado
-    const leftBound = doorX - interactionRange
-    const rightBound = doorX + doorWidth + interactionRange
-    const topBound = doorY - interactionRange
-    const bottomBound = doorY + doorHeight + interactionRange
-    
-    console.log('🚪 Door proximity check:', { 
-      playerX, 
-      playerY, 
-      doorX, 
-      doorY, 
-      doorWidth, 
-      doorHeight,
-      interactionRange,
-      leftBound,
-      rightBound,
-      topBound,
-      bottomBound,
-      isNearDoor,
-      currentNearbyDoor: nearbyDoor,
-      xCheck: `${playerX} >= ${leftBound} && ${playerX} <= ${rightBound}`,
-      yCheck: `${playerY} >= ${topBound} && ${playerY} <= ${bottomBound}`
+    const nearbyDoor = currentMap.doors.find(door => {
+      const isNearDoor = (
+        playerX >= door.x - door.interactionRadius &&
+        playerX <= door.x + door.width + door.interactionRadius &&
+        playerY >= door.y - door.interactionRadius &&
+        playerY <= door.y + door.height + door.interactionRadius
+      )
+      return isNearDoor
     })
 
-    if (isNearDoor !== nearbyDoor) {
-      console.log('🚪 Door proximity CHANGED:', { 
-        from: nearbyDoor,
-        to: isNearDoor
-      })
-    }
+    setNearbyDoor(!!nearbyDoor)
+    setCurrentDoor(nearbyDoor || null)
+  }, [currentMap.doors])
 
-    setNearbyDoor(isNearDoor)
-  }, [nearbyDoor])
-
-  // Verificar proximidad al shop
+  // Verificar proximidad a las tiendas
   const checkNearbyShop = useCallback((playerX: number, playerY: number) => {
-    const shopX = 76  // Nueva posición del blacksmith
-    const shopY = 1130  // Nueva posición del blacksmith
-    const interactionRange = 80
+    const nearbyShop = currentMap.shops.find(shop => {
+      const distance = Math.sqrt(
+        Math.pow(playerX - shop.x, 2) + Math.pow(playerY - shop.y, 2)
+      )
+      return distance <= shop.interactionRadius
+    })
 
-    const isNearShop = (
-      playerX >= shopX - interactionRange &&
-      playerX <= shopX + interactionRange &&
-      playerY >= shopY - interactionRange &&
-      playerY <= shopY + interactionRange
-    )
-
-    setNearbyShop(isNearShop)
-  }, [])
+    setNearbyShop(!!nearbyShop)
+    setCurrentShop(nearbyShop || null)
+  }, [currentMap.shops])
 
   // Verificar proximidad inicial a la puerta y shop
   useEffect(() => {
@@ -679,10 +577,33 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
 
   // Función para interactuar con la puerta
   const interactWithDoor = useCallback(() => {
-    if (nearbyDoor) {
+    if (nearbyDoor && currentDoor) {
       setShowDoorDialog(true)
     }
-  }, [nearbyDoor])
+  }, [nearbyDoor, currentDoor])
+
+  // Función para realizar la transición de mapa
+  const performMapTransition = useCallback(() => {
+    if (currentDoor) {
+      // Transition to the target map
+      const newMap = mapManager.transitionToMap(currentDoor.targetMap, currentDoor.targetSpawnPoint)
+      if (newMap) {
+        setCurrentMap(newMap)
+        // Update player position to spawn point
+        setLocalCharacter(prev => ({
+          ...prev,
+          x: currentDoor.targetSpawnPoint.x,
+          y: currentDoor.targetSpawnPoint.y
+        }))
+        // Update camera to follow player
+        setCamera({
+          x: Math.max(0, Math.min(newMap.width - CANVAS_WIDTH, currentDoor.targetSpawnPoint.x - CANVAS_WIDTH / 2)),
+          y: Math.max(0, Math.min(newMap.height - CANVAS_HEIGHT, currentDoor.targetSpawnPoint.y - CANVAS_HEIGHT / 2))
+        })
+        console.log(`🚪 Transitioned to map: ${currentDoor.targetMap}`)
+      }
+    }
+  }, [currentDoor, mapManager, CANVAS_WIDTH, CANVAS_HEIGHT])
 
   // Función para desafiar a un jugador
   const challengePlayer = useCallback(() => {
@@ -2229,7 +2150,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
     })
 
     // Dibujar NPCs
-    npcs.forEach((npc) => {
+    currentMap.npcs.forEach((npc) => {
       const screenX = npc.x - camera.x
       const screenY = npc.y - camera.y
       
@@ -2550,7 +2471,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
                 </div>
                 <div className="flex-1">
                   <p className="text-sm text-muted-foreground leading-relaxed">
-                    {nearbyNPC.message}
+                    {nearbyNPC.dialog}
                   </p>
                 </div>
               </div>
@@ -2664,24 +2585,34 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
       )}
 
       {/* Door Dialog */}
-      {showDoorDialog && (
+      {showDoorDialog && currentDoor && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-gradient-to-b from-amber-800 to-amber-900 border-4 border-amber-600 rounded-lg p-6 max-w-md mx-4 shadow-2xl">
             <div className="text-center">
-              <div className="text-3xl mb-4"></div>
+              <div className="text-3xl mb-4">🚪</div>
               <div className="text-2xl font-bold text-amber-100 pixel-text mb-4">
-                FUTURE EXPANSION
+                {currentDoor.name}
               </div>
               <div className="text-amber-200 pixel-text mb-6">
-                This door leads to a new area that will be available in a future update. 
-                Stay tuned for exciting new adventures!
+                {currentDoor.description}
               </div>
-              <Button
-                onClick={() => setShowDoorDialog(false)}
-                className="pixel-button bg-amber-600 hover:bg-amber-700 text-white font-bold px-6 py-2"
-              >
-                Close
-              </Button>
+              <div className="flex gap-4 justify-center">
+                <Button
+                  onClick={() => setShowDoorDialog(false)}
+                  className="pixel-button bg-gray-600 hover:bg-gray-700 text-white font-bold px-6 py-2"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={() => {
+                    setShowDoorDialog(false)
+                    performMapTransition()
+                  }}
+                  className="pixel-button bg-amber-600 hover:bg-amber-700 text-white font-bold px-6 py-2"
+                >
+                  Enter
+                </Button>
+              </div>
             </div>
           </div>
         </div>

@@ -1,0 +1,282 @@
+// Map System for RPG Chat
+// Handles multiple maps and transitions
+
+export interface MapConfig {
+  id: string
+  name: string
+  width: number
+  height: number
+  backgroundImage?: string
+  spawnPoint: { x: number; y: number }
+  collisionObjects: CollisionObject[]
+  npcs: NPC[]
+  doors: Door[]
+  shops: Shop[]
+}
+
+export interface CollisionObject {
+  x: number
+  y: number
+  width: number
+  height: number
+  type: string
+}
+
+export interface NPC {
+  id: string
+  name: string
+  x: number
+  y: number
+  avatar: string
+  dialog: string
+  interactionRadius: number
+}
+
+export interface Door {
+  id: string
+  x: number
+  y: number
+  width: number
+  height: number
+  targetMap: string
+  targetSpawnPoint: { x: number; y: number }
+  interactionRadius: number
+  name: string
+  description: string
+}
+
+export interface Shop {
+  id: string
+  x: number
+  y: number
+  interactionRadius: number
+  name: string
+}
+
+// Tavern Map (Current Map)
+export const TAVERN_MAP: MapConfig = {
+  id: 'tavern',
+  name: 'The Tavern',
+  width: 1600,
+  height: 1200,
+  spawnPoint: { x: 100, y: 150 },
+  collisionObjects: [
+    // Outer walls
+    { x: 0, y: 0, width: 1600, height: 32, type: "wall" }, // Top wall
+    { x: 0, y: 1168, width: 1600, height: 32, type: "wall" }, // Bottom wall
+    { x: 0, y: 0, width: 32, height: 1200, type: "wall" }, // Left wall
+    { x: 1568, y: 0, width: 32, height: 1200, type: "wall" }, // Right wall
+
+    // Bar counter (center-left)
+    { x: 200, y: 300, width: 300, height: 64, type: "bar" },
+
+    // Tables and chairs arranged in rows
+    { x: 600, y: 200, width: 96, height: 64, type: "table" },
+    { x: 800, y: 200, width: 96, height: 64, type: "table" },
+    { x: 1000, y: 200, width: 96, height: 64, type: "table" },
+    { x: 600, y: 400, width: 96, height: 64, type: "table" },
+    { x: 800, y: 400, width: 96, height: 64, type: "table" },
+    { x: 1000, y: 400, width: 96, height: 64, type: "table" },
+    { x: 600, y: 600, width: 96, height: 64, type: "table" },
+    { x: 800, y: 600, width: 96, height: 64, type: "table" },
+
+    // Fireplace (top-right corner)
+    { x: 1400, y: 100, width: 128, height: 96, type: "fireplace" },
+
+    // Barrels and storage
+    { x: 1200, y: 300, width: 48, height: 48, type: "barrel" },
+    { x: 1200, y: 380, width: 48, height: 48, type: "barrel" },
+    { x: 1200, y: 460, width: 48, height: 48, type: "barrel" },
+    { x: 1200, y: 540, width: 48, height: 48, type: "barrel" },
+  ],
+  npcs: [
+    {
+      id: "npc_1",
+      name: "Tavern keeper",
+      x: 1364,
+      y: 554,
+      avatar: "character_18",
+      dialog: "Hail, good traveller! I am Maeve, keeper of Ye Drunken Monkey. Enter ye, take thy seat by ye hearth, and let ye fine ale and tales flow freely. What bringeth thee to mine humble tavern?",
+      interactionRadius: 80
+    },
+    {
+      id: "npc_2",
+      name: "Tavern Crier",
+      x: 1364,
+      y: 698,
+      avatar: "character_27",
+      dialog: "Greetings, traveler. I sense great power within you. The ancient secrets of this land await those who are worthy...",
+      interactionRadius: 80
+    },
+    {
+      id: "npc_3",
+      name: "Ambassador of Apestore",
+      x: 84,
+      y: 258,
+      avatar: "monkeyking",
+      dialog: "Greetings, noble adventurer! I am the Ambassador of Apestore, representing the great trading company from the distant lands. We deal in the finest goods and exotic treasures. Perhaps you would be interested in our wares?",
+      interactionRadius: 80
+    },
+    {
+      id: "npc_4",
+      name: "Blacksmith",
+      x: 76,
+      y: 1130,
+      avatar: "blacksmith",
+      dialog: "Welcome to my shop! I sell equipment up to level 7. Press E to browse my wares.",
+      interactionRadius: 80
+    }
+  ],
+  doors: [
+    {
+      id: 'exterior_door',
+      x: 1344,
+      y: 1168,
+      width: 128,
+      height: 32,
+      targetMap: 'exterior',
+      targetSpawnPoint: { x: 800, y: 100 },
+      interactionRadius: 50,
+      name: 'Exit to Exterior',
+      description: 'A sturdy wooden door leading to the outside world.'
+    }
+  ],
+  shops: [
+    {
+      id: 'blacksmith',
+      x: 76,
+      y: 1130,
+      interactionRadius: 80,
+      name: 'Blacksmith'
+    }
+  ]
+}
+
+// Exterior Map (New Map)
+export const EXTERIOR_MAP: MapConfig = {
+  id: 'exterior',
+  name: 'The Exterior',
+  width: 2000,
+  height: 1500,
+  spawnPoint: { x: 800, y: 100 },
+  collisionObjects: [
+    // Outer walls
+    { x: 0, y: 0, width: 2000, height: 32, type: "wall" }, // Top wall
+    { x: 0, y: 1468, width: 2000, height: 32, type: "wall" }, // Bottom wall
+    { x: 0, y: 0, width: 32, height: 1500, type: "wall" }, // Left wall
+    { x: 1968, y: 0, width: 32, height: 1500, type: "wall" }, // Right wall
+
+    // Trees and natural obstacles
+    { x: 200, y: 200, width: 64, height: 64, type: "tree" },
+    { x: 400, y: 300, width: 64, height: 64, type: "tree" },
+    { x: 600, y: 150, width: 64, height: 64, type: "tree" },
+    { x: 1200, y: 400, width: 64, height: 64, type: "tree" },
+    { x: 1400, y: 250, width: 64, height: 64, type: "tree" },
+    { x: 1600, y: 350, width: 64, height: 64, type: "tree" },
+
+    // Rocks
+    { x: 300, y: 500, width: 48, height: 48, type: "rock" },
+    { x: 800, y: 600, width: 48, height: 48, type: "rock" },
+    { x: 1100, y: 700, width: 48, height: 48, type: "rock" },
+    { x: 1500, y: 800, width: 48, height: 48, type: "rock" },
+
+    // Buildings
+    { x: 100, y: 800, width: 128, height: 96, type: "house" },
+    { x: 300, y: 900, width: 128, height: 96, type: "house" },
+    { x: 1700, y: 1000, width: 128, height: 96, type: "house" },
+  ],
+  npcs: [
+    {
+      id: 'traveler',
+      name: 'Traveler',
+      x: 500,
+      y: 400,
+      avatar: 'character_5',
+      dialog: "The world outside the tavern is vast and full of adventure!",
+      interactionRadius: 80
+    },
+    {
+      id: 'merchant',
+      name: 'Merchant',
+      x: 1200,
+      y: 600,
+      avatar: 'character_10',
+      dialog: "I trade goods from distant lands. What do you need?",
+      interactionRadius: 80
+    }
+  ],
+  doors: [
+    {
+      id: 'tavern_door',
+      x: 800,
+      y: 0,
+      width: 128,
+      height: 32,
+      targetMap: 'tavern',
+      targetSpawnPoint: { x: 1344, y: 1100 },
+      interactionRadius: 50,
+      name: 'Enter Tavern',
+      description: 'The warm glow of the tavern beckons you inside.'
+    }
+  ],
+  shops: [
+    {
+      id: 'exterior_merchant',
+      x: 1200,
+      y: 600,
+      interactionRadius: 80,
+      name: 'Traveling Merchant'
+    }
+  ]
+}
+
+// Map registry
+export const MAPS: Record<string, MapConfig> = {
+  'tavern': TAVERN_MAP,
+  'exterior': EXTERIOR_MAP
+}
+
+// Map transition system
+export class MapManager {
+  private currentMapId: string = 'tavern'
+  private currentMap: MapConfig = TAVERN_MAP
+
+  getCurrentMap(): MapConfig {
+    return this.currentMap
+  }
+
+  getCurrentMapId(): string {
+    return this.currentMapId
+  }
+
+  transitionToMap(mapId: string, spawnPoint?: { x: number; y: number }): MapConfig | null {
+    const targetMap = MAPS[mapId]
+    if (!targetMap) {
+      console.error(`Map ${mapId} not found`)
+      return null
+    }
+
+    this.currentMapId = mapId
+    this.currentMap = targetMap
+
+    // Override spawn point if provided
+    if (spawnPoint) {
+      this.currentMap.spawnPoint = spawnPoint
+    }
+
+    console.log(`Transitioned to map: ${mapId}`)
+    return this.currentMap
+  }
+
+  getDoorById(doorId: string): Door | null {
+    return this.currentMap.doors.find(door => door.id === doorId) || null
+  }
+
+  getNPCById(npcId: string): NPC | null {
+    return this.currentMap.npcs.find(npc => npc.id === npcId) || null
+  }
+
+  getShopById(shopId: string): Shop | null {
+    return this.currentMap.shops.find(shop => shop.id === shopId) || null
+  }
+}
