@@ -834,6 +834,24 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
         const newGold = (userGold ?? 0) + defeatedEnemy.rewards.gold
         setUserGold(newGold)
         
+        // Save gold to database
+        if (user?.id) {
+          try {
+            const { error } = await supabase
+              .from('users')
+              .update({ gold: newGold })
+              .eq('id', user.id)
+            
+            if (error) {
+              console.error('Error saving gold reward:', error)
+            } else {
+              console.log(`💰 Gold reward saved to database: ${newGold}`)
+            }
+          } catch (error) {
+            console.error('Error updating gold in database:', error)
+          }
+        }
+        
         // TODO: Add XP system integration
         console.log(`🎉 Defeated ${defeatedEnemy.name}! Gained ${defeatedEnemy.rewards.gold} gold and ${defeatedEnemy.rewards.xp} XP`)
       }
@@ -859,7 +877,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
       // TODO: Implement XP loss system
       console.log(`📉 Lost XP due to PvE defeat`)
     }
-  }, [enemies, userGold, mapManager, CANVAS_WIDTH, CANVAS_HEIGHT])
+  }, [enemies, userGold, mapManager, CANVAS_WIDTH, CANVAS_HEIGHT, user])
 
   // Función para guardar progreso del jugador en Supabase
   const savePlayerProgressToSupabase = useCallback(async () => {
