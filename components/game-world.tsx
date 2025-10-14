@@ -338,6 +338,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
   const [nearbyEnemy, setNearbyEnemy] = useState<Enemy | null>(null)
   const [showEnemyDialog, setShowEnemyDialog] = useState(false)
   const [enemies, setEnemies] = useState<Enemy[]>(currentMap.enemies)
+  const [enemyCheckTimeout, setEnemyCheckTimeout] = useState<NodeJS.Timeout | null>(null)
   
   // Panel states
   const [showInventoryPanel, setShowInventoryPanel] = useState(false)
@@ -613,18 +614,26 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
     const newNearbyEnemy = foundEnemy || null
     console.log(`👹 Nearby enemy found:`, newNearbyEnemy ? newNearbyEnemy.name : 'none')
     
-    // Prevent state override if we already have a nearby enemy and the new result is null
-    // This prevents multiple calls from interfering with each other
-    if (nearbyEnemy && !newNearbyEnemy) {
-      console.log(`🛡️ Preventing state override - keeping existing nearbyEnemy: ${nearbyEnemy.name}`)
-      return
-    }
-    
-    // Always update state for debugging
+    // Always update state - let React handle the state updates properly
     console.log(`👹 Setting nearbyEnemy to:`, newNearbyEnemy ? newNearbyEnemy.name : 'null')
     console.log(`👹 State update timestamp: ${new Date().toISOString()}`)
     setNearbyEnemy(newNearbyEnemy)
-  }, [enemies, currentMap.id, nearbyEnemy])
+  }, [enemies, currentMap.id])
+
+  // Debounced version of checkNearbyEnemies to prevent rapid-fire calls
+  const debouncedCheckNearbyEnemies = useCallback((playerX: number, playerY: number, source = 'unknown') => {
+    // Clear existing timeout
+    if (enemyCheckTimeout) {
+      clearTimeout(enemyCheckTimeout)
+    }
+    
+    // Set new timeout
+    const timeout = setTimeout(() => {
+      checkNearbyEnemies(playerX, playerY, source)
+    }, 50) // 50ms debounce
+    
+    setEnemyCheckTimeout(timeout)
+  }, [checkNearbyEnemies, enemyCheckTimeout])
 
   // Verificar proximidad inicial a la puerta, shop y enemigos
   useEffect(() => {
@@ -2344,7 +2353,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
       checkNearbyPlayers(newX, newY)
       checkNearbyDoor(newX, newY)
       checkNearbyShop(newX, newY)
-      checkNearbyEnemies(newX, newY, 'updateGame')
+      debouncedCheckNearbyEnemies(newX, newY, 'updateGame')
       
       return true // Indica que hubo cambios
     }
