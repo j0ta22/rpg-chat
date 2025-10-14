@@ -40,6 +40,7 @@ interface PvECombatState {
   enemyId: string
 }
 import CombatInterface from "./combat-interface"
+import PvECombatInterface from "./pve-combat-interface"
 import CombatChallengeComponent from "./combat-challenge"
 import RankingPanel from "./ranking-panel"
 import AdvancedInventoryPanel from "./advanced-inventory-panel"
@@ -331,6 +332,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
   const [combatState, setCombatState] = useState<CombatState | null>(null)
   const [pveCombatState, setPveCombatState] = useState<PvECombatState | null>(null)
   const [showCombatInterface, setShowCombatInterface] = useState(false)
+  const [showPvECombatInterface, setShowPvECombatInterface] = useState(false)
   const [nearbyShop, setNearbyShop] = useState<boolean>(false)
   const [currentShop, setCurrentShop] = useState<Shop | null>(null)
   const [nearbyEnemy, setNearbyEnemy] = useState<Enemy | null>(null)
@@ -716,7 +718,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
         enemyId: nearbyEnemy.id
       }
       setPveCombatState(enemyCombatState)
-      setShowCombatInterface(true)
+      setShowPvECombatInterface(true)
     }
   }, [nearbyEnemy, playerStats, localCharacter])
 
@@ -725,32 +727,59 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
     setCombatChallenge(challenge)
   }, [])
 
-  // Función para manejar victoria contra enemigos
-  const handleEnemyDefeat = useCallback((enemyId: string) => {
-    setEnemies(prevEnemies => 
-      prevEnemies.map(enemy => {
-        if (enemy.id === enemyId) {
-          return {
-            ...enemy,
-            isAlive: false,
-            lastKilled: Date.now()
-          }
-        }
-        return enemy
-      })
-    )
+  // Función para manejar el final del combate PvE
+  const handlePvECombatEnd = useCallback((result: 'victory' | 'defeat', enemyId: string) => {
+    setShowPvECombatInterface(false)
+    setPveCombatState(null)
     
-    // Find the defeated enemy to get rewards
-    const defeatedEnemy = enemies.find(e => e.id === enemyId)
-    if (defeatedEnemy) {
-      // Add gold and XP rewards
-      const newGold = (userGold ?? 0) + defeatedEnemy.rewards.gold
-      setUserGold(newGold)
+    if (result === 'victory') {
+      // Player wins - enemy disappears for 2 minutes
+      setEnemies(prevEnemies => 
+        prevEnemies.map(enemy => {
+          if (enemy.id === enemyId) {
+            return {
+              ...enemy,
+              isAlive: false,
+              lastKilled: Date.now()
+            }
+          }
+          return enemy
+        })
+      )
       
-      // TODO: Add XP system integration
-      console.log(`🎉 Defeated ${defeatedEnemy.name}! Gained ${defeatedEnemy.rewards.gold} gold and ${defeatedEnemy.rewards.xp} XP`)
+      // Find the defeated enemy to get rewards
+      const defeatedEnemy = enemies.find(e => e.id === enemyId)
+      if (defeatedEnemy) {
+        // Add gold and XP rewards
+        const newGold = (userGold ?? 0) + defeatedEnemy.rewards.gold
+        setUserGold(newGold)
+        
+        // TODO: Add XP system integration
+        console.log(`🎉 Defeated ${defeatedEnemy.name}! Gained ${defeatedEnemy.rewards.gold} gold and ${defeatedEnemy.rewards.xp} XP`)
+      }
+    } else {
+      // Player loses - respawn in tavern and lose XP
+      console.log(`💀 Defeated by enemy! Respawning in tavern...`)
+      
+      // Teleport to tavern
+      const tavernMap = mapManager.transitionToMap('tavern', { x: 100, y: 100 })
+      if (tavernMap) {
+        setCurrentMap(tavernMap)
+        setLocalCharacter(prev => ({
+          ...prev,
+          x: 100,
+          y: 100
+        }))
+        setCamera({
+          x: Math.max(0, Math.min(tavernMap.width - CANVAS_WIDTH, 100 - CANVAS_WIDTH / 2)),
+          y: Math.max(0, Math.min(tavernMap.height - CANVAS_HEIGHT, 100 - CANVAS_HEIGHT / 2))
+        })
+      }
+      
+      // TODO: Implement XP loss system
+      console.log(`📉 Lost XP due to PvE defeat`)
     }
-  }, [enemies, userGold])
+  }, [enemies, userGold, mapManager, CANVAS_WIDTH, CANVAS_HEIGHT])
 
   // Función para guardar progreso del jugador en Supabase
   const savePlayerProgressToSupabase = useCallback(async () => {
@@ -2990,6 +3019,18 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
         userLevel={userLevel}
         onGoldUpdate={(gold: number) => setUserGold(gold)}
       />
+
+      {/* PvE Combat Interface */}
+      {showPvECombatInterface && pveCombatState && (
+        <PvECombatInterface
+          combatState={pveCombatState}
+          onCombatEnd={handlePvECombatEnd}
+          onClose={() => {
+            setShowPvECombatInterface(false)
+            setPveCombatState(null)
+          }}
+        />
+      )}
 
     </div>
   )

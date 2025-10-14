@@ -273,7 +273,7 @@ export const EXTERIOR_MAP: MapConfig = {
         gold: 8,
         xp: 25
       },
-      respawnTime: 30000, // 30 seconds
+      respawnTime: 120000, // 2 minutes
       isAlive: true
     },
     {
@@ -294,7 +294,7 @@ export const EXTERIOR_MAP: MapConfig = {
         gold: 12,
         xp: 40
       },
-      respawnTime: 45000, // 45 seconds
+      respawnTime: 120000, // 2 minutes
       isAlive: true
     },
     {
@@ -315,7 +315,7 @@ export const EXTERIOR_MAP: MapConfig = {
         gold: 18,
         xp: 60
       },
-      respawnTime: 60000, // 60 seconds
+      respawnTime: 120000, // 2 minutes
       isAlive: true
     },
     {
@@ -336,7 +336,7 @@ export const EXTERIOR_MAP: MapConfig = {
         gold: 8,
         xp: 25
       },
-      respawnTime: 30000,
+      respawnTime: 120000, // 2 minutes
       isAlive: true
     },
     {
@@ -357,7 +357,7 @@ export const EXTERIOR_MAP: MapConfig = {
         gold: 12,
         xp: 40
       },
-      respawnTime: 45000,
+      respawnTime: 120000, // 2 minutes
       isAlive: true
     },
     {
@@ -378,7 +378,7 @@ export const EXTERIOR_MAP: MapConfig = {
         gold: 18,
         xp: 60
       },
-      respawnTime: 60000,
+      respawnTime: 120000, // 2 minutes
       isAlive: true
     }
   ]
