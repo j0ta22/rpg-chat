@@ -338,7 +338,6 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
   const [nearbyEnemy, setNearbyEnemy] = useState<Enemy | null>(null)
   const [showEnemyDialog, setShowEnemyDialog] = useState(false)
   const [enemies, setEnemies] = useState<Enemy[]>(currentMap.enemies)
-  const [enemyCheckTimeout, setEnemyCheckTimeout] = useState<NodeJS.Timeout | null>(null)
   
   // Panel states
   const [showInventoryPanel, setShowInventoryPanel] = useState(false)
@@ -594,39 +593,29 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
   }, [currentMap.shops])
 
   const checkNearbyEnemies = useCallback((playerX: number, playerY: number) => {
-    // Clear previous timeout
-    if (enemyCheckTimeout) {
-      clearTimeout(enemyCheckTimeout)
-    }
+    console.log(`🔍 Checking enemies - Total enemies: ${enemies.length}`)
+    console.log(`🔍 Current map: ${currentMap.id}`)
     
-    // Set new timeout for debounced execution
-    const timeout = setTimeout(() => {
-      console.log(`🔍 Checking enemies - Total enemies: ${enemies.length}`)
-      console.log(`🔍 Current map: ${currentMap.id}`)
-      
-      const nearbyEnemy = enemies.find(enemy => {
-        console.log(`🔍 Checking enemy: ${enemy.name}, isAlive: ${enemy.isAlive}`)
-        if (!enemy.isAlive) {
-          console.log(`🔍 Enemy ${enemy.name} is dead, skipping`)
-          return false
-        }
-        const distance = Math.sqrt(
-          Math.pow(playerX - enemy.x, 2) + Math.pow(playerY - enemy.y, 2)
-        )
-        console.log(`🔍 Enemy check: ${enemy.name} at (${enemy.x}, ${enemy.y}), player at (${playerX}, ${playerY}), distance: ${distance.toFixed(1)}`)
-        return distance <= 60 // Interaction radius for enemies
-      })
-      
-      const newNearbyEnemy = nearbyEnemy || null
-      console.log(`👹 Nearby enemy found:`, newNearbyEnemy ? newNearbyEnemy.name : 'none')
-      
-      // Always update state for debugging
-      console.log(`👹 Setting nearbyEnemy to:`, newNearbyEnemy ? newNearbyEnemy.name : 'null')
-      setNearbyEnemy(newNearbyEnemy)
-    }, 100) // 100ms debounce
+    const nearbyEnemy = enemies.find(enemy => {
+      console.log(`🔍 Checking enemy: ${enemy.name}, isAlive: ${enemy.isAlive}`)
+      if (!enemy.isAlive) {
+        console.log(`🔍 Enemy ${enemy.name} is dead, skipping`)
+        return false
+      }
+      const distance = Math.sqrt(
+        Math.pow(playerX - enemy.x, 2) + Math.pow(playerY - enemy.y, 2)
+      )
+      console.log(`🔍 Enemy check: ${enemy.name} at (${enemy.x}, ${enemy.y}), player at (${playerX}, ${playerY}), distance: ${distance.toFixed(1)}`)
+      return distance <= 60 // Interaction radius for enemies
+    })
     
-    setEnemyCheckTimeout(timeout)
-  }, [enemies, currentMap.id, enemyCheckTimeout])
+    const newNearbyEnemy = nearbyEnemy || null
+    console.log(`👹 Nearby enemy found:`, newNearbyEnemy ? newNearbyEnemy.name : 'none')
+    
+    // Always update state for debugging
+    console.log(`👹 Setting nearbyEnemy to:`, newNearbyEnemy ? newNearbyEnemy.name : 'null')
+    setNearbyEnemy(newNearbyEnemy)
+  }, [enemies, currentMap.id])
 
   // Verificar proximidad inicial a la puerta, shop y enemigos
   useEffect(() => {
