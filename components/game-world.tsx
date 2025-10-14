@@ -2762,11 +2762,23 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
         console.log(`🔑 Key E pressed - nearbyNPC:`, nearbyNPC)
         console.log(`🔑 Key E pressed - nearbyDoor:`, nearbyDoor)
         
+        // Check for nearby enemy directly to avoid race condition
+        const nearbyEnemyDirect = enemies.find(enemy => {
+          if (!enemy.isAlive) return false
+          const distance = Math.sqrt(
+            Math.pow(localCharacter.x - enemy.x, 2) + Math.pow(localCharacter.y - enemy.y, 2)
+          )
+          console.log(`🔑 Direct enemy check: ${enemy.name} at (${enemy.x}, ${enemy.y}), player at (${localCharacter.x}, ${localCharacter.y}), distance: ${distance.toFixed(1)}`)
+          return distance <= 60
+        })
+        
+        console.log(`🔑 Direct enemy check result:`, nearbyEnemyDirect ? nearbyEnemyDirect.name : 'none')
+        
         if (nearbyPlayer) {
           console.log(`🔑 Challenging player`)
           challengePlayer()
-        } else if (nearbyEnemy) {
-          console.log(`⚔️ Starting combat with enemy:`, nearbyEnemy.name)
+        } else if (nearbyEnemyDirect) {
+          console.log(`⚔️ Starting combat with enemy:`, nearbyEnemyDirect.name)
           setShowEnemyDialog(true)
         } else if (nearbyShop) {
           console.log(`🔑 Opening shop`)
