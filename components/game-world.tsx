@@ -612,14 +612,9 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
     const newNearbyEnemy = nearbyEnemy || null
     console.log(`👹 Nearby enemy found:`, newNearbyEnemy ? newNearbyEnemy.name : 'none')
     
-    // Only update state if it actually changed to avoid unnecessary re-renders
-    setNearbyEnemy(prev => {
-      if (prev?.id !== newNearbyEnemy?.id) {
-        console.log(`👹 Enemy state changing from ${prev?.name || 'null'} to ${newNearbyEnemy?.name || 'null'}`)
-        return newNearbyEnemy
-      }
-      return prev
-    })
+    // Always update state for debugging
+    console.log(`👹 Setting nearbyEnemy to:`, newNearbyEnemy ? newNearbyEnemy.name : 'null')
+    setNearbyEnemy(newNearbyEnemy)
   }, [enemies, currentMap.id])
 
   // Verificar proximidad inicial a la puerta, shop y enemigos
@@ -2602,17 +2597,28 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
       if (e.code === "KeyE") {
         e.preventDefault()
         console.log(`🔑 Key E pressed - nearbyEnemy:`, nearbyEnemy)
+        console.log(`🔑 Key E pressed - nearbyPlayer:`, nearbyPlayer)
+        console.log(`🔑 Key E pressed - nearbyShop:`, nearbyShop)
+        console.log(`🔑 Key E pressed - nearbyNPC:`, nearbyNPC)
+        console.log(`🔑 Key E pressed - nearbyDoor:`, nearbyDoor)
+        
         if (nearbyPlayer) {
+          console.log(`🔑 Challenging player`)
           challengePlayer()
         } else if (nearbyEnemy) {
           console.log(`⚔️ Starting combat with enemy:`, nearbyEnemy.name)
           setShowEnemyDialog(true)
         } else if (nearbyShop) {
+          console.log(`🔑 Opening shop`)
           setShowShopPanel(true)
         } else if (nearbyNPC) {
-        interactWithNPC()
+          console.log(`🔑 Interacting with NPC`)
+          interactWithNPC()
         } else if (nearbyDoor) {
+          console.log(`🔑 Interacting with door`)
           interactWithDoor()
+        } else {
+          console.log(`🔑 No nearby interactions available`)
         }
         return
       }
