@@ -614,7 +614,12 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
     
     // Always update state for debugging
     console.log(`👹 Setting nearbyEnemy to:`, newNearbyEnemy ? newNearbyEnemy.name : 'null')
-    setNearbyEnemy(newNearbyEnemy)
+    
+    // Use a timeout to ensure state update happens after current execution
+    setTimeout(() => {
+      console.log(`👹 Actually setting nearbyEnemy state now`)
+      setNearbyEnemy(newNearbyEnemy)
+    }, 0)
   }, [enemies, currentMap.id])
 
   // Verificar proximidad inicial a la puerta, shop y enemigos
