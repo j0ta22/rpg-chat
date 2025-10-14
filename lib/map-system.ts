@@ -12,6 +12,7 @@ export interface MapConfig {
   npcs: NPC[]
   doors: Door[]
   shops: Shop[]
+  enemies: Enemy[]
 }
 
 export interface CollisionObject {
@@ -51,6 +52,29 @@ export interface Shop {
   y: number
   interactionRadius: number
   name: string
+}
+
+export interface Enemy {
+  id: string
+  name: string
+  x: number
+  y: number
+  avatar: string
+  level: number
+  stats: {
+    health: number
+    maxHealth: number
+    attack: number
+    defense: number
+    speed: number
+  }
+  rewards: {
+    gold: number
+    xp: number
+  }
+  respawnTime: number // in milliseconds
+  lastKilled?: number
+  isAlive: boolean
 }
 
 // Tavern Map (Current Map)
@@ -149,7 +173,8 @@ export const TAVERN_MAP: MapConfig = {
       interactionRadius: 80,
       name: 'Blacksmith'
     }
-  ]
+  ],
+  enemies: [] // No enemies in tavern
 }
 
 // Exterior Map (Dark Swamp)
@@ -226,6 +251,135 @@ export const EXTERIOR_MAP: MapConfig = {
       y: 600,
       interactionRadius: 80,
       name: 'Shadow Merchant'
+    }
+  ],
+  enemies: [
+    // Low level swamp orcs (Level 1-3)
+    {
+      id: 'swamp_orc_1',
+      name: 'Swamp Orc Scout',
+      x: 300,
+      y: 300,
+      avatar: 'orc_1',
+      level: 1,
+      stats: {
+        health: 50,
+        maxHealth: 50,
+        attack: 15,
+        defense: 5,
+        speed: 3
+      },
+      rewards: {
+        gold: 8,
+        xp: 25
+      },
+      respawnTime: 30000, // 30 seconds
+      isAlive: true
+    },
+    {
+      id: 'swamp_orc_2',
+      name: 'Swamp Orc Warrior',
+      x: 600,
+      y: 500,
+      avatar: 'orc_2',
+      level: 2,
+      stats: {
+        health: 80,
+        maxHealth: 80,
+        attack: 20,
+        defense: 8,
+        speed: 2
+      },
+      rewards: {
+        gold: 12,
+        xp: 40
+      },
+      respawnTime: 45000, // 45 seconds
+      isAlive: true
+    },
+    {
+      id: 'swamp_orc_3',
+      name: 'Swamp Orc Brute',
+      x: 900,
+      y: 400,
+      avatar: 'orc_3',
+      level: 3,
+      stats: {
+        health: 120,
+        maxHealth: 120,
+        attack: 25,
+        defense: 12,
+        speed: 1
+      },
+      rewards: {
+        gold: 18,
+        xp: 60
+      },
+      respawnTime: 60000, // 60 seconds
+      isAlive: true
+    },
+    {
+      id: 'swamp_orc_4',
+      name: 'Swamp Orc Scout',
+      x: 1200,
+      y: 200,
+      avatar: 'orc_1',
+      level: 1,
+      stats: {
+        health: 50,
+        maxHealth: 50,
+        attack: 15,
+        defense: 5,
+        speed: 3
+      },
+      rewards: {
+        gold: 8,
+        xp: 25
+      },
+      respawnTime: 30000,
+      isAlive: true
+    },
+    {
+      id: 'swamp_orc_5',
+      name: 'Swamp Orc Warrior',
+      x: 1500,
+      y: 700,
+      avatar: 'orc_2',
+      level: 2,
+      stats: {
+        health: 80,
+        maxHealth: 80,
+        attack: 20,
+        defense: 8,
+        speed: 2
+      },
+      rewards: {
+        gold: 12,
+        xp: 40
+      },
+      respawnTime: 45000,
+      isAlive: true
+    },
+    {
+      id: 'swamp_orc_6',
+      name: 'Swamp Orc Brute',
+      x: 400,
+      y: 900,
+      avatar: 'orc_3',
+      level: 3,
+      stats: {
+        health: 120,
+        maxHealth: 120,
+        attack: 25,
+        defense: 12,
+        speed: 1
+      },
+      rewards: {
+        gold: 18,
+        xp: 60
+      },
+      respawnTime: 60000,
+      isAlive: true
     }
   ]
 }

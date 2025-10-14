@@ -10,7 +10,35 @@ import { savePlayerProgress, loadPlayerProgress, type PlayerSaveData, type Playe
 import { calculatePlayerStats } from "@/lib/combat-system"
 import { calculateXPToNext } from "@/lib/xp-system"
 import { supabase } from "@/lib/supabase"
-import { MapManager, type MapConfig, type Door, type NPC as MapNPC, type Shop } from "@/lib/map-system"
+import { MapManager, type MapConfig, type Door, type NPC as MapNPC, type Shop, type Enemy } from "@/lib/map-system"
+
+// Interface for PvE combat
+interface PvECombatState {
+  player: {
+    name: string
+    avatar: string
+    stats: PlayerStats
+    health: number
+    maxHealth: number
+  }
+  enemy: {
+    name: string
+    avatar: string
+    stats: {
+      health: number
+      maxHealth: number
+      attack: number
+      defense: number
+      speed: number
+    }
+    health: number
+    maxHealth: number
+  }
+  currentTurn: 'player' | 'enemy'
+  turnNumber: number
+  isPlayerTurn: boolean
+  enemyId: string
+}
 import CombatInterface from "./combat-interface"
 import CombatChallengeComponent from "./combat-challenge"
 import RankingPanel from "./ranking-panel"
@@ -155,6 +183,9 @@ const migrateAvatar = (oldAvatar: string): AvatarKey => {
     'character_33': '/sprite_split/character_33/character_33_frame32x32.png',
     'blacksmith': '/blacksmith/BLACKSMITH.png',
     'monkeyking': '/sprite_split/character_2/character_2_frame32x32.png',
+    'orc_1': '/orcs/orc_1.png',
+    'orc_2': '/orcs/orc_2.png',
+    'orc_3': '/orcs/orc_3.png',
   }
 
   // Configuración para sprites multidireccionales de 32x32
@@ -298,9 +329,13 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
   const [nearbyPlayer, setNearbyPlayer] = useState<Player | null>(null)
   const [combatChallenge, setCombatChallenge] = useState<CombatChallenge | null>(null)
   const [combatState, setCombatState] = useState<CombatState | null>(null)
+  const [pveCombatState, setPveCombatState] = useState<PvECombatState | null>(null)
   const [showCombatInterface, setShowCombatInterface] = useState(false)
   const [nearbyShop, setNearbyShop] = useState<boolean>(false)
   const [currentShop, setCurrentShop] = useState<Shop | null>(null)
+  const [nearbyEnemy, setNearbyEnemy] = useState<Enemy | null>(null)
+  const [showEnemyDialog, setShowEnemyDialog] = useState(false)
+  const [enemies, setEnemies] = useState<Enemy[]>(currentMap.enemies)
   
   // Panel states
   const [showInventoryPanel, setShowInventoryPanel] = useState(false)
@@ -555,13 +590,57 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
     setCurrentShop(nearbyShop || null)
   }, [currentMap.shops])
 
-  // Verificar proximidad inicial a la puerta y shop
+  const checkNearbyEnemies = useCallback((playerX: number, playerY: number) => {
+    const nearbyEnemy = enemies.find(enemy => {
+      if (!enemy.isAlive) return false
+      const distance = Math.sqrt(
+        Math.pow(playerX - enemy.x, 2) + Math.pow(playerY - enemy.y, 2)
+      )
+      return distance <= 60 // Interaction radius for enemies
+    })
+    setNearbyEnemy(nearbyEnemy || null)
+  }, [enemies])
+
+  // Verificar proximidad inicial a la puerta, shop y enemigos
   useEffect(() => {
     if (localCharacter.x && localCharacter.y) {
       checkNearbyDoor(localCharacter.x, localCharacter.y)
       checkNearbyShop(localCharacter.x, localCharacter.y)
+      checkNearbyEnemies(localCharacter.x, localCharacter.y)
     }
-  }, [localCharacter.x, localCharacter.y, checkNearbyDoor, checkNearbyShop])
+  }, [localCharacter.x, localCharacter.y, checkNearbyDoor, checkNearbyShop, checkNearbyEnemies])
+
+  // Update enemies when currentMap changes
+  useEffect(() => {
+    setEnemies(currentMap.enemies)
+  }, [currentMap])
+
+  // Handle enemy respawn
+  useEffect(() => {
+    const respawnInterval = setInterval(() => {
+      setEnemies(prevEnemies => 
+        prevEnemies.map(enemy => {
+          if (!enemy.isAlive && enemy.lastKilled) {
+            const timeSinceKilled = Date.now() - enemy.lastKilled
+            if (timeSinceKilled >= enemy.respawnTime) {
+              return {
+                ...enemy,
+                isAlive: true,
+                stats: {
+                  ...enemy.stats,
+                  health: enemy.stats.maxHealth
+                },
+                lastKilled: undefined
+              }
+            }
+          }
+          return enemy
+        })
+      )
+    }, 1000) // Check every second
+
+    return () => clearInterval(respawnInterval)
+  }, [])
 
   // Monitorear cambios en nearbyDoor
   useEffect(() => {
@@ -612,10 +691,66 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
     }
   }, [nearbyPlayer, websocketClient])
 
+  const startCombatWithEnemy = useCallback(() => {
+    if (nearbyEnemy && playerStats) {
+      setShowEnemyDialog(false)
+      // Create a combat state for PvE combat
+      const enemyCombatState: PvECombatState = {
+        player: {
+          name: localCharacter.name,
+          avatar: localCharacter.avatar,
+          stats: playerStats,
+          health: playerStats.health,
+          maxHealth: playerStats.health
+        },
+        enemy: {
+          name: nearbyEnemy.name,
+          avatar: nearbyEnemy.avatar,
+          stats: nearbyEnemy.stats,
+          health: nearbyEnemy.stats.health,
+          maxHealth: nearbyEnemy.stats.maxHealth
+        },
+        currentTurn: 'player',
+        turnNumber: 1,
+        isPlayerTurn: true,
+        enemyId: nearbyEnemy.id
+      }
+      setPveCombatState(enemyCombatState)
+      setShowCombatInterface(true)
+    }
+  }, [nearbyEnemy, playerStats, localCharacter])
+
   // Función para manejar desafíos de combate
   const handleCombatChallenge = useCallback((challenge: CombatChallenge) => {
     setCombatChallenge(challenge)
   }, [])
+
+  // Función para manejar victoria contra enemigos
+  const handleEnemyDefeat = useCallback((enemyId: string) => {
+    setEnemies(prevEnemies => 
+      prevEnemies.map(enemy => {
+        if (enemy.id === enemyId) {
+          return {
+            ...enemy,
+            isAlive: false,
+            lastKilled: Date.now()
+          }
+        }
+        return enemy
+      })
+    )
+    
+    // Find the defeated enemy to get rewards
+    const defeatedEnemy = enemies.find(e => e.id === enemyId)
+    if (defeatedEnemy) {
+      // Add gold and XP rewards
+      const newGold = (userGold ?? 0) + defeatedEnemy.rewards.gold
+      setUserGold(newGold)
+      
+      // TODO: Add XP system integration
+      console.log(`🎉 Defeated ${defeatedEnemy.name}! Gained ${defeatedEnemy.rewards.gold} gold and ${defeatedEnemy.rewards.xp} XP`)
+    }
+  }, [enemies, userGold])
 
   // Función para guardar progreso del jugador en Supabase
   const savePlayerProgressToSupabase = useCallback(async () => {
@@ -2313,6 +2448,59 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
       }
     })
 
+    // Dibujar enemigos
+    enemies.forEach((enemy) => {
+      if (!enemy.isAlive) return // No renderizar enemigos muertos
+      
+      const screenX = enemy.x - camera.x
+      const screenY = enemy.y - camera.y
+      
+      // Solo dibujar si el enemigo está en pantalla
+      if (screenX > -100 && screenX < CANVAS_WIDTH + 100 && 
+          screenY > -100 && screenY < CANVAS_HEIGHT + 100) {
+        
+        // Dibujar enemigo usando la misma función que los jugadores
+        drawPlayer(
+          ctx,
+          enemy.x,
+          enemy.y,
+          '#ff4444', // Color rojo para enemigos
+          enemy.name,
+          false, // No es el jugador actual
+          camera.x,
+          camera.y,
+          undefined, // Sin mensaje de chat
+          enemy.avatar,
+          'down' // Enemigos siempre miran hacia abajo
+        )
+        
+        // Dibujar barra de vida del enemigo
+        const healthBarWidth = 40
+        const healthBarHeight = 4
+        const healthPercentage = enemy.stats.health / enemy.stats.maxHealth
+        
+        // Fondo de la barra de vida
+        ctx.fillStyle = "#333333"
+        ctx.fillRect(screenX - healthBarWidth/2, screenY - 30, healthBarWidth, healthBarHeight)
+        
+        // Barra de vida
+        ctx.fillStyle = healthPercentage > 0.5 ? "#4CAF50" : healthPercentage > 0.25 ? "#FF9800" : "#F44336"
+        ctx.fillRect(screenX - healthBarWidth/2, screenY - 30, healthBarWidth * healthPercentage, healthBarHeight)
+        
+        // Dibujar nivel del enemigo
+        ctx.fillStyle = "#ffffff"
+        ctx.font = "10px monospace"
+        ctx.fillText(`Lv.${enemy.level}`, screenX - 10, screenY - 35)
+        
+        // Dibujar indicador de interacción si está cerca
+        if (nearbyEnemy && nearbyEnemy.id === enemy.id) {
+          ctx.fillStyle = "#ff4444"
+          ctx.font = "14px monospace"
+          ctx.fillText("Press E to fight", screenX - 50, screenY - 45)
+        }
+      }
+    })
+
   }, [localCharacter, camera, allPlayers, interpolatedPlayers, playerId, playerVisibility, nearbyPlayer, playerChatMessages])
 
   const gameLoop = useCallback(() => {
@@ -2355,11 +2543,13 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
         return
       }
       
-      // Interactuar con NPC, puerta, shop o desafiar jugador con E
+      // Interactuar con NPC, puerta, shop, enemigo o desafiar jugador con E
       if (e.code === "KeyE") {
         e.preventDefault()
         if (nearbyPlayer) {
           challengePlayer()
+        } else if (nearbyEnemy) {
+          setShowEnemyDialog(true)
         } else if (nearbyShop) {
           setShowShopPanel(true)
         } else if (nearbyNPC) {
@@ -2746,6 +2936,39 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
         </div>
       )}
 
+      {/* Enemy Dialog */}
+      {showEnemyDialog && nearbyEnemy && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-gradient-to-b from-red-800 to-red-900 border-4 border-red-600 rounded-lg p-6 max-w-md mx-4 shadow-2xl">
+            <div className="text-center">
+              <div className="text-3xl mb-4">⚔️</div>
+              <div className="text-2xl font-bold text-red-100 pixel-text mb-4">
+                {nearbyEnemy.name}
+              </div>
+              <div className="text-red-200 pixel-text mb-4">
+                Level {nearbyEnemy.level} • HP: {nearbyEnemy.stats.health}/{nearbyEnemy.stats.maxHealth}
+              </div>
+              <div className="text-red-200 pixel-text mb-6">
+                Rewards: {nearbyEnemy.rewards.gold} gold, {nearbyEnemy.rewards.xp} XP
+              </div>
+              <div className="flex gap-4 justify-center">
+                <Button
+                  onClick={() => setShowEnemyDialog(false)}
+                  className="pixel-button bg-gray-600 hover:bg-gray-700 text-white font-bold px-6 py-2"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={startCombatWithEnemy}
+                  className="pixel-button bg-red-600 hover:bg-red-700 text-white font-bold px-6 py-2"
+                >
+                  Fight!
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Advanced Inventory Panel */}
       <AdvancedInventoryPanel 
