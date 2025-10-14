@@ -1112,11 +1112,21 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
         delete others[currentPlayerId]
         
         // Filter players by current map
+        console.log(`🗺️ Filtering players by map. Current map: ${currentMap.id}`)
+        console.log(`🗺️ All players received:`, Object.keys(state.players).map(id => ({
+          id,
+          name: state.players[id].name,
+          currentMap: state.players[id].currentMap
+        })))
+        
         const playersInSameMap = Object.fromEntries(
-          Object.entries(others).filter(([id, player]) => 
-            player.currentMap === currentMap.id
-          )
+          Object.entries(others).filter(([id, player]) => {
+            const isInSameMap = player.currentMap === currentMap.id
+            console.log(`🗺️ Player ${player.name} (${id}): map=${player.currentMap}, current=${currentMap.id}, match=${isInSameMap}`)
+            return isInSameMap
+          })
         )
+        console.log(`🗺️ Players in same map after filtering:`, Object.keys(playersInSameMap))
         setOtherPlayers(playersInSameMap)
         
         // Marcar todos los jugadores como visibles
@@ -1131,11 +1141,15 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
         console.log(`🎮 Player ${player.name} joined the game`)
         
         // Only add to otherPlayers if they're in the same map
+        console.log(`🎮 Player ${player.name} joined. Their map: ${player.currentMap}, Current map: ${currentMap.id}`)
         if (player.currentMap === currentMap.id) {
+          console.log(`✅ Adding ${player.name} to otherPlayers (same map)`)
           setOtherPlayers(prev => ({
             ...prev,
             [player.id]: player
           }))
+        } else {
+          console.log(`❌ Not adding ${player.name} to otherPlayers (different map)`)
         }
       },
       (playerId: string) => {
