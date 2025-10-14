@@ -159,7 +159,7 @@ export const TAVERN_MAP: MapConfig = {
       width: 128,
       height: 32,
       targetMap: 'exterior',
-      targetSpawnPoint: { x: 2800, y: 2100 }, // Updated to match new exterior spawn point
+      targetSpawnPoint: { x: 2700, y: 2000 }, // Updated to match new exterior spawn point
       interactionRadius: 50,
       name: 'Exit to Dark Swamp',
       description: 'A weathered door that creaks ominously. Beyond lies a murky, foreboding swamp filled with twisted trees and dark secrets.'
@@ -183,7 +183,7 @@ export const EXTERIOR_MAP: MapConfig = {
   name: 'The Dark Swamp',
   width: 2000,
   height: 1500,
-  spawnPoint: { x: 2800, y: 2100 }, // Offset to avoid coordinate overlap with tavern
+  spawnPoint: { x: 2700, y: 2000 }, // Offset to avoid coordinate overlap with tavern, moved to avoid rock collision
   collisionObjects: [
     // Outer walls (offset by +2000, +1500)
     { x: 2000, y: 1500, width: 2000, height: 32, type: "wall" }, // Top wall
