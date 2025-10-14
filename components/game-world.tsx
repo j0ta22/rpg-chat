@@ -338,6 +338,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
   const [nearbyEnemy, setNearbyEnemy] = useState<Enemy | null>(null)
   const [showEnemyDialog, setShowEnemyDialog] = useState(false)
   const [enemies, setEnemies] = useState<Enemy[]>(currentMap.enemies)
+  const [enemyCheckTimeout, setEnemyCheckTimeout] = useState<NodeJS.Timeout | null>(null)
   
   // Panel states
   const [showInventoryPanel, setShowInventoryPanel] = useState(false)
@@ -593,34 +594,39 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
   }, [currentMap.shops])
 
   const checkNearbyEnemies = useCallback((playerX: number, playerY: number) => {
-    console.log(`🔍 Checking enemies - Total enemies: ${enemies.length}`)
-    console.log(`🔍 Current map: ${currentMap.id}`)
+    // Clear previous timeout
+    if (enemyCheckTimeout) {
+      clearTimeout(enemyCheckTimeout)
+    }
     
-    const nearbyEnemy = enemies.find(enemy => {
-      console.log(`🔍 Checking enemy: ${enemy.name}, isAlive: ${enemy.isAlive}`)
-      if (!enemy.isAlive) {
-        console.log(`🔍 Enemy ${enemy.name} is dead, skipping`)
-        return false
-      }
-      const distance = Math.sqrt(
-        Math.pow(playerX - enemy.x, 2) + Math.pow(playerY - enemy.y, 2)
-      )
-      console.log(`🔍 Enemy check: ${enemy.name} at (${enemy.x}, ${enemy.y}), player at (${playerX}, ${playerY}), distance: ${distance.toFixed(1)}`)
-      return distance <= 60 // Interaction radius for enemies
-    })
-    
-    const newNearbyEnemy = nearbyEnemy || null
-    console.log(`👹 Nearby enemy found:`, newNearbyEnemy ? newNearbyEnemy.name : 'none')
-    
-    // Always update state for debugging
-    console.log(`👹 Setting nearbyEnemy to:`, newNearbyEnemy ? newNearbyEnemy.name : 'null')
-    
-    // Use a timeout to ensure state update happens after current execution
-    setTimeout(() => {
-      console.log(`👹 Actually setting nearbyEnemy state now`)
+    // Set new timeout for debounced execution
+    const timeout = setTimeout(() => {
+      console.log(`🔍 Checking enemies - Total enemies: ${enemies.length}`)
+      console.log(`🔍 Current map: ${currentMap.id}`)
+      
+      const nearbyEnemy = enemies.find(enemy => {
+        console.log(`🔍 Checking enemy: ${enemy.name}, isAlive: ${enemy.isAlive}`)
+        if (!enemy.isAlive) {
+          console.log(`🔍 Enemy ${enemy.name} is dead, skipping`)
+          return false
+        }
+        const distance = Math.sqrt(
+          Math.pow(playerX - enemy.x, 2) + Math.pow(playerY - enemy.y, 2)
+        )
+        console.log(`🔍 Enemy check: ${enemy.name} at (${enemy.x}, ${enemy.y}), player at (${playerX}, ${playerY}), distance: ${distance.toFixed(1)}`)
+        return distance <= 60 // Interaction radius for enemies
+      })
+      
+      const newNearbyEnemy = nearbyEnemy || null
+      console.log(`👹 Nearby enemy found:`, newNearbyEnemy ? newNearbyEnemy.name : 'none')
+      
+      // Always update state for debugging
+      console.log(`👹 Setting nearbyEnemy to:`, newNearbyEnemy ? newNearbyEnemy.name : 'null')
       setNearbyEnemy(newNearbyEnemy)
-    }, 0)
-  }, [enemies, currentMap.id])
+    }, 100) // 100ms debounce
+    
+    setEnemyCheckTimeout(timeout)
+  }, [enemies, currentMap.id, enemyCheckTimeout])
 
   // Verificar proximidad inicial a la puerta, shop y enemigos
   useEffect(() => {
@@ -672,6 +678,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
   // Monitorear cambios en nearbyEnemy
   useEffect(() => {
     console.log('👹 nearbyEnemy state changed:', nearbyEnemy ? nearbyEnemy.name : 'null')
+    console.log('👹 nearbyEnemy useEffect triggered with:', nearbyEnemy)
   }, [nearbyEnemy])
 
   // Función para interactuar con NPC
