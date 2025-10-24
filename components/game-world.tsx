@@ -12,6 +12,70 @@ import { calculateXPToNext, addExperience, calculateCombatXP, type PlayerStats }
 import { supabase } from "@/lib/supabase"
 import { MapManager, type MapConfig, type Door, type NPC as MapNPC, type Shop, type Enemy } from "@/lib/map-system"
 
+// Componente para renderizar avatares de NPCs con clipping correcto
+interface NPCAvatarProps {
+  avatar: string
+  name: string
+  size: number
+}
+
+const NPCAvatar = ({ avatar, name, size }: NPCAvatarProps) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const [spriteImage, setSpriteImage] = useState<HTMLImageElement | null>(null)
+
+  // Cargar la imagen del sprite
+  useEffect(() => {
+    const loadSprite = async () => {
+      const img = new Image()
+      img.src = avatarSprites[avatar as keyof typeof avatarSprites]
+      img.onload = () => setSpriteImage(img)
+    }
+    loadSprite()
+  }, [avatar])
+
+  // Renderizar el sprite con clipping
+  useEffect(() => {
+    if (!spriteImage || !canvasRef.current) return
+
+    const canvas = canvasRef.current
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+
+    // Configurar canvas
+    canvas.width = size
+    canvas.height = size
+
+    // Obtener configuración del sprite
+    const spriteConfig = getSpriteConfig(avatar)
+    
+    // Mostrar solo el primer frame (frame 0) mirando hacia abajo
+    const frameX = 0 * spriteConfig.frameWidth
+    const frameY = spriteConfig.directions.down * spriteConfig.frameHeight
+
+    // Limpiar canvas
+    ctx.clearRect(0, 0, size, size)
+
+    // Dibujar solo el frame específico
+    ctx.drawImage(
+      spriteImage,
+      frameX, frameY,
+      spriteConfig.frameWidth, spriteConfig.frameHeight,
+      0, 0,
+      size, size
+    )
+  }, [spriteImage, avatar, size])
+
+  return (
+    <canvas
+      ref={canvasRef}
+      width={size}
+      height={size}
+      className="pixel-art"
+      style={{ imageRendering: 'pixelated' }}
+    />
+  )
+}
+
 // Interface for PvE combat
 interface PvECombatState {
   player: {
@@ -3116,10 +3180,10 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
             <CardContent className="space-y-4">
               <div className="flex items-center space-x-4">
                 <div className="w-16 h-16 relative">
-                  <img
-                    src={avatarSprites[nearbyNPC.avatar as keyof typeof avatarSprites]}
-                    alt={nearbyNPC.name}
-                    className="w-full h-full object-contain pixel-art"
+                  <NPCAvatar 
+                    avatar={nearbyNPC.avatar}
+                    name={nearbyNPC.name}
+                    size={64}
                   />
                 </div>
                 <div className="flex-1">
