@@ -3013,7 +3013,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
         <RankingPanel />
         
         {/* Panel de enlaces y contract */}
-        <Card className="mt-4">
+        <Card className="w-full mt-4 h-fit border-4 border-primary" style={{borderRadius: '0'}}>
           <CardHeader className="pb-3">
             <CardTitle className="text-lg font-bold text-center">Community & Contract</CardTitle>
           </CardHeader>
@@ -3026,7 +3026,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
                 className="pixel-button text-xs"
                 onClick={() => window.open('https://ape.store/', '_blank')}
               >
-                🦍 ape.store
+                ape.store
               </Button>
               <Button 
                 variant="outline" 
@@ -3034,7 +3034,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
                 className="pixel-button text-xs"
                 onClick={() => window.open('https://t.me/drunkenmonkeyrpg', '_blank')}
               >
-                📱 Telegram
+                Telegram
               </Button>
               <Button 
                 variant="outline" 
@@ -3042,7 +3042,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
                 className="pixel-button text-xs"
                 onClick={() => window.open('https://x.com/drunkenmonkeyrpg', '_blank')}
               >
-                🐦 X
+                X
               </Button>
             </div>
             
