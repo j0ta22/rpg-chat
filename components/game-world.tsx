@@ -11,6 +11,7 @@ import { calculatePlayerStats } from "@/lib/combat-system"
 import { calculateXPToNext, addExperience, calculateCombatXP, type PlayerStats } from "@/lib/xp-system"
 import { supabase } from "@/lib/supabase"
 import { MapManager, type MapConfig, type Door, type NPC as MapNPC, type Shop, type Enemy } from "@/lib/map-system"
+import { useToast } from "@/hooks/use-toast"
 
 // Componente para renderizar avatares de NPCs con clipping correcto
 interface NPCAvatarProps {
@@ -415,6 +416,9 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
   // Panel states
   const [showInventoryPanel, setShowInventoryPanel] = useState(false)
   const [showShopPanel, setShowShopPanel] = useState(false)
+  
+  // Toast hook
+  const { toast } = useToast()
   const [userGold, setUserGold] = useState<number | null>(null)
   
   // Debug userGold changes
@@ -3007,6 +3011,65 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
       {/* Panel de rankings - Izquierda en desktop, arriba en mobile */}
       <div className="w-full lg:w-80 order-1 lg:order-1 lg:mr-8">
         <RankingPanel />
+        
+        {/* Panel de enlaces y contract */}
+        <Card className="mt-4">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg font-bold text-center">Community & Contract</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Botones de redes sociales */}
+            <div className="grid grid-cols-3 gap-2">
+              <Button 
+                variant="outline" 
+                size="sm"
+                className="pixel-button text-xs"
+                onClick={() => window.open('https://ape.store/', '_blank')}
+              >
+                🦍 ape.store
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm"
+                className="pixel-button text-xs"
+                onClick={() => window.open('https://t.me/drunkenmonkeyrpg', '_blank')}
+              >
+                📱 Telegram
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm"
+                className="pixel-button text-xs"
+                onClick={() => window.open('https://x.com/drunkenmonkeyrpg', '_blank')}
+              >
+                🐦 X
+              </Button>
+            </div>
+            
+            {/* Contract Address */}
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-muted-foreground">Contract Address:</label>
+              <div className="bg-muted p-2 rounded text-xs font-mono break-all">
+                0x1234567890abcdef1234567890abcdef12345678
+              </div>
+              <Button 
+                variant="ghost" 
+                size="sm"
+                className="w-full text-xs"
+                onClick={() => {
+                  navigator.clipboard.writeText('0x1234567890abcdef1234567890abcdef12345678')
+                  toast({
+                    title: "Contract Address Copied!",
+                    description: "The contract address has been copied to your clipboard.",
+                    duration: 2000,
+                  })
+                }}
+              >
+                📋 Copy Address
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
       
       {/* Panel del juego principal - Centrado */}
