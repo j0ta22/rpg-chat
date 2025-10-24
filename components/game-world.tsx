@@ -3077,14 +3077,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
 
           {/* Botones de acción */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-2">
-            <Button 
-              onClick={savePlayerProgressToSupabase} 
-              className="w-full pixel-button bg-blue-600 hover:bg-blue-700"
-              disabled={isSaving}
-            >
-              {isSaving ? "Saving..." : "Save Progress"}
-            </Button>
-            
+                       
             
             <Button 
               onClick={() => setShowInventoryPanel(true)} 
@@ -3093,9 +3086,6 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
               Inventory
             </Button>
             
-            <Button onClick={onBackToCreation} className="w-full pixel-button">
-              Create New Hero
-            </Button>
             
             {onBackToSelection && (
               <Button onClick={onBackToSelection} className="w-full pixel-button bg-green-600 hover:bg-green-700">

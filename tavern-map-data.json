@@ -1,0 +1,419 @@
+{
+  "mapInfo": {
+    "id": "tavern",
+    "name": "The Tavern - Ye Drunken Monkey",
+    "dimensions": {
+      "width": 1600,
+      "height": 1200
+    },
+    "spawnPoint": {
+      "x": 100,
+      "y": 150
+    },
+    "description": "A cozy medieval tavern with warm lighting, wooden furniture, and a welcoming atmosphere. The perfect place for adventurers to rest, trade, and socialize."
+  },
+  "walls": [
+    {
+      "id": "top_wall",
+      "x": 0,
+      "y": 0,
+      "width": 1600,
+      "height": 32,
+      "type": "wall",
+      "description": "Top wall of the tavern"
+    },
+    {
+      "id": "bottom_wall", 
+      "x": 0,
+      "y": 1168,
+      "width": 1600,
+      "height": 32,
+      "type": "wall",
+      "description": "Bottom wall of the tavern"
+    },
+    {
+      "id": "left_wall",
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 1200,
+      "type": "wall",
+      "description": "Left wall of the tavern"
+    },
+    {
+      "id": "right_wall",
+      "x": 1568,
+      "y": 0,
+      "width": 32,
+      "height": 1200,
+      "type": "wall",
+      "description": "Right wall of the tavern"
+    }
+  ],
+  "furniture": {
+    "tables": [
+      {
+        "id": "table_1",
+        "x": 600,
+        "y": 200,
+        "width": 96,
+        "height": 64,
+        "type": "table",
+        "description": "Dining table for 4 people"
+      },
+      {
+        "id": "table_2",
+        "x": 800,
+        "y": 200,
+        "width": 96,
+        "height": 64,
+        "type": "table",
+        "description": "Dining table for 4 people"
+      },
+      {
+        "id": "table_3",
+        "x": 1000,
+        "y": 200,
+        "width": 96,
+        "height": 64,
+        "type": "table",
+        "description": "Dining table for 4 people"
+      },
+      {
+        "id": "table_4",
+        "x": 600,
+        "y": 400,
+        "width": 96,
+        "height": 64,
+        "type": "table",
+        "description": "Dining table for 4 people"
+      },
+      {
+        "id": "table_5",
+        "x": 800,
+        "y": 400,
+        "width": 96,
+        "height": 64,
+        "type": "table",
+        "description": "Dining table for 4 people"
+      },
+      {
+        "id": "table_6",
+        "x": 1000,
+        "y": 400,
+        "width": 96,
+        "height": 64,
+        "type": "table",
+        "description": "Dining table for 4 people"
+      },
+      {
+        "id": "table_7",
+        "x": 600,
+        "y": 600,
+        "width": 96,
+        "height": 64,
+        "type": "table",
+        "description": "Dining table for 4 people"
+      },
+      {
+        "id": "table_8",
+        "x": 800,
+        "y": 600,
+        "width": 96,
+        "height": 64,
+        "type": "table",
+        "description": "Dining table for 4 people"
+      },
+      {
+        "id": "table_9",
+        "x": 1000,
+        "y": 600,
+        "width": 96,
+        "height": 64,
+        "type": "table",
+        "description": "Dining table for 4 people"
+      }
+    ],
+    "fireplace": {
+      "id": "main_fireplace",
+      "x": 1400,
+      "y": 50,
+      "width": 128,
+      "height": 96,
+      "type": "fireplace",
+      "description": "Large stone fireplace with warm glow"
+    },
+    "barrels": [
+      {
+        "id": "barrel_1",
+        "x": 1200,
+        "y": 300,
+        "width": 48,
+        "height": 48,
+        "type": "barrel",
+        "description": "Ale barrel"
+      },
+      {
+        "id": "barrel_2",
+        "x": 1200,
+        "y": 380,
+        "width": 48,
+        "height": 48,
+        "type": "barrel",
+        "description": "Wine barrel"
+      },
+      {
+        "id": "barrel_3",
+        "x": 1200,
+        "y": 460,
+        "width": 48,
+        "height": 48,
+        "type": "barrel",
+        "description": "Mead barrel"
+      },
+      {
+        "id": "barrel_4",
+        "x": 1200,
+        "y": 540,
+        "width": 48,
+        "height": 48,
+        "type": "barrel",
+        "description": "Whiskey barrel"
+      },
+      {
+        "id": "barrel_5",
+        "x": 1300,
+        "y": 300,
+        "width": 48,
+        "height": 48,
+        "type": "barrel",
+        "description": "Ale barrel"
+      },
+      {
+        "id": "barrel_6",
+        "x": 1300,
+        "y": 380,
+        "width": 48,
+        "height": 48,
+        "type": "barrel",
+        "description": "Wine barrel"
+      },
+      {
+        "id": "barrel_7",
+        "x": 1300,
+        "y": 460,
+        "width": 48,
+        "height": 48,
+        "type": "barrel",
+        "description": "Mead barrel"
+      },
+      {
+        "id": "barrel_8",
+        "x": 1300,
+        "y": 540,
+        "width": 48,
+        "height": 48,
+        "type": "barrel",
+        "description": "Whiskey barrel"
+      },
+      {
+        "id": "barrel_9",
+        "x": 1400,
+        "y": 300,
+        "width": 48,
+        "height": 48,
+        "type": "barrel",
+        "description": "Ale barrel"
+      },
+      {
+        "id": "barrel_10",
+        "x": 1400,
+        "y": 380,
+        "width": 48,
+        "height": 48,
+        "type": "barrel",
+        "description": "Wine barrel"
+      },
+      {
+        "id": "barrel_11",
+        "x": 1400,
+        "y": 460,
+        "width": 48,
+        "height": 48,
+        "type": "barrel",
+        "description": "Mead barrel"
+      },
+      {
+        "id": "barrel_12",
+        "x": 1400,
+        "y": 540,
+        "width": 48,
+        "height": 48,
+        "type": "barrel",
+        "description": "Whiskey barrel"
+      }
+    ]
+  },
+  "npcs": [
+    {
+      "id": "npc_1",
+      "name": "Maeve - Tavern Keeper",
+      "x": 84,
+      "y": 430,
+      "avatar": "character_18",
+      "interactionRadius": 80,
+      "dialog": "Hail, good traveller! I am Maeve, keeper of Ye Drunken Monkey. Enter ye, take thy seat by ye hearth, and let ye fine ale and tales flow freely. What bringeth thee to mine humble tavern?",
+      "role": "Tavern Keeper",
+      "description": "The friendly tavern keeper who welcomes all travelers"
+    },
+    {
+      "id": "npc_2", 
+      "name": "Tavern Crier",
+      "x": 84,
+      "y": 344,
+      "avatar": "character_27",
+      "interactionRadius": 80,
+      "dialog": "Greetings, traveler. I sense great power within you. The ancient secrets of this land await those who are worthy...",
+      "role": "Information Broker",
+      "description": "A mysterious figure who knows the secrets of the land"
+    },
+    {
+      "id": "npc_3",
+      "name": "Ambassador of Apestore",
+      "x": 84,
+      "y": 258,
+      "avatar": "monkeyking",
+      "interactionRadius": 80,
+      "dialog": "Greetings, noble adventurer! I am the Ambassador of Apestore, representing the great trading company from the distant lands. We deal in the finest goods and exotic treasures. Perhaps you would be interested in our wares? Visit https://ape.store/",
+      "role": "Merchant Ambassador",
+      "description": "Representative of the Apestore trading company"
+    },
+    {
+      "id": "npc_4",
+      "name": "Blacksmith",
+      "x": 76,
+      "y": 1130,
+      "avatar": "blacksmith",
+      "interactionRadius": 80,
+      "dialog": "Welcome to my shop! I sell equipment up to level 7. Press E to browse my wares.",
+      "role": "Equipment Merchant",
+      "description": "Master blacksmith who crafts weapons and armor"
+    }
+  ],
+  "shops": [
+    {
+      "id": "blacksmith_shop",
+      "name": "Blacksmith's Forge",
+      "x": 76,
+      "y": 1130,
+      "interactionRadius": 80,
+      "owner": "Blacksmith",
+      "description": "Equipment shop selling weapons and armor up to level 7"
+    }
+  ],
+  "doors": [
+    {
+      "id": "exterior_door_disabled",
+      "x": 1344,
+      "y": 1168,
+      "width": 128,
+      "height": 32,
+      "name": "Exit to Dark Swamp",
+      "description": "A weathered door that creaks ominously. Beyond lies a murky, foreboding swamp filled with twisted trees and dark secrets.",
+      "status": "DISABLED",
+      "note": "Temporarily disabled - players can only stay in tavern"
+    }
+  ],
+  "zones": [
+    {
+      "name": "Dining Area",
+      "description": "Main seating area with tables and chairs",
+      "bounds": {
+        "x": 600,
+        "y": 200,
+        "width": 500,
+        "height": 500
+      }
+    },
+    {
+      "name": "Storage Area",
+      "description": "Barrel storage and supplies",
+      "bounds": {
+        "x": 1200,
+        "y": 300,
+        "width": 250,
+        "height": 300
+      }
+    },
+    {
+      "name": "Fireplace Corner",
+      "description": "Cozy area with the main fireplace",
+      "bounds": {
+        "x": 1400,
+        "y": 50,
+        "width": 200,
+        "height": 200
+      }
+    },
+    {
+      "name": "NPC Gathering Area",
+      "description": "Where NPCs congregate for conversations",
+      "bounds": {
+        "x": 50,
+        "y": 250,
+        "width": 100,
+        "height": 200
+      }
+    },
+    {
+      "name": "Blacksmith Shop",
+      "description": "Equipment and weapon shop",
+      "bounds": {
+        "x": 50,
+        "y": 1100,
+        "width": 100,
+        "height": 100
+      }
+    }
+  ],
+  "visualElements": {
+    "lighting": {
+      "fireplace": {
+        "x": 1400,
+        "y": 50,
+        "radius": 200,
+        "intensity": "warm",
+        "description": "Main source of warm light"
+      },
+      "ambient": {
+        "type": "dim",
+        "description": "Soft candlelight throughout the tavern"
+      }
+    },
+    "atmosphere": {
+      "mood": "cozy",
+      "temperature": "warm",
+      "noise_level": "moderate",
+      "description": "A welcoming medieval tavern with the sound of crackling fire and friendly chatter"
+    }
+  },
+  "mapLayout": {
+    "gridSize": 32,
+    "totalTiles": {
+      "width": 50,
+      "height": 37.5
+    },
+    "walkableAreas": [
+      {
+        "name": "Main Floor",
+        "description": "Open area for movement",
+        "bounds": {
+          "x": 32,
+          "y": 32,
+          "width": 1536,
+          "height": 1136
+        }
+      }
+    ]
+  }
+}

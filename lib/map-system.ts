@@ -91,8 +91,6 @@ export const TAVERN_MAP: MapConfig = {
     { x: 0, y: 0, width: 32, height: 1200, type: "wall" }, // Left wall
     { x: 1568, y: 0, width: 32, height: 1200, type: "wall" }, // Right wall
 
-    // Bar counter (center-left)
-    { x: 200, y: 300, width: 300, height: 64, type: "bar" },
 
     // Tables and chairs arranged in rows
     { x: 600, y: 200, width: 96, height: 64, type: "table" },
@@ -103,22 +101,31 @@ export const TAVERN_MAP: MapConfig = {
     { x: 1000, y: 400, width: 96, height: 64, type: "table" },
     { x: 600, y: 600, width: 96, height: 64, type: "table" },
     { x: 800, y: 600, width: 96, height: 64, type: "table" },
+    { x: 1000, y: 600, width: 96, height: 64, type: "table" },
 
     // Fireplace (top-right corner)
-    { x: 1400, y: 100, width: 128, height: 96, type: "fireplace" },
+    { x: 1400, y: 50, width: 128, height: 96, type: "fireplace" },
 
     // Barrels and storage
     { x: 1200, y: 300, width: 48, height: 48, type: "barrel" },
     { x: 1200, y: 380, width: 48, height: 48, type: "barrel" },
     { x: 1200, y: 460, width: 48, height: 48, type: "barrel" },
     { x: 1200, y: 540, width: 48, height: 48, type: "barrel" },
+    { x: 1300, y: 300, width: 48, height: 48, type: "barrel" },
+    { x: 1300, y: 380, width: 48, height: 48, type: "barrel" },
+    { x: 1300, y: 460, width: 48, height: 48, type: "barrel" },
+    { x: 1300, y: 540, width: 48, height: 48, type: "barrel" },
+    { x: 1400, y: 300, width: 48, height: 48, type: "barrel" },
+    { x: 1400, y: 380, width: 48, height: 48, type: "barrel" },
+    { x: 1400, y: 460, width: 48, height: 48, type: "barrel" },
+    { x: 1400, y: 540, width: 48, height: 48, type: "barrel" },
   ],
   npcs: [
     {
       id: "npc_1",
       name: "Tavern keeper",
-      x: 1364,
-      y: 554,
+      x: 84,
+      y: 430,
       avatar: "character_18",
       dialog: "Hail, good traveller! I am Maeve, keeper of Ye Drunken Monkey. Enter ye, take thy seat by ye hearth, and let ye fine ale and tales flow freely. What bringeth thee to mine humble tavern?",
       interactionRadius: 80
@@ -126,8 +133,8 @@ export const TAVERN_MAP: MapConfig = {
     {
       id: "npc_2",
       name: "Tavern Crier",
-      x: 1364,
-      y: 698,
+      x: 84,
+      y: 344,
       avatar: "character_27",
       dialog: "Greetings, traveler. I sense great power within you. The ancient secrets of this land await those who are worthy...",
       interactionRadius: 80
@@ -138,7 +145,7 @@ export const TAVERN_MAP: MapConfig = {
       x: 84,
       y: 258,
       avatar: "monkeyking",
-      dialog: "Greetings, noble adventurer! I am the Ambassador of Apestore, representing the great trading company from the distant lands. We deal in the finest goods and exotic treasures. Perhaps you would be interested in our wares?",
+      dialog: "Greetings, noble adventurer! I am the Ambassador of Apestore, representing the great trading company from the distant lands. We deal in the finest goods and exotic treasures. Perhaps you would be interested in our wares? Visit https://ape.store/",
       interactionRadius: 80
     },
     {
@@ -152,18 +159,19 @@ export const TAVERN_MAP: MapConfig = {
     }
   ],
   doors: [
-    {
-      id: 'exterior_door',
-      x: 1344,
-      y: 1168,
-      width: 128,
-      height: 32,
-      targetMap: 'exterior',
-      targetSpawnPoint: { x: 2700, y: 2000 }, // Updated to match new exterior spawn point
-      interactionRadius: 50,
-      name: 'Exit to Dark Swamp',
-      description: 'A weathered door that creaks ominously. Beyond lies a murky, foreboding swamp filled with twisted trees and dark secrets.'
-    }
+    // Temporarily disabled exterior door - players can only stay in tavern
+    // {
+    //   id: 'exterior_door',
+    //   x: 1344,
+    //   y: 1168,
+    //   width: 128,
+    //   height: 32,
+    //   targetMap: 'exterior',
+    //   targetSpawnPoint: { x: 2700, y: 2000 }, // Updated to match new exterior spawn point
+    //   interactionRadius: 50,
+    //   name: 'Exit to Dark Swamp',
+    //   description: 'A weathered door that creaks ominously. Beyond lies a murky, foreboding swamp filled with twisted trees and dark secrets.'
+    // }
   ],
   shops: [
     {
