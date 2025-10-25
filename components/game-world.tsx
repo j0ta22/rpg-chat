@@ -3040,7 +3040,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
                 variant="outline" 
                 size="sm"
                 className="pixel-button text-xs"
-                onClick={() => window.open('https://x.com/drunkenmonkeyrpg', '_blank')}
+                onClick={() => window.open('https://x.com/drunken_base', '_blank')}
               >
                 X
               </Button>
@@ -3077,7 +3077,12 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
         <CardHeader className="text-center pb-4">
           <div className="flex items-center justify-between">
             <div className="flex-1"></div>
-            <CardTitle className="text-2xl font-bold pixel-text">Drunken Monkey Tavern</CardTitle>
+            <img 
+              src="/banner.svg" 
+              alt="Drunken Monkey Tavern" 
+              className="h-12 w-auto mx-auto pixel-art"
+              style={{ imageRendering: 'pixelated' }}
+            />
             <div className="flex-1 flex justify-end gap-2">
               <Button
                 variant="ghost"
