@@ -3078,7 +3078,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
           <div className="flex items-center justify-between">
             <div className="flex-1"></div>
             <img 
-              src="/banner.svg?v=1" 
+              src="/banner.svg" 
               alt="Drunken Monkey Tavern" 
               className="h-24 w-auto mx-auto pixel-art"
               style={{ imageRendering: 'pixelated' }}

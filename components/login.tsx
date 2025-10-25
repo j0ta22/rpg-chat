@@ -101,7 +101,7 @@ export default function Login({ onLogin, onRegister, isLoading, error }: LoginPr
           <div className="mb-4 flex flex-col items-center">
             <div className="relative mb-3">
               <Image
-                src="/logo.svg"
+                src="/cartel.svg"
                 alt="The Drunken Monkey Logo"
                 width={100}
                 height={100}

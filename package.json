@@ -5,12 +5,13 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "build:static": "next build && next export",
     "start": "next start",
     "lint": "next lint",
     "server": "cd server && npm run dev",
     "dev:full": "concurrently \"npm run server\" \"npm run dev\"",
     "build:server": "cd server && npm install && npm run build",
-    "deploy:netlify": "npm run build",
+    "deploy:netlify": "npm run build:static",
     "deploy:server": "cd server && npm run build"
   },
   "dependencies": {

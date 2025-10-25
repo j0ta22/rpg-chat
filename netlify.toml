@@ -1,6 +1,6 @@
 [build]
   command = "npm run build"
-  publish = ".next"
+  publish = "out"
 
 [build.environment]
   NODE_VERSION = "18"
@@ -10,6 +10,27 @@
 [[redirects]]
   from = "/*"
   to = "/index.html"
+  status = 200
+
+# Redirecciones específicas para assets
+[[redirects]]
+  from = "/banner.svg"
+  to = "/banner.svg"
+  status = 200
+
+[[redirects]]
+  from = "/cartel.svg"
+  to = "/cartel.svg"
+  status = 200
+
+[[redirects]]
+  from = "/sprite_split/*"
+  to = "/sprite_split/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/Items Pack/*"
+  to = "/Items Pack/:splat"
   status = 200
 
 # Headers para CORS
