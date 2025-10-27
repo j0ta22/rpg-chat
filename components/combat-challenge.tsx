@@ -46,10 +46,10 @@ export default function CombatChallengeComponent({
         <Card className="w-full max-w-md mx-4">
           <CardContent className="pt-6 text-center">
             <p className="text-lg font-medium mb-4">
-              El desafío de {challenge.challengerName} ha expirado
+              {challenge.challengerName}'s challenge has expired
             </p>
             <Button onClick={onDecline} className="w-full">
-              Cerrar
+              Close
             </Button>
           </CardContent>
         </Card>
@@ -63,10 +63,10 @@ export default function CombatChallengeComponent({
         <Card className="w-full max-w-md mx-4">
           <CardContent className="pt-6 text-center">
             <p className="text-lg font-medium mb-4">
-              Has declinado el desafío de {challenge.challengerName}
+              You declined {challenge.challengerName}'s challenge
             </p>
             <Button onClick={onDecline} className="w-full">
-              Cerrar
+              Close
             </Button>
           </CardContent>
         </Card>
@@ -78,29 +78,29 @@ export default function CombatChallengeComponent({
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <Card className="w-full max-w-md mx-4">
         <CardHeader className="text-center">
-          <CardTitle className="text-xl font-bold">¡Desafío de Combate!</CardTitle>
+          <CardTitle className="text-xl font-bold">Combat Challenge!</CardTitle>
           <Badge variant="destructive" className="mx-auto">
-            Tiempo: {timeLeft}s
+            Time: {timeLeft}s
           </Badge>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="text-center">
             <p className="text-lg font-medium mb-2">
-              {challenge.challengerName} te desafía a un combate!
+              {challenge.challengerName} challenges you to combat!
             </p>
             <p className="text-sm text-muted-foreground mb-4">
-              Ambos comenzaréis con 100 puntos de vida.
-              El combate será por turnos: atacar, bloquear o esquivar.
+              Both players will start with 100 health points.
+              The combat will be turn-based: attack, block, or dodge.
             </p>
           </div>
 
           <div className="space-y-2">
-            <h4 className="font-semibold">Reglas del combate:</h4>
+            <h4 className="font-semibold">Combat Rules:</h4>
             <ul className="text-sm text-muted-foreground space-y-1">
-              <li>• <strong>Atacar:</strong> Inflige 15-25 de daño</li>
-              <li>• <strong>Bloquear:</strong> Reduce el daño a la mitad</li>
-              <li>• <strong>Esquivar:</strong> 30% de probabilidad de evitar daño</li>
-              <li>• Cada turno tiene 30 segundos de tiempo límite</li>
+              <li>• <strong>Attack:</strong> Deal 15-25 damage</li>
+              <li>• <strong>Block:</strong> Reduce damage by half</li>
+              <li>• <strong>Dodge:</strong> 30% chance to avoid damage</li>
+              <li>• Each turn has a 30 second time limit</li>
             </ul>
           </div>
 
@@ -110,14 +110,14 @@ export default function CombatChallengeComponent({
               className="flex-1"
               variant="default"
             >
-              Aceptar
+              Accept
             </Button>
             <Button 
               onClick={onDecline}
               className="flex-1"
               variant="outline"
             >
-              Declinar
+              Decline
             </Button>
           </div>
         </CardContent>
