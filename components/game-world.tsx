@@ -3032,7 +3032,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
                 variant="outline" 
                 size="sm"
                 className="pixel-button text-xs"
-                onClick={() => window.open('https://t.me/drunkenmonkeyrpg', '_blank')}
+                onClick={() => window.open('https://t.me/thedrunkenmonkey', '_blank')}
               >
                 Telegram
               </Button>
@@ -3050,14 +3050,14 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
             <div className="space-y-2">
               <label className="text-xs font-medium text-muted-foreground">Contract Address:</label>
               <div className="bg-muted p-2 rounded text-xs font-mono break-all">
-                0x1234567890abcdef1234567890abcdef12345678
+                0x0000000000000000000000000000000000000000
               </div>
               <Button 
                 variant="ghost" 
                 size="sm"
                 className="w-full text-xs"
                 onClick={() => {
-                  navigator.clipboard.writeText('0x1234567890abcdef1234567890abcdef12345678')
+                  navigator.clipboard.writeText('0x0000000000000000000000000000000000000000')
                   toast({
                     title: "Contract Address Copied!",
                     description: "The contract address has been copied to your clipboard.",
