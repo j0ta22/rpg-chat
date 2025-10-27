@@ -3024,7 +3024,7 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
                 variant="outline" 
                 size="sm"
                 className="pixel-button text-xs"
-                onClick={() => window.open('https://ape.store/', '_blank')}
+                onClick={() => window.open('https://ape.store/base/0x31fac88ce3489f7d749849cf3120d5e53869683c', '_blank')}
               >
                 ape.store
               </Button>
@@ -3050,14 +3050,14 @@ export default function GameWorld({ character, onCharacterUpdate, onBackToCreati
             <div className="space-y-2">
               <label className="text-xs font-medium text-muted-foreground">Contract Address:</label>
               <div className="bg-muted p-2 rounded text-xs font-mono break-all">
-                0x0000000000000000000000000000000000000000
+              0x31fac88ce3489f7d749849cf3120d5e53869683c
               </div>
               <Button 
                 variant="ghost" 
                 size="sm"
                 className="w-full text-xs"
                 onClick={() => {
-                  navigator.clipboard.writeText('0x0000000000000000000000000000000000000000')
+                  navigator.clipboard.writeText('0x31fac88ce3489f7d749849cf3120d5e53869683c')
                   toast({
                     title: "Contract Address Copied!",
                     description: "The contract address has been copied to your clipboard.",
