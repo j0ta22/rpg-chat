@@ -83,18 +83,18 @@ export default function CombatInterface({
     switch (action.type) {
       case 'attack':
         if (action.dodged) {
-          return `${playerName} atacó pero fue esquivado!`
+          return `${playerName} attacked but was dodged!`
         }
         if (action.blocked) {
-          return `${playerName} atacó por ${action.damage} de daño (bloqueado)!`
+          return `${playerName} attacked for ${action.damage} damage (blocked)!`
         }
-        return `${playerName} atacó por ${action.damage} de daño!`
+        return `${playerName} attacked for ${action.damage} damage!`
       case 'block':
-        return `${playerName} se preparó para bloquear!`
+        return `${playerName} prepared to block!`
       case 'dodge':
-        return `${playerName} se preparó para esquivar!`
+        return `${playerName} prepared to dodge!`
       default:
-        return `${playerName} hizo una acción!`
+        return `${playerName} performed an action!`
     }
   }
 
@@ -106,31 +106,31 @@ export default function CombatInterface({
         <Card className="w-full max-w-md mx-4">
           <CardHeader className="text-center">
             <CardTitle className="text-2xl font-bold">
-              {isWinner ? "¡Victoria!" : "Derrota"}
+              {isWinner ? "Victory!" : "Defeat"}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="text-center">
               <p className="text-lg mb-4">
                 {isWinner 
-                  ? `¡Has derrotado a ${opponent.name}!` 
-                  : `${opponent.name} te ha derrotado!`
+                  ? `You defeated ${opponent.name}!` 
+                  : `${opponent.name} defeated you!`
                 }
               </p>
               <div className="space-y-2">
                 <p className="text-sm text-muted-foreground">
-                  Duración: {Math.floor((combatState.endTime! - combatState.startTime) / 1000)}s
+                  Duration: {Math.floor((combatState.endTime! - combatState.startTime) / 1000)}s
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  Turnos: {combatState.turns.length}
+                  Turns: {combatState.turns.length}
                 </p>
               </div>
             </div>
             <Button onClick={() => {
-              console.log('🚪 CombatInterface: Continuar button clicked')
+              console.log('🚪 CombatInterface: Continue button clicked')
               onClose()
             }} className="w-full" size="lg">
-              Continuar
+              Continue
             </Button>
           </CardContent>
         </Card>
@@ -142,14 +142,14 @@ export default function CombatInterface({
     <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
       <Card className="w-full max-w-2xl mx-4">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold">Combate</CardTitle>
+          <CardTitle className="text-2xl font-bold">Combat</CardTitle>
           <div className="flex justify-center space-x-4">
             <Badge variant={isCurrentPlayerTurn ? "default" : "secondary"}>
-              {isCurrentPlayerTurn ? "Tu turno" : "Turno del oponente"}
+              {isCurrentPlayerTurn ? "Your Turn" : "Opponent's Turn"}
             </Badge>
             {isCurrentPlayerTurn && (
               <Badge variant="destructive">
-                Tiempo: {timeLeft}s
+                Time: {timeLeft}s
               </Badge>
             )}
           </div>
@@ -162,7 +162,7 @@ export default function CombatInterface({
               <h3 className="font-bold text-center">{currentPlayer.name}</h3>
               <div className="space-y-1">
                 <div className="flex justify-between text-sm">
-                  <span>Vida:</span>
+                  <span>Health:</span>
                   <span>{currentPlayer.health}/{currentPlayer.maxHealth}</span>
                 </div>
                 <Progress 
@@ -177,7 +177,7 @@ export default function CombatInterface({
               <h3 className="font-bold text-center">{opponent.name}</h3>
               <div className="space-y-1">
                 <div className="flex justify-between text-sm">
-                  <span>Vida:</span>
+                  <span>Health:</span>
                   <span>{opponent.health}/{opponent.maxHealth}</span>
                 </div>
                 <Progress 
@@ -204,7 +204,7 @@ export default function CombatInterface({
           {/* Acciones disponibles */}
           {isCurrentPlayerTurn && combatState.status === 'active' && (
             <div className="space-y-3">
-              <h4 className="font-semibold text-center">Elige tu acción:</h4>
+              <h4 className="font-semibold text-center">Choose your action:</h4>
               <div className="grid grid-cols-3 gap-3">
                 <Button 
                   onClick={() => handleAction('attack')}
@@ -212,7 +212,7 @@ export default function CombatInterface({
                   className="h-16 flex flex-col"
                 >
                   <span className="text-lg">⚔️</span>
-                  <span className="text-xs">Atacar</span>
+                  <span className="text-xs">Attack</span>
                 </Button>
                 <Button 
                   onClick={() => handleAction('block')}
@@ -220,7 +220,7 @@ export default function CombatInterface({
                   className="h-16 flex flex-col"
                 >
                   <span className="text-lg">🛡️</span>
-                  <span className="text-xs">Bloquear</span>
+                  <span className="text-xs">Block</span>
                 </Button>
                 <Button 
                   onClick={() => handleAction('dodge')}
@@ -228,13 +228,13 @@ export default function CombatInterface({
                   className="h-16 flex flex-col"
                 >
                   <span className="text-lg">💨</span>
-                  <span className="text-xs">Esquivar</span>
+                  <span className="text-xs">Dodge</span>
                 </Button>
               </div>
               <div className="text-xs text-muted-foreground text-center space-y-1">
-                <p><strong>Atacar:</strong> Inflige daño aleatorio (15-25)</p>
-                <p><strong>Bloquear:</strong> Reduce el daño recibido a la mitad</p>
-                <p><strong>Esquivar:</strong> 30% de probabilidad de evitar el daño</p>
+                <p><strong>Attack:</strong> Deal random damage (15-25)</p>
+                <p><strong>Block:</strong> Reduce incoming damage by half</p>
+                <p><strong>Dodge:</strong> 30% chance to avoid damage</p>
               </div>
             </div>
           )}
@@ -242,7 +242,7 @@ export default function CombatInterface({
           {/* Esperando turno del oponente */}
           {!isCurrentPlayerTurn && combatState.status === 'active' && (
             <div className="text-center p-4">
-              <p className="text-lg font-medium">Esperando que {opponent.name} elija su acción...</p>
+              <p className="text-lg font-medium">Waiting for {opponent.name} to choose their action...</p>
               <div className="mt-4">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
               </div>
@@ -253,7 +253,7 @@ export default function CombatInterface({
           {!isCurrentPlayerTurn && (
             <div className="text-center">
               <Button variant="outline" onClick={onClose}>
-                Minimizar
+                Minimize
               </Button>
             </div>
           )}
